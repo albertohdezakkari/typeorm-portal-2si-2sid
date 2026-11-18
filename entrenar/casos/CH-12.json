@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-12",
+    "sha256": "b5628765aa16ec11ed346987013fa1a10666af3f2dfd232e46caecc9fb251538",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar peso",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "COOPERATIVA  1 ───────── 0..N  LOTE\n\nCOOPERATIVA                         LOTE\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               KILOS\n                               ID_COOPERATIVA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por lote",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias lotes",
+            "note": "Un cooperativa puede tener cero, una o muchas lotes."
+          },
+          {
+            "text": "ID_COOPERATIVA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Cooperativa",
+        "path": "src/cooperativas/entities/cooperativa.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Lote } from '../../lotes/entities/lote.entity';\n\n@Entity({ name: 'COOPERATIVA' })\nexport class Cooperativa {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Lote, lote => lote.cooperativa)\n  lotes!: Lote[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'COOPERATIVA' })",
+            "title": "Clase Cooperativa → tabla COOPERATIVA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Lote, lote => lote.cooperativa)",
+            "title": "Una colección de lotes",
+            "note": "Cooperativa.lotes representa los registros asociados. lote.cooperativa señala la propiedad del otro lado; no crea una segunda FK en COOPERATIVA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Lote",
+        "path": "src/lotes/entities/lote.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cooperativa } from '../../cooperativas/entities/cooperativa.entity';\n\n@Entity({ name: 'LOTE' })\nexport class Lote {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'KILOS', type: 'integer' })\n  kilos!: number;\n\n  @ManyToOne(() => Cooperativa, cooperativa => cooperativa.lotes, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COOPERATIVA' })\n  cooperativa!: Cooperativa;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'LOTE' })",
+            "title": "Clase Lote → tabla LOTE",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, peso y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de LOTE. No es el ID del registro principal y no se repite entre lotes."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'KILOS', type: 'integer' })",
+            "title": "Una peso numérica",
+            "note": "kilos se guarda en KILOS, de tipo entero. El siguiente paso detalla la relación con Cooperativa."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/lotes/entities/lote.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cooperativa } from '../../cooperativas/entities/cooperativa.entity';\n\n@Entity({ name: 'LOTE' })\nexport class Lote {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'KILOS', type: 'integer' })\n  kilos!: number;\n\n  @ManyToOne(() => Cooperativa, cooperativa => cooperativa.lotes, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COOPERATIVA' })\n  cooperativa!: Cooperativa;\n}",
+        "cues": [
+          {
+            "text": "import { Cooperativa } from '../../cooperativas/entities/cooperativa.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Lote importa la clase Cooperativa para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Cooperativa, cooperativa => cooperativa.lotes, {",
+            "title": "Muchas lotes → un registro principal",
+            "note": "() => Cooperativa indica la entidad de destino. cooperativa.lotes indica la colección inversa, definida con @OneToMany en Cooperativa."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda lote tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_COOPERATIVA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_COOPERATIVA' })",
+            "title": "La FK está en LOTE",
+            "note": "JoinColumn da el nombre físico de la FK: LOTE.ID_COOPERATIVA referencia COOPERATIVA.ID. El mismo cooperativa puede aparecer en varias lotes."
+          },
+          {
+            "text": "cooperativa!: Cooperativa;",
+            "title": "Una propiedad de tipo Cooperativa",
+            "note": "En el código usamos lote.cooperativa; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_COOPERATIVA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cooperativa } from './cooperativas/entities/cooperativa.entity';\nimport { Lote } from './lotes/entities/lote.entity';\nimport { CrearListarController } from './lotes/crear-listar/controller';\nimport { CrearListarService } from './lotes/crear-listar/service';\nimport { CrearListarRepository } from './lotes/crear-listar/repository';\nimport { EliminarController } from './lotes/eliminar/controller';\nimport { EliminarService } from './lotes/eliminar/service';\nimport { EliminarRepository } from './lotes/eliminar/repository';\nimport { ModificarKilosController } from './lotes/modificar-kilos/controller';\nimport { ModificarKilosService } from './lotes/modificar-kilos/service';\nimport { ModificarKilosRepository } from './lotes/modificar-kilos/repository';\nimport { TrasladarController } from './lotes/trasladar/controller';\nimport { TrasladarService } from './lotes/trasladar/service';\nimport { TrasladarRepository } from './lotes/trasladar/repository';\nimport { ConsultarCooperativaController } from './cooperativas/consultar/controller';\nimport { ConsultarCooperativaService } from './cooperativas/consultar/service';\nimport { ConsultarCooperativaRepository } from './cooperativas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cooperativa, Lote])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarKilosController,\n    TrasladarController,\n    ConsultarCooperativaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarKilosService,\n    ModificarKilosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarCooperativaService,\n    ConsultarCooperativaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Cooperativa } from './cooperativas/entities/cooperativa.entity';",
+            "title": "Importar Cooperativa",
+            "note": "El módulo utiliza la misma clase Cooperativa que has preparado en entities."
+          },
+          {
+            "text": "import { Lote } from './lotes/entities/lote.entity';",
+            "title": "Importar Lote",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Cooperativa, Lote])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Cooperativa> y Repository<Lote>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/lotes/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../entities/lote.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>\n  ) {}\n\n  crearLoteRepository(nombre: string, kilos: number, cooperativaId: number) {\n    const lote = this.lotes.create({\n      nombre, kilos, cooperativa: { id: cooperativaId }\n    });\n    return this.lotes.save(lote);\n  }\n\n  listarLotesRepository() {\n    return this.lotes.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Lote } from '../entities/lote.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Lote de su fichero entities/lote.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Lote) private readonly lotes: Repository<Lote>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Lote) pide a Nest el repositorio de esa Entity. lotes es el nombre de la dependencia; Repository<Lote> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.lotes.create({",
+            "title": "Preparar un objeto Lote",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "cooperativa: { id: cooperativaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad cooperativa existe en la Entity Lote. TypeORM traduce cooperativa.id a la FK ID_COOPERATIVA al guardar."
+          },
+          {
+            "text": "this.lotes.save(lote)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Lote y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia COOPERATIVA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Lote>. getMany devuelve objetos Lote, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/lotes/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('lotes')\n  async ejecutar(@Body() datos: { nombre: string; kilos: number; cooperativaId: number }) {\n    return this.service.crearLoteService(datos.nombre, datos.kilos, datos.cooperativaId);\n  }\n\n  @Get('lotes')\n  listar() {\n    return this.service.listarLotesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('lotes')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearLoteService(datos.nombre, datos.kilos, datos.cooperativaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/lotes/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearLoteService(nombre: string, kilos: number, cooperativaId: number) {\n    return this.repository.crearLoteRepository(nombre, kilos, cooperativaId);\n  }\n\n  listarLotesService() {\n    return this.repository.listarLotesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearLoteRepository(nombre, kilos, cooperativaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/lotes/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../entities/lote.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>\n  ) {}\n\n  crearLoteRepository(nombre: string, kilos: number, cooperativaId: number) {\n    const lote = this.lotes.create({\n      nombre, kilos, cooperativa: { id: cooperativaId }\n    });\n    return this.lotes.save(lote);\n  }\n\n  listarLotesRepository() {\n    return this.lotes.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "cooperativa: { id: cooperativaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_COOPERATIVA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.lotes.save(lote)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /lotes\n{\"nombre\":\"Registro de prueba\",\"kilos\":41,\"cooperativaId\":2}\n\n201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/lotes/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('lotes/:loteId')\n  @HttpCode(204)\n  async ejecutar(@Param('loteId', ParseIntPipe) loteId: number) {\n    return this.service.eliminarLoteService(loteId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('lotes/:loteId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarLoteService(loteId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/lotes/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarLoteService(loteId: number) {\n    return this.repository.eliminarLoteRepository(loteId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarLoteRepository(loteId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/lotes/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../entities/lote.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>\n  ) {}\n\n  async eliminarLoteRepository(loteId: number) {\n    await this.lotes.delete(loteId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.lotes.delete(loteId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /lotes/10\n\n204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/lotes/modificar-kilos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarKilosService } from './service';\n\n@Controller()\nexport class ModificarKilosController {\n  constructor(private readonly service: ModificarKilosService) {}\n\n  @Patch('lotes/:loteId')\n  async ejecutar(@Param('loteId', ParseIntPipe) loteId: number,\n    @Body() datos: { kilos: number }) {\n    return this.service.modificarKilosService(loteId, datos.kilos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('lotes/:loteId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarKilosService(loteId, datos.kilos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/lotes/modificar-kilos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarKilosRepository } from './repository';\n\n@Injectable()\nexport class ModificarKilosService {\n  constructor(private readonly repository: ModificarKilosRepository) {}\n\n  modificarKilosService(loteId: number, kilos: number) {\n    return this.repository.modificarKilosRepository(loteId, kilos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarKilosRepository(loteId, kilos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/lotes/modificar-kilos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../entities/lote.entity';\n\n@Injectable()\nexport class ModificarKilosRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>\n  ) {}\n\n  async modificarKilosRepository(loteId: number, kilos: number) {\n    await this.lotes.update(loteId, { kilos });\n    return this.lotes.createQueryBuilder('p')\n      .where('p.id = :loteId', { loteId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.lotes.update(loteId, { kilos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :loteId', { loteId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /lotes/7\n{\"kilos\":160}\n\n200 · Registro 7 · kilos = 160 kg · cooperativaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 160 kg · cooperativaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 160 kg · cooperativaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/lotes/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('lotes/:loteId/cooperativa')\n  async ejecutar(@Param('loteId', ParseIntPipe) loteId: number,\n    @Body() datos: { cooperativaId: number }) {\n    return this.service.trasladarLoteService(loteId, datos.cooperativaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('lotes/:loteId/cooperativa')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarLoteService(loteId, datos.cooperativaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/lotes/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarLoteService(loteId: number, cooperativaId: number) {\n    return this.repository.trasladarLoteRepository(loteId, cooperativaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarLoteRepository(loteId, cooperativaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/lotes/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../entities/lote.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>\n  ) {}\n\n  async trasladarLoteRepository(loteId: number, cooperativaId: number) {\n    await this.lotes.update(loteId, { cooperativa: { id: cooperativaId } });\n    return this.lotes.createQueryBuilder('p')\n      .where('p.id = :loteId', { loteId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.lotes.update(loteId, { cooperativa: { id: cooperativaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :loteId', { loteId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /lotes/7/cooperativa\n{\"cooperativaId\":2}\n\n200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/cooperativas/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarCooperativaService } from './service';\n\n@Controller()\nexport class ConsultarCooperativaController {\n  constructor(private readonly service: ConsultarCooperativaService) {}\n\n  @Get('cooperativas/:cooperativaId/lotes')\n  async ejecutar(@Param('cooperativaId', ParseIntPipe) cooperativaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarCooperativaService(cooperativaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('cooperativas/:cooperativaId/lotes')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarCooperativaService(cooperativaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cooperativas/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarCooperativaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarCooperativaService {\n  constructor(private readonly repository: ConsultarCooperativaRepository) {}\n\n  consultarCooperativaService(cooperativaId: number, minimo: number) {\n    return this.repository.consultarCooperativaRepository(cooperativaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarCooperativaRepository(cooperativaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cooperativas/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../../lotes/entities/lote.entity';\nimport { Cooperativa } from '../entities/cooperativa.entity';\n\n@Injectable()\nexport class ConsultarCooperativaRepository {\n  constructor(\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Cooperativa) private readonly cooperativas: Repository<Cooperativa>\n  ) {}\n\n  async consultarCooperativaRepository(cooperativaId: number, minimo: number) {\n    const cooperativa = await this.cooperativas.createQueryBuilder('h')\n      .where('h.id = :cooperativaId', { cooperativaId }).getOne();\n    const lotes = await this.lotes.createQueryBuilder('p')\n      .innerJoin('p.cooperativa', 'h')\n      .where('h.id = :cooperativaId', { cooperativaId })\n      .andWhere('p.kilos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { cooperativa, lotes };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.cooperativa', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa LOTE y h representa COOPERATIVA."
+          },
+          {
+            "text": ".where('h.id = :cooperativaId', { cooperativaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :cooperativaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.kilos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.KILOS >= 121. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cooperativas/2/lotes?minimo=121\n\n200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "COOPERATIVA  1 ───────── 0..N  LOTE\n\nCOOPERATIVA                         LOTE\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               KILOS\n                               ID_COOPERATIVA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por lote",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias lotes",
+            "note": "Un cooperativa puede tener cero, una o muchas lotes."
+          },
+          {
+            "text": "ID_COOPERATIVA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_COOPERATIVAS: { Ref: TablaCooperativas }\n    TABLA_LOTES: { Ref: TablaLotes }\n\nresources:\n  Resources:\n    TablaCooperativas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COOPERATIVAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COOPERATIVA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaLotes:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LOTES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: LOTE_ID, AttributeType: N }\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LOTE_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en LOTES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCooperativa\n            # Clave compuesta = partition key + sort key:\n            # (COOPERATIVA_ID, LOTE_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COOPERATIVA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cooperativa.\n              - AttributeName: LOTE_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - KILOS",
+        "cues": [
+          {
+            "text": "TableName: COOPERATIVAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear COOPERATIVAS."
+          },
+          {
+            "text": "TableName: LOTES",
+            "title": "Tabla de lotes",
+            "note": "La tabla usa LOTE_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorCooperativa",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por COOPERATIVA_ID y ordena por LOTE_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y KILOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/cooperativa-lote.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COOPERATIVAS = new Table({\n  name: process.env.TABLA_COOPERATIVAS, documentClient: db,\n  partitionKey: { name: 'COOPERATIVA_ID', type: 'number' }\n});\n\nexport const TABLA_LOTES = new Table({\n  name: process.env.TABLA_LOTES, documentClient: db,\n  partitionKey: { name: 'LOTE_ID', type: 'number' },\n  indexes: {\n    PorCooperativa: {\n      type: 'global',\n      partitionKey: { name: 'COOPERATIVA_ID', type: 'number' },\n      sortKey: { name: 'LOTE_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COOPERATIVA = new Entity({\n  name: 'Cooperativa', table: TABLA_COOPERATIVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cooperativaId: number().key().savedAs('COOPERATIVA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_LOTE = new Entity({\n  name: 'Lote', table: TABLA_LOTES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    loteId: number().key().savedAs('LOTE_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    cooperativaId: number().savedAs('COOPERATIVA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_LOTES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_LOTES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'LOTE_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "LOTE_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorCooperativa: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorCooperativa que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es COOPERATIVA_ID y su sort key LOTE_ID: agrupa lotes de toda la tabla por cooperativa."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/cooperativa-lote.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COOPERATIVAS = new Table({\n  name: process.env.TABLA_COOPERATIVAS, documentClient: db,\n  partitionKey: { name: 'COOPERATIVA_ID', type: 'number' }\n});\n\nexport const TABLA_LOTES = new Table({\n  name: process.env.TABLA_LOTES, documentClient: db,\n  partitionKey: { name: 'LOTE_ID', type: 'number' },\n  indexes: {\n    PorCooperativa: {\n      type: 'global',\n      partitionKey: { name: 'COOPERATIVA_ID', type: 'number' },\n      sortKey: { name: 'LOTE_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COOPERATIVA = new Entity({\n  name: 'Cooperativa', table: TABLA_COOPERATIVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cooperativaId: number().key().savedAs('COOPERATIVA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_LOTE = new Entity({\n  name: 'Lote', table: TABLA_LOTES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    loteId: number().key().savedAs('LOTE_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    cooperativaId: number().savedAs('COOPERATIVA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_LOTE = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_LOTE en el repository."
+          },
+          {
+            "text": "name: 'Lote', table: TABLA_LOTES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_LOTES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "loteId: number().key().savedAs('LOTE_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce loteId a LOTE_ID."
+          },
+          {
+            "text": "kilos: number().savedAs('KILOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. kilos es un número; se guarda como KILOS y no forma parte de la clave."
+          },
+          {
+            "text": "cooperativaId: number().savedAs('COOPERATIVA_ID')",
+            "title": "Guardar la referencia",
+            "note": "COOPERATIVA_ID es un atributo de LOTES y la clave del índice PorCooperativa. Aquí no lleva .key(): la clave de la tabla sigue siendo LOTE_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/lotes/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function crearLoteRepository(lote) {\n  await MODELO_LOTE.build(PutItemCommand)\n    .item(lote)\n    .options({ condition: { attr: 'loteId', exists: false } })\n    .send();\n}\n\nexport async function listarLotesRepository() {\n  const { Items = [] } = await TABLA_LOTES.build(ScanCommand)\n    .entities(MODELO_LOTE)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/cooperativa-lote.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_LOTE.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_LOTE. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(lote)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa loteId, nombre, kilos y cooperativaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_LOTES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_LOTE)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_LOTE para interpretar los ítems: LOTE_ID vuelve a ser loteId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearLote:\n    handler: src/lotes/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /lotes }\n  listarLotes:\n    handler: src/lotes/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /lotes }\n  eliminarLote:\n    handler: src/lotes/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /lotes/{loteId} }\n  modificarKilos:\n    handler: src/lotes/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /lotes/{loteId} }\n  trasladarLote:\n    handler: src/lotes/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /lotes/{loteId}/cooperativa }\n  consultarCooperativa:\n    handler: src/cooperativas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /cooperativas/{cooperativaId}/lotes }",
+        "cues": [
+          {
+            "text": "src/lotes/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/lotes/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /lotes",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, kilos y cooperativaId."
+          },
+          {
+            "text": "path: /lotes/{loteId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.loteId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/lotes/crear-listar/handler.mjs",
+        "code": "import { crearLoteService, listarLotesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, kilos, cooperativaId } = JSON.parse(event.body);\n  const lote = await crearLoteService(nombre, kilos, cooperativaId);\n  return { statusCode: 201, body: JSON.stringify(lote) };\n}\n\nexport async function listarHandler() {\n  const lotes = await listarLotesService();\n  return { statusCode: 200, body: JSON.stringify(lotes) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearLoteService(nombre, kilos, cooperativaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/lotes/crear-listar/service.mjs",
+        "code": "import { crearLoteRepository, listarLotesRepository } from './repository.mjs';\n\nexport async function crearLoteService(nombre, kilos, cooperativaId) {\n  const loteId = Date.now();\n  const lote = { loteId, nombre, kilos, cooperativaId };\n  await crearLoteRepository(lote);\n  return lote;\n}\n\nexport function listarLotesService() {\n  return listarLotesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearLoteRepository(lote)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/lotes/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function crearLoteRepository(lote) {\n  await MODELO_LOTE.build(PutItemCommand)\n    .item(lote)\n    .options({ condition: { attr: 'loteId', exists: false } })\n    .send();\n}\n\nexport async function listarLotesRepository() {\n  const { Items = [] } = await TABLA_LOTES.build(ScanCommand)\n    .entities(MODELO_LOTE)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(lote)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva loteId, nombre, kilos y cooperativaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /lotes\n{\"nombre\":\"Registro de prueba\",\"kilos\":41,\"cooperativaId\":2}\n\n201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/lotes/eliminar/handler.mjs",
+        "code": "import { eliminarLoteService } from './service.mjs';\n\nexport async function handler(event) {\n  const loteId = Number(event.pathParameters.loteId);\n  await eliminarLoteService(loteId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.loteId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarLoteService(loteId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/lotes/eliminar/service.mjs",
+        "code": "import { eliminarLoteRepository } from './repository.mjs';\n\nexport async function eliminarLoteService(loteId) {\n  await eliminarLoteRepository(loteId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarLoteRepository(loteId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/lotes/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function eliminarLoteRepository(loteId) {\n  await MODELO_LOTE.build(DeleteItemCommand)\n    .key({ loteId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ loteId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /lotes/10\n\n204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/lotes/modificar-kilos/handler.mjs",
+        "code": "import { modificarKilosService } from './service.mjs';\n\nexport async function handler(event) {\n  const loteId = Number(event.pathParameters.loteId);\n  const { kilos } = JSON.parse(event.body);\n  const resultado = await modificarKilosService(loteId, kilos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.loteId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarKilosService(loteId, kilos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/lotes/modificar-kilos/service.mjs",
+        "code": "import { modificarKilosRepository } from './repository.mjs';\n\nexport function modificarKilosService(loteId, kilos) {\n  return modificarKilosRepository(loteId, kilos);\n}",
+        "cues": [
+          {
+            "text": "modificarKilosRepository(loteId, kilos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. kilos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/lotes/modificar-kilos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function modificarKilosRepository(loteId, kilos) {\n  const { Attributes } = await MODELO_LOTE.build(UpdateItemCommand)\n    .item({ loteId, kilos })\n    .options({\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ loteId, kilos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo kilos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /lotes/7\n{\"kilos\":160}\n\n200 · Registro 7 · kilos = 160 kg · cooperativaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 160 kg · cooperativaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 160 kg · cooperativaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/lotes/trasladar/handler.mjs",
+        "code": "import { trasladarLoteService } from './service.mjs';\n\nexport async function handler(event) {\n  const loteId = Number(event.pathParameters.loteId);\n  const { cooperativaId } = JSON.parse(event.body);\n  const resultado = await trasladarLoteService(loteId, cooperativaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.loteId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarLoteService(loteId, cooperativaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/lotes/trasladar/service.mjs",
+        "code": "import { trasladarLoteRepository } from './repository.mjs';\nimport { buscarCooperativaRepository } from '../../cooperativas/consultar/repository.mjs';\n\nexport async function trasladarLoteService(loteId, cooperativaId) {\n  const cooperativa = await buscarCooperativaRepository(cooperativaId);\n  if (!cooperativa) throw new Error('Cooperativa no encontrado');\n  return trasladarLoteRepository(loteId, cooperativaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarCooperativaRepository(cooperativaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarLoteRepository(loteId, cooperativaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza COOPERATIVA_ID. LOTE_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/lotes/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function trasladarLoteRepository(loteId, cooperativaId) {\n  const { Attributes } = await MODELO_LOTE.build(UpdateItemCommand)\n    .item({ loteId, cooperativaId })\n    .options({\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ loteId, cooperativaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo cooperativaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /lotes/7/cooperativa\n{\"cooperativaId\":2}\n\n200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/cooperativas/consultar/handler.mjs",
+        "code": "import { consultarCooperativaService } from './service.mjs';\n\nexport async function handler(event) {\n  const cooperativaId = Number(event.pathParameters.cooperativaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarCooperativaService(cooperativaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cooperativaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarCooperativaService(cooperativaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cooperativas/consultar/service.mjs",
+        "code": "import { buscarCooperativaRepository, consultarCooperativaRepository } from './repository.mjs';\n\nexport async function consultarCooperativaService(cooperativaId, minimo) {\n  const cooperativa = await buscarCooperativaRepository(cooperativaId);\n  if (!cooperativa) throw new Error('Cooperativa no encontrado');\n  const lotes = await consultarCooperativaRepository(cooperativaId, minimo);\n  return { cooperativa, lotes };\n}",
+        "cues": [
+          {
+            "text": "await buscarCooperativaRepository(cooperativaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarCooperativaRepository(cooperativaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { cooperativa, lotes }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cooperativas/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function buscarCooperativaRepository(cooperativaId) {\n  const { Item } = await MODELO_COOPERATIVA.build(GetItemCommand)\n    .key({ cooperativaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCooperativaRepository(cooperativaId, minimo) {\n  const { Items = [] } = await TABLA_LOTES.build(QueryCommand)\n    .entities(MODELO_LOTE)\n    .query({ index: 'PorCooperativa', partition: cooperativaId })\n    .options({ filters: { Lote: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con COOPERATIVA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorCooperativa', partition: cooperativaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por COOPERATIVA_ID. No busca por LOTE_ID."
+          },
+          {
+            "text": "attr: 'kilos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cooperativas/2/lotes?minimo=121\n\n200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Lote de manzanas",
+      "value": 40,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Lote de peras",
+      "value": 120,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Lote de manzanas · nuevo",
+      "value": 200,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/lotes",
+      "request": "POST /lotes\n{\"nombre\":\"Registro de prueba\",\"kilos\":41,\"cooperativaId\":2}",
+      "fields": "nombre, kilos, cooperativaId",
+      "args": "nombre, kilos, cooperativaId",
+      "result": "201 · Registro 10 creado → GET /lotes → 200 · aparecen 4 registros",
+      "service": "crearLoteService",
+      "repo": "crearLoteRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/lotes/:loteId",
+      "request": "DELETE /lotes/10",
+      "fields": "loteId",
+      "args": "loteId",
+      "result": "204 · Registro 10 eliminado → GET /lotes → 200 · quedan 7, 8 y 9",
+      "service": "eliminarLoteService",
+      "repo": "eliminarLoteRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-kilos",
+      "title": "Cambiar peso",
+      "verb": "PATCH",
+      "route": "/lotes/:loteId",
+      "request": "PATCH /lotes/7\n{\"kilos\":160}",
+      "fields": "loteId, kilos",
+      "args": "loteId, kilos",
+      "result": "200 · Registro 7 · kilos = 160 kg · cooperativaId = 1",
+      "service": "modificarKilosService",
+      "repo": "modificarKilosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de cooperativa",
+      "verb": "PATCH",
+      "route": "/lotes/:loteId/cooperativa",
+      "request": "PATCH /lotes/7/cooperativa\n{\"cooperativaId\":2}",
+      "fields": "loteId, cooperativaId",
+      "args": "loteId, cooperativaId",
+      "result": "200 · Registro 7 · kilos = 160 kg · cooperativaId pasa de 1 a 2",
+      "service": "trasladarLoteService",
+      "repo": "trasladarLoteRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un cooperativa",
+      "verb": "GET",
+      "route": "/cooperativas/:cooperativaId/lotes",
+      "request": "GET /cooperativas/2/lotes?minimo=121",
+      "fields": "cooperativaId, minimo",
+      "args": "cooperativaId, minimo",
+      "result": "200 · Cooperativa Campo + registro 7 (160 kg). Excluye el 8 (120 kg) y el 9 (pertenece al ID 1).",
+      "service": "consultarCooperativaService",
+      "repo": "consultarCooperativaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-12",
+    "title": "Cooperativa → Lote",
+    "parent": {
+      "entity": "Cooperativa",
+      "sql": "COOPERATIVA",
+      "table": "COOPERATIVAS",
+      "route": "cooperativas",
+      "property": "cooperativa",
+      "input": "cooperativaId",
+      "variable": "TABLA_COOPERATIVAS",
+      "model": "MODELO_COOPERATIVA",
+      "file": "src/cooperativas/entities/cooperativa.entity.ts",
+      "examples": [
+        "Cooperativa Olivo",
+        "Cooperativa Campo"
+      ]
+    },
+    "child": {
+      "entity": "Lote",
+      "sql": "LOTE",
+      "table": "LOTES",
+      "route": "lotes",
+      "property": "lote",
+      "input": "loteId",
+      "inverse": "lotes",
+      "variable": "TABLA_LOTES",
+      "model": "MODELO_LOTE",
+      "file": "src/lotes/entities/lote.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "kilos",
+      "column": "KILOS",
+      "label": "Peso",
+      "unit": "kg",
+      "initial": 40,
+      "other": 120,
+      "after": 160,
+      "minimum": 121,
+      "create": 41,
+      "unrelated": 200
+    },
+    "foreignKey": "ID_COOPERATIVA",
+    "index": "PorCooperativa",
+    "modelFile": "src/models/cooperativa-lote.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

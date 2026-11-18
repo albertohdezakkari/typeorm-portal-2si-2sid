@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-16",
+    "sha256": "12c3e49669b9c3b221ce036c9a6e4d7aac0fd1f628fd0cb854c6efca22439937",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar existencias",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "TIENDA  1 ───────── 0..N  ARTICULO\n\nTIENDA                         ARTICULO\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               STOCK\n                               ID_TIENDA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por articulo",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias articulos",
+            "note": "Un tienda puede tener cero, una o muchas articulos."
+          },
+          {
+            "text": "ID_TIENDA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Tienda",
+        "path": "src/tiendas/entities/tienda.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Articulo } from '../../articulos/entities/articulo.entity';\n\n@Entity({ name: 'TIENDA' })\nexport class Tienda {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Articulo, articulo => articulo.tienda)\n  articulos!: Articulo[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'TIENDA' })",
+            "title": "Clase Tienda → tabla TIENDA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Articulo, articulo => articulo.tienda)",
+            "title": "Una colección de articulos",
+            "note": "Tienda.articulos representa los registros asociados. articulo.tienda señala la propiedad del otro lado; no crea una segunda FK en TIENDA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Articulo",
+        "path": "src/articulos/entities/articulo.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Tienda } from '../../tiendas/entities/tienda.entity';\n\n@Entity({ name: 'ARTICULO' })\nexport class Articulo {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'STOCK', type: 'integer' })\n  stock!: number;\n\n  @ManyToOne(() => Tienda, tienda => tienda.articulos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TIENDA' })\n  tienda!: Tienda;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'ARTICULO' })",
+            "title": "Clase Articulo → tabla ARTICULO",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, existencias y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de ARTICULO. No es el ID del registro principal y no se repite entre articulos."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'STOCK', type: 'integer' })",
+            "title": "Una existencias numérica",
+            "note": "stock se guarda en STOCK, de tipo entero. El siguiente paso detalla la relación con Tienda."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/articulos/entities/articulo.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Tienda } from '../../tiendas/entities/tienda.entity';\n\n@Entity({ name: 'ARTICULO' })\nexport class Articulo {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'STOCK', type: 'integer' })\n  stock!: number;\n\n  @ManyToOne(() => Tienda, tienda => tienda.articulos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TIENDA' })\n  tienda!: Tienda;\n}",
+        "cues": [
+          {
+            "text": "import { Tienda } from '../../tiendas/entities/tienda.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Articulo importa la clase Tienda para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Tienda, tienda => tienda.articulos, {",
+            "title": "Muchas articulos → un registro principal",
+            "note": "() => Tienda indica la entidad de destino. tienda.articulos indica la colección inversa, definida con @OneToMany en Tienda."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda articulo tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_TIENDA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_TIENDA' })",
+            "title": "La FK está en ARTICULO",
+            "note": "JoinColumn da el nombre físico de la FK: ARTICULO.ID_TIENDA referencia TIENDA.ID. El mismo tienda puede aparecer en varias articulos."
+          },
+          {
+            "text": "tienda!: Tienda;",
+            "title": "Una propiedad de tipo Tienda",
+            "note": "En el código usamos articulo.tienda; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_TIENDA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Tienda } from './tiendas/entities/tienda.entity';\nimport { Articulo } from './articulos/entities/articulo.entity';\nimport { CrearListarController } from './articulos/crear-listar/controller';\nimport { CrearListarService } from './articulos/crear-listar/service';\nimport { CrearListarRepository } from './articulos/crear-listar/repository';\nimport { EliminarController } from './articulos/eliminar/controller';\nimport { EliminarService } from './articulos/eliminar/service';\nimport { EliminarRepository } from './articulos/eliminar/repository';\nimport { ModificarStockController } from './articulos/modificar-stock/controller';\nimport { ModificarStockService } from './articulos/modificar-stock/service';\nimport { ModificarStockRepository } from './articulos/modificar-stock/repository';\nimport { TrasladarController } from './articulos/trasladar/controller';\nimport { TrasladarService } from './articulos/trasladar/service';\nimport { TrasladarRepository } from './articulos/trasladar/repository';\nimport { ConsultarTiendaController } from './tiendas/consultar/controller';\nimport { ConsultarTiendaService } from './tiendas/consultar/service';\nimport { ConsultarTiendaRepository } from './tiendas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Tienda, Articulo])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarStockController,\n    TrasladarController,\n    ConsultarTiendaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarStockService,\n    ModificarStockRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarTiendaService,\n    ConsultarTiendaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Tienda } from './tiendas/entities/tienda.entity';",
+            "title": "Importar Tienda",
+            "note": "El módulo utiliza la misma clase Tienda que has preparado en entities."
+          },
+          {
+            "text": "import { Articulo } from './articulos/entities/articulo.entity';",
+            "title": "Importar Articulo",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Tienda, Articulo])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Tienda> y Repository<Articulo>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/articulos/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../entities/articulo.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>\n  ) {}\n\n  crearArticuloRepository(nombre: string, stock: number, tiendaId: number) {\n    const articulo = this.articulos.create({\n      nombre, stock, tienda: { id: tiendaId }\n    });\n    return this.articulos.save(articulo);\n  }\n\n  listarArticulosRepository() {\n    return this.articulos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Articulo } from '../entities/articulo.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Articulo de su fichero entities/articulo.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Articulo) private readonly articulos: Repository<Articulo>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Articulo) pide a Nest el repositorio de esa Entity. articulos es el nombre de la dependencia; Repository<Articulo> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.articulos.create({",
+            "title": "Preparar un objeto Articulo",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "tienda: { id: tiendaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad tienda existe en la Entity Articulo. TypeORM traduce tienda.id a la FK ID_TIENDA al guardar."
+          },
+          {
+            "text": "this.articulos.save(articulo)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Articulo y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia TIENDA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Articulo>. getMany devuelve objetos Articulo, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/articulos/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('articulos')\n  async ejecutar(@Body() datos: { nombre: string; stock: number; tiendaId: number }) {\n    return this.service.crearArticuloService(datos.nombre, datos.stock, datos.tiendaId);\n  }\n\n  @Get('articulos')\n  listar() {\n    return this.service.listarArticulosService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('articulos')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearArticuloService(datos.nombre, datos.stock, datos.tiendaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/articulos/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearArticuloService(nombre: string, stock: number, tiendaId: number) {\n    return this.repository.crearArticuloRepository(nombre, stock, tiendaId);\n  }\n\n  listarArticulosService() {\n    return this.repository.listarArticulosRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearArticuloRepository(nombre, stock, tiendaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/articulos/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../entities/articulo.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>\n  ) {}\n\n  crearArticuloRepository(nombre: string, stock: number, tiendaId: number) {\n    const articulo = this.articulos.create({\n      nombre, stock, tienda: { id: tiendaId }\n    });\n    return this.articulos.save(articulo);\n  }\n\n  listarArticulosRepository() {\n    return this.articulos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "tienda: { id: tiendaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_TIENDA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.articulos.save(articulo)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /articulos\n{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}\n\n201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/articulos/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('articulos/:articuloId')\n  @HttpCode(204)\n  async ejecutar(@Param('articuloId', ParseIntPipe) articuloId: number) {\n    return this.service.eliminarArticuloService(articuloId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('articulos/:articuloId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarArticuloService(articuloId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/articulos/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarArticuloService(articuloId: number) {\n    return this.repository.eliminarArticuloRepository(articuloId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarArticuloRepository(articuloId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/articulos/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../entities/articulo.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>\n  ) {}\n\n  async eliminarArticuloRepository(articuloId: number) {\n    await this.articulos.delete(articuloId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.articulos.delete(articuloId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /articulos/10\n\n204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/articulos/modificar-stock/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarStockService } from './service';\n\n@Controller()\nexport class ModificarStockController {\n  constructor(private readonly service: ModificarStockService) {}\n\n  @Patch('articulos/:articuloId')\n  async ejecutar(@Param('articuloId', ParseIntPipe) articuloId: number,\n    @Body() datos: { stock: number }) {\n    return this.service.modificarStockService(articuloId, datos.stock);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('articulos/:articuloId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarStockService(articuloId, datos.stock)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/articulos/modificar-stock/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarStockRepository } from './repository';\n\n@Injectable()\nexport class ModificarStockService {\n  constructor(private readonly repository: ModificarStockRepository) {}\n\n  modificarStockService(articuloId: number, stock: number) {\n    return this.repository.modificarStockRepository(articuloId, stock);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarStockRepository(articuloId, stock)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/articulos/modificar-stock/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../entities/articulo.entity';\n\n@Injectable()\nexport class ModificarStockRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>\n  ) {}\n\n  async modificarStockRepository(articuloId: number, stock: number) {\n    await this.articulos.update(articuloId, { stock });\n    return this.articulos.createQueryBuilder('p')\n      .where('p.id = :articuloId', { articuloId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.articulos.update(articuloId, { stock })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :articuloId', { articuloId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /articulos/7\n{\"stock\":72}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/articulos/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('articulos/:articuloId/tienda')\n  async ejecutar(@Param('articuloId', ParseIntPipe) articuloId: number,\n    @Body() datos: { tiendaId: number }) {\n    return this.service.trasladarArticuloService(articuloId, datos.tiendaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('articulos/:articuloId/tienda')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarArticuloService(articuloId, datos.tiendaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/articulos/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarArticuloService(articuloId: number, tiendaId: number) {\n    return this.repository.trasladarArticuloRepository(articuloId, tiendaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarArticuloRepository(articuloId, tiendaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/articulos/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../entities/articulo.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>\n  ) {}\n\n  async trasladarArticuloRepository(articuloId: number, tiendaId: number) {\n    await this.articulos.update(articuloId, { tienda: { id: tiendaId } });\n    return this.articulos.createQueryBuilder('p')\n      .where('p.id = :articuloId', { articuloId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.articulos.update(articuloId, { tienda: { id: tiendaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :articuloId', { articuloId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /articulos/7/tienda\n{\"tiendaId\":2}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/tiendas/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarTiendaService } from './service';\n\n@Controller()\nexport class ConsultarTiendaController {\n  constructor(private readonly service: ConsultarTiendaService) {}\n\n  @Get('tiendas/:tiendaId/articulos')\n  async ejecutar(@Param('tiendaId', ParseIntPipe) tiendaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarTiendaService(tiendaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('tiendas/:tiendaId/articulos')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarTiendaService(tiendaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/tiendas/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarTiendaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarTiendaService {\n  constructor(private readonly repository: ConsultarTiendaRepository) {}\n\n  consultarTiendaService(tiendaId: number, minimo: number) {\n    return this.repository.consultarTiendaRepository(tiendaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarTiendaRepository(tiendaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/tiendas/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Articulo } from '../../articulos/entities/articulo.entity';\nimport { Tienda } from '../entities/tienda.entity';\n\n@Injectable()\nexport class ConsultarTiendaRepository {\n  constructor(\n    @InjectRepository(Articulo) private readonly articulos: Repository<Articulo>,\n    @InjectRepository(Tienda) private readonly tiendas: Repository<Tienda>\n  ) {}\n\n  async consultarTiendaRepository(tiendaId: number, minimo: number) {\n    const tienda = await this.tiendas.createQueryBuilder('h')\n      .where('h.id = :tiendaId', { tiendaId }).getOne();\n    const articulos = await this.articulos.createQueryBuilder('p')\n      .innerJoin('p.tienda', 'h')\n      .where('h.id = :tiendaId', { tiendaId })\n      .andWhere('p.stock >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { tienda, articulos };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.tienda', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa ARTICULO y h representa TIENDA."
+          },
+          {
+            "text": ".where('h.id = :tiendaId', { tiendaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :tiendaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.stock >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.STOCK >= 61. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /tiendas/2/articulos?minimo=61\n\n200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "TIENDA  1 ───────── 0..N  ARTICULO\n\nTIENDA                         ARTICULO\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               STOCK\n                               ID_TIENDA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por articulo",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias articulos",
+            "note": "Un tienda puede tener cero, una o muchas articulos."
+          },
+          {
+            "text": "ID_TIENDA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_TIENDAS: { Ref: TablaTiendas }\n    TABLA_ARTICULOS: { Ref: TablaArticulos }\n\nresources:\n  Resources:\n    TablaTiendas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TIENDAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TIENDA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaArticulos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ARTICULOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ARTICULO_ID, AttributeType: N }\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ARTICULO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ARTICULOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTienda\n            # Clave compuesta = partition key + sort key:\n            # (TIENDA_ID, ARTICULO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TIENDA_ID\n                KeyType: HASH   # Partition key. Agrupa por Tienda.\n              - AttributeName: ARTICULO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - STOCK",
+        "cues": [
+          {
+            "text": "TableName: TIENDAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear TIENDAS."
+          },
+          {
+            "text": "TableName: ARTICULOS",
+            "title": "Tabla de articulos",
+            "note": "La tabla usa ARTICULO_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorTienda",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por TIENDA_ID y ordena por ARTICULO_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y STOCK para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/tienda-articulo.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TIENDAS = new Table({\n  name: process.env.TABLA_TIENDAS, documentClient: db,\n  partitionKey: { name: 'TIENDA_ID', type: 'number' }\n});\n\nexport const TABLA_ARTICULOS = new Table({\n  name: process.env.TABLA_ARTICULOS, documentClient: db,\n  partitionKey: { name: 'ARTICULO_ID', type: 'number' },\n  indexes: {\n    PorTienda: {\n      type: 'global',\n      partitionKey: { name: 'TIENDA_ID', type: 'number' },\n      sortKey: { name: 'ARTICULO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TIENDA = new Entity({\n  name: 'Tienda', table: TABLA_TIENDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tiendaId: number().key().savedAs('TIENDA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ARTICULO = new Entity({\n  name: 'Articulo', table: TABLA_ARTICULOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    articuloId: number().key().savedAs('ARTICULO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    stock: number().savedAs('STOCK'),\n    tiendaId: number().savedAs('TIENDA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_ARTICULOS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_ARTICULOS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'ARTICULO_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "ARTICULO_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorTienda: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorTienda que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es TIENDA_ID y su sort key ARTICULO_ID: agrupa articulos de toda la tabla por tienda."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/tienda-articulo.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TIENDAS = new Table({\n  name: process.env.TABLA_TIENDAS, documentClient: db,\n  partitionKey: { name: 'TIENDA_ID', type: 'number' }\n});\n\nexport const TABLA_ARTICULOS = new Table({\n  name: process.env.TABLA_ARTICULOS, documentClient: db,\n  partitionKey: { name: 'ARTICULO_ID', type: 'number' },\n  indexes: {\n    PorTienda: {\n      type: 'global',\n      partitionKey: { name: 'TIENDA_ID', type: 'number' },\n      sortKey: { name: 'ARTICULO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TIENDA = new Entity({\n  name: 'Tienda', table: TABLA_TIENDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tiendaId: number().key().savedAs('TIENDA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ARTICULO = new Entity({\n  name: 'Articulo', table: TABLA_ARTICULOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    articuloId: number().key().savedAs('ARTICULO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    stock: number().savedAs('STOCK'),\n    tiendaId: number().savedAs('TIENDA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_ARTICULO = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ARTICULO en el repository."
+          },
+          {
+            "text": "name: 'Articulo', table: TABLA_ARTICULOS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_ARTICULOS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "articuloId: number().key().savedAs('ARTICULO_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce articuloId a ARTICULO_ID."
+          },
+          {
+            "text": "stock: number().savedAs('STOCK')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. stock es un número; se guarda como STOCK y no forma parte de la clave."
+          },
+          {
+            "text": "tiendaId: number().savedAs('TIENDA_ID')",
+            "title": "Guardar la referencia",
+            "note": "TIENDA_ID es un atributo de ARTICULOS y la clave del índice PorTienda. Aquí no lleva .key(): la clave de la tabla sigue siendo ARTICULO_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/articulos/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function crearArticuloRepository(articulo) {\n  await MODELO_ARTICULO.build(PutItemCommand)\n    .item(articulo)\n    .options({ condition: { attr: 'articuloId', exists: false } })\n    .send();\n}\n\nexport async function listarArticulosRepository() {\n  const { Items = [] } = await TABLA_ARTICULOS.build(ScanCommand)\n    .entities(MODELO_ARTICULO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/tienda-articulo.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_ARTICULO.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_ARTICULO. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(articulo)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa articuloId, nombre, stock y tiendaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_ARTICULOS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_ARTICULO)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_ARTICULO para interpretar los ítems: ARTICULO_ID vuelve a ser articuloId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearArticulo:\n    handler: src/articulos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /articulos }\n  listarArticulos:\n    handler: src/articulos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /articulos }\n  eliminarArticulo:\n    handler: src/articulos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /articulos/{articuloId} }\n  modificarStock:\n    handler: src/articulos/modificar-stock/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId} }\n  trasladarArticulo:\n    handler: src/articulos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId}/tienda }\n  consultarTienda:\n    handler: src/tiendas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /tiendas/{tiendaId}/articulos }",
+        "cues": [
+          {
+            "text": "src/articulos/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/articulos/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /articulos",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, stock y tiendaId."
+          },
+          {
+            "text": "path: /articulos/{articuloId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.articuloId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/articulos/crear-listar/handler.mjs",
+        "code": "import { crearArticuloService, listarArticulosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, stock, tiendaId } = JSON.parse(event.body);\n  const articulo = await crearArticuloService(nombre, stock, tiendaId);\n  return { statusCode: 201, body: JSON.stringify(articulo) };\n}\n\nexport async function listarHandler() {\n  const articulos = await listarArticulosService();\n  return { statusCode: 200, body: JSON.stringify(articulos) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearArticuloService(nombre, stock, tiendaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/articulos/crear-listar/service.mjs",
+        "code": "import { crearArticuloRepository, listarArticulosRepository } from './repository.mjs';\n\nexport async function crearArticuloService(nombre, stock, tiendaId) {\n  const articuloId = Date.now();\n  const articulo = { articuloId, nombre, stock, tiendaId };\n  await crearArticuloRepository(articulo);\n  return articulo;\n}\n\nexport function listarArticulosService() {\n  return listarArticulosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearArticuloRepository(articulo)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/articulos/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function crearArticuloRepository(articulo) {\n  await MODELO_ARTICULO.build(PutItemCommand)\n    .item(articulo)\n    .options({ condition: { attr: 'articuloId', exists: false } })\n    .send();\n}\n\nexport async function listarArticulosRepository() {\n  const { Items = [] } = await TABLA_ARTICULOS.build(ScanCommand)\n    .entities(MODELO_ARTICULO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(articulo)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva articuloId, nombre, stock y tiendaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /articulos\n{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}\n\n201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/articulos/eliminar/handler.mjs",
+        "code": "import { eliminarArticuloService } from './service.mjs';\n\nexport async function handler(event) {\n  const articuloId = Number(event.pathParameters.articuloId);\n  await eliminarArticuloService(articuloId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.articuloId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarArticuloService(articuloId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/articulos/eliminar/service.mjs",
+        "code": "import { eliminarArticuloRepository } from './repository.mjs';\n\nexport async function eliminarArticuloService(articuloId) {\n  await eliminarArticuloRepository(articuloId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarArticuloRepository(articuloId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/articulos/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function eliminarArticuloRepository(articuloId) {\n  await MODELO_ARTICULO.build(DeleteItemCommand)\n    .key({ articuloId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ articuloId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /articulos/10\n\n204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/articulos/modificar-stock/handler.mjs",
+        "code": "import { modificarStockService } from './service.mjs';\n\nexport async function handler(event) {\n  const articuloId = Number(event.pathParameters.articuloId);\n  const { stock } = JSON.parse(event.body);\n  const resultado = await modificarStockService(articuloId, stock);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.articuloId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarStockService(articuloId, stock)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/articulos/modificar-stock/service.mjs",
+        "code": "import { modificarStockRepository } from './repository.mjs';\n\nexport function modificarStockService(articuloId, stock) {\n  return modificarStockRepository(articuloId, stock);\n}",
+        "cues": [
+          {
+            "text": "modificarStockRepository(articuloId, stock)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. stock es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/articulos/modificar-stock/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function modificarStockRepository(articuloId, stock) {\n  const { Attributes } = await MODELO_ARTICULO.build(UpdateItemCommand)\n    .item({ articuloId, stock })\n    .options({\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ articuloId, stock })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo stock. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /articulos/7\n{\"stock\":72}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/articulos/trasladar/handler.mjs",
+        "code": "import { trasladarArticuloService } from './service.mjs';\n\nexport async function handler(event) {\n  const articuloId = Number(event.pathParameters.articuloId);\n  const { tiendaId } = JSON.parse(event.body);\n  const resultado = await trasladarArticuloService(articuloId, tiendaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.articuloId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarArticuloService(articuloId, tiendaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/articulos/trasladar/service.mjs",
+        "code": "import { trasladarArticuloRepository } from './repository.mjs';\nimport { buscarTiendaRepository } from '../../tiendas/consultar/repository.mjs';\n\nexport async function trasladarArticuloService(articuloId, tiendaId) {\n  const tienda = await buscarTiendaRepository(tiendaId);\n  if (!tienda) throw new Error('Tienda no encontrado');\n  return trasladarArticuloRepository(articuloId, tiendaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarTiendaRepository(tiendaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarArticuloRepository(articuloId, tiendaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza TIENDA_ID. ARTICULO_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/articulos/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function trasladarArticuloRepository(articuloId, tiendaId) {\n  const { Attributes } = await MODELO_ARTICULO.build(UpdateItemCommand)\n    .item({ articuloId, tiendaId })\n    .options({\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ articuloId, tiendaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo tiendaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /articulos/7/tienda\n{\"tiendaId\":2}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/tiendas/consultar/handler.mjs",
+        "code": "import { consultarTiendaService } from './service.mjs';\n\nexport async function handler(event) {\n  const tiendaId = Number(event.pathParameters.tiendaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarTiendaService(tiendaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.tiendaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarTiendaService(tiendaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/tiendas/consultar/service.mjs",
+        "code": "import { buscarTiendaRepository, consultarTiendaRepository } from './repository.mjs';\n\nexport async function consultarTiendaService(tiendaId, minimo) {\n  const tienda = await buscarTiendaRepository(tiendaId);\n  if (!tienda) throw new Error('Tienda no encontrado');\n  const articulos = await consultarTiendaRepository(tiendaId, minimo);\n  return { tienda, articulos };\n}",
+        "cues": [
+          {
+            "text": "await buscarTiendaRepository(tiendaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarTiendaRepository(tiendaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { tienda, articulos }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/tiendas/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function buscarTiendaRepository(tiendaId) {\n  const { Item } = await MODELO_TIENDA.build(GetItemCommand)\n    .key({ tiendaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTiendaRepository(tiendaId, minimo) {\n  const { Items = [] } = await TABLA_ARTICULOS.build(QueryCommand)\n    .entities(MODELO_ARTICULO)\n    .query({ index: 'PorTienda', partition: tiendaId })\n    .options({ filters: { Articulo: { attr: 'stock', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con TIENDA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorTienda', partition: tiendaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por TIENDA_ID. No busca por ARTICULO_ID."
+          },
+          {
+            "text": "attr: 'stock', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /tiendas/2/articulos?minimo=61\n\n200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Cuaderno azul",
+      "value": 12,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Estuche verde",
+      "value": 60,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Cuaderno azul · nuevo",
+      "value": 84,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/articulos",
+      "request": "POST /articulos\n{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}",
+      "fields": "nombre, stock, tiendaId",
+      "args": "nombre, stock, tiendaId",
+      "result": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros",
+      "service": "crearArticuloService",
+      "repo": "crearArticuloRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/articulos/:articuloId",
+      "request": "DELETE /articulos/10",
+      "fields": "articuloId",
+      "args": "articuloId",
+      "result": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
+      "service": "eliminarArticuloService",
+      "repo": "eliminarArticuloRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-stock",
+      "title": "Cambiar existencias",
+      "verb": "PATCH",
+      "route": "/articulos/:articuloId",
+      "request": "PATCH /articulos/7\n{\"stock\":72}",
+      "fields": "articuloId, stock",
+      "args": "articuloId, stock",
+      "result": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
+      "service": "modificarStockService",
+      "repo": "modificarStockRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de tienda",
+      "verb": "PATCH",
+      "route": "/articulos/:articuloId/tienda",
+      "request": "PATCH /articulos/7/tienda\n{\"tiendaId\":2}",
+      "fields": "articuloId, tiendaId",
+      "args": "articuloId, tiendaId",
+      "result": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
+      "service": "trasladarArticuloService",
+      "repo": "trasladarArticuloRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un tienda",
+      "verb": "GET",
+      "route": "/tiendas/:tiendaId/articulos",
+      "request": "GET /tiendas/2/articulos?minimo=61",
+      "fields": "tiendaId, minimo",
+      "args": "tiendaId, minimo",
+      "result": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
+      "service": "consultarTiendaService",
+      "repo": "consultarTiendaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-16",
+    "title": "Tienda → Articulo",
+    "parent": {
+      "entity": "Tienda",
+      "sql": "TIENDA",
+      "table": "TIENDAS",
+      "route": "tiendas",
+      "property": "tienda",
+      "input": "tiendaId",
+      "variable": "TABLA_TIENDAS",
+      "model": "MODELO_TIENDA",
+      "file": "src/tiendas/entities/tienda.entity.ts",
+      "examples": [
+        "Tienda Esquina",
+        "Tienda Centro"
+      ]
+    },
+    "child": {
+      "entity": "Articulo",
+      "sql": "ARTICULO",
+      "table": "ARTICULOS",
+      "route": "articulos",
+      "property": "articulo",
+      "input": "articuloId",
+      "inverse": "articulos",
+      "variable": "TABLA_ARTICULOS",
+      "model": "MODELO_ARTICULO",
+      "file": "src/articulos/entities/articulo.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "stock",
+      "column": "STOCK",
+      "label": "Existencias",
+      "unit": "unidades",
+      "initial": 12,
+      "other": 60,
+      "after": 72,
+      "minimum": 61,
+      "create": 13,
+      "unrelated": 84
+    },
+    "foreignKey": "ID_TIENDA",
+    "index": "PorTienda",
+    "modelFile": "src/models/tienda-articulo.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

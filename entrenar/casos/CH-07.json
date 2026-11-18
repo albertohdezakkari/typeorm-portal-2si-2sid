@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-07",
+    "sha256": "d6df179d4206d986aa993bf731b7f8f1d14a1d552e814f9856015436dbd7db3e",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar duración",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "AGENCIA  1 ───────── 0..N  EXCURSION\n\nAGENCIA                         EXCURSION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_HORAS\n                               ID_AGENCIA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por excursion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias excursiones",
+            "note": "Un agencia puede tener cero, una o muchas excursiones."
+          },
+          {
+            "text": "ID_AGENCIA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Agencia",
+        "path": "src/agencias/entities/agencia.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Excursion } from '../../excursiones/entities/excursion.entity';\n\n@Entity({ name: 'AGENCIA' })\nexport class Agencia {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Excursion, excursion => excursion.agencia)\n  excursiones!: Excursion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'AGENCIA' })",
+            "title": "Clase Agencia → tabla AGENCIA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Excursion, excursion => excursion.agencia)",
+            "title": "Una colección de excursiones",
+            "note": "Agencia.excursiones representa los registros asociados. excursion.agencia señala la propiedad del otro lado; no crea una segunda FK en AGENCIA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Excursion",
+        "path": "src/excursiones/entities/excursion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Agencia } from '../../agencias/entities/agencia.entity';\n\n@Entity({ name: 'EXCURSION' })\nexport class Excursion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'DURACION_HORAS', type: 'integer' })\n  duracionHoras!: number;\n\n  @ManyToOne(() => Agencia, agencia => agencia.excursiones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_AGENCIA' })\n  agencia!: Agencia;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'EXCURSION' })",
+            "title": "Clase Excursion → tabla EXCURSION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, duración y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de EXCURSION. No es el ID del registro principal y no se repite entre excursiones."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'DURACION_HORAS', type: 'integer' })",
+            "title": "Una duración numérica",
+            "note": "duracionHoras se guarda en DURACION_HORAS, de tipo entero. El siguiente paso detalla la relación con Agencia."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/excursiones/entities/excursion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Agencia } from '../../agencias/entities/agencia.entity';\n\n@Entity({ name: 'EXCURSION' })\nexport class Excursion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'DURACION_HORAS', type: 'integer' })\n  duracionHoras!: number;\n\n  @ManyToOne(() => Agencia, agencia => agencia.excursiones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_AGENCIA' })\n  agencia!: Agencia;\n}",
+        "cues": [
+          {
+            "text": "import { Agencia } from '../../agencias/entities/agencia.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Excursion importa la clase Agencia para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Agencia, agencia => agencia.excursiones, {",
+            "title": "Muchas excursiones → un registro principal",
+            "note": "() => Agencia indica la entidad de destino. agencia.excursiones indica la colección inversa, definida con @OneToMany en Agencia."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda excursion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_AGENCIA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_AGENCIA' })",
+            "title": "La FK está en EXCURSION",
+            "note": "JoinColumn da el nombre físico de la FK: EXCURSION.ID_AGENCIA referencia AGENCIA.ID. El mismo agencia puede aparecer en varias excursiones."
+          },
+          {
+            "text": "agencia!: Agencia;",
+            "title": "Una propiedad de tipo Agencia",
+            "note": "En el código usamos excursion.agencia; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_AGENCIA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Agencia } from './agencias/entities/agencia.entity';\nimport { Excursion } from './excursiones/entities/excursion.entity';\nimport { CrearListarController } from './excursiones/crear-listar/controller';\nimport { CrearListarService } from './excursiones/crear-listar/service';\nimport { CrearListarRepository } from './excursiones/crear-listar/repository';\nimport { EliminarController } from './excursiones/eliminar/controller';\nimport { EliminarService } from './excursiones/eliminar/service';\nimport { EliminarRepository } from './excursiones/eliminar/repository';\nimport { ModificarDuracionHorasController } from './excursiones/modificar-duracion-horas/controller';\nimport { ModificarDuracionHorasService } from './excursiones/modificar-duracion-horas/service';\nimport { ModificarDuracionHorasRepository } from './excursiones/modificar-duracion-horas/repository';\nimport { TrasladarController } from './excursiones/trasladar/controller';\nimport { TrasladarService } from './excursiones/trasladar/service';\nimport { TrasladarRepository } from './excursiones/trasladar/repository';\nimport { ConsultarAgenciaController } from './agencias/consultar/controller';\nimport { ConsultarAgenciaService } from './agencias/consultar/service';\nimport { ConsultarAgenciaRepository } from './agencias/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Agencia, Excursion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarDuracionHorasController,\n    TrasladarController,\n    ConsultarAgenciaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarDuracionHorasService,\n    ModificarDuracionHorasRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarAgenciaService,\n    ConsultarAgenciaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Agencia } from './agencias/entities/agencia.entity';",
+            "title": "Importar Agencia",
+            "note": "El módulo utiliza la misma clase Agencia que has preparado en entities."
+          },
+          {
+            "text": "import { Excursion } from './excursiones/entities/excursion.entity';",
+            "title": "Importar Excursion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Agencia, Excursion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Agencia> y Repository<Excursion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/excursiones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../entities/excursion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>\n  ) {}\n\n  crearExcursionRepository(nombre: string, duracionHoras: number, agenciaId: number) {\n    const excursion = this.excursiones.create({\n      nombre, duracionHoras, agencia: { id: agenciaId }\n    });\n    return this.excursiones.save(excursion);\n  }\n\n  listarExcursionesRepository() {\n    return this.excursiones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Excursion } from '../entities/excursion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Excursion de su fichero entities/excursion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Excursion) pide a Nest el repositorio de esa Entity. excursiones es el nombre de la dependencia; Repository<Excursion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.excursiones.create({",
+            "title": "Preparar un objeto Excursion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "agencia: { id: agenciaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad agencia existe en la Entity Excursion. TypeORM traduce agencia.id a la FK ID_AGENCIA al guardar."
+          },
+          {
+            "text": "this.excursiones.save(excursion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Excursion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia AGENCIA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Excursion>. getMany devuelve objetos Excursion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/excursiones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('excursiones')\n  async ejecutar(@Body() datos: { nombre: string; duracionHoras: number; agenciaId: number }) {\n    return this.service.crearExcursionService(datos.nombre, datos.duracionHoras, datos.agenciaId);\n  }\n\n  @Get('excursiones')\n  listar() {\n    return this.service.listarExcursionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('excursiones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearExcursionService(datos.nombre, datos.duracionHoras, datos.agenciaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/excursiones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearExcursionService(nombre: string, duracionHoras: number, agenciaId: number) {\n    return this.repository.crearExcursionRepository(nombre, duracionHoras, agenciaId);\n  }\n\n  listarExcursionesService() {\n    return this.repository.listarExcursionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearExcursionRepository(nombre, duracionHoras, agenciaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/excursiones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../entities/excursion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>\n  ) {}\n\n  crearExcursionRepository(nombre: string, duracionHoras: number, agenciaId: number) {\n    const excursion = this.excursiones.create({\n      nombre, duracionHoras, agencia: { id: agenciaId }\n    });\n    return this.excursiones.save(excursion);\n  }\n\n  listarExcursionesRepository() {\n    return this.excursiones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "agencia: { id: agenciaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_AGENCIA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.excursiones.save(excursion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /excursiones\n{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}\n\n201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/excursiones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('excursiones/:excursionId')\n  @HttpCode(204)\n  async ejecutar(@Param('excursionId', ParseIntPipe) excursionId: number) {\n    return this.service.eliminarExcursionService(excursionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('excursiones/:excursionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarExcursionService(excursionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/excursiones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarExcursionService(excursionId: number) {\n    return this.repository.eliminarExcursionRepository(excursionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarExcursionRepository(excursionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/excursiones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../entities/excursion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>\n  ) {}\n\n  async eliminarExcursionRepository(excursionId: number) {\n    await this.excursiones.delete(excursionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.excursiones.delete(excursionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /excursiones/10\n\n204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/excursiones/modificar-duracion-horas/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarDuracionHorasService } from './service';\n\n@Controller()\nexport class ModificarDuracionHorasController {\n  constructor(private readonly service: ModificarDuracionHorasService) {}\n\n  @Patch('excursiones/:excursionId')\n  async ejecutar(@Param('excursionId', ParseIntPipe) excursionId: number,\n    @Body() datos: { duracionHoras: number }) {\n    return this.service.modificarDuracionHorasService(excursionId, datos.duracionHoras);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('excursiones/:excursionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarDuracionHorasService(excursionId, datos.duracionHoras)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/excursiones/modificar-duracion-horas/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarDuracionHorasRepository } from './repository';\n\n@Injectable()\nexport class ModificarDuracionHorasService {\n  constructor(private readonly repository: ModificarDuracionHorasRepository) {}\n\n  modificarDuracionHorasService(excursionId: number, duracionHoras: number) {\n    return this.repository.modificarDuracionHorasRepository(excursionId, duracionHoras);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarDuracionHorasRepository(excursionId, duracionHoras)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/excursiones/modificar-duracion-horas/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../entities/excursion.entity';\n\n@Injectable()\nexport class ModificarDuracionHorasRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>\n  ) {}\n\n  async modificarDuracionHorasRepository(excursionId: number, duracionHoras: number) {\n    await this.excursiones.update(excursionId, { duracionHoras });\n    return this.excursiones.createQueryBuilder('p')\n      .where('p.id = :excursionId', { excursionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.excursiones.update(excursionId, { duracionHoras })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :excursionId', { excursionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /excursiones/7\n{\"duracionHoras\":8}\n\n200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/excursiones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('excursiones/:excursionId/agencia')\n  async ejecutar(@Param('excursionId', ParseIntPipe) excursionId: number,\n    @Body() datos: { agenciaId: number }) {\n    return this.service.trasladarExcursionService(excursionId, datos.agenciaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('excursiones/:excursionId/agencia')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarExcursionService(excursionId, datos.agenciaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/excursiones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarExcursionService(excursionId: number, agenciaId: number) {\n    return this.repository.trasladarExcursionRepository(excursionId, agenciaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarExcursionRepository(excursionId, agenciaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/excursiones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../entities/excursion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>\n  ) {}\n\n  async trasladarExcursionRepository(excursionId: number, agenciaId: number) {\n    await this.excursiones.update(excursionId, { agencia: { id: agenciaId } });\n    return this.excursiones.createQueryBuilder('p')\n      .where('p.id = :excursionId', { excursionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.excursiones.update(excursionId, { agencia: { id: agenciaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :excursionId', { excursionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /excursiones/7/agencia\n{\"agenciaId\":2}\n\n200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/agencias/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarAgenciaService } from './service';\n\n@Controller()\nexport class ConsultarAgenciaController {\n  constructor(private readonly service: ConsultarAgenciaService) {}\n\n  @Get('agencias/:agenciaId/excursiones')\n  async ejecutar(@Param('agenciaId', ParseIntPipe) agenciaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarAgenciaService(agenciaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('agencias/:agenciaId/excursiones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarAgenciaService(agenciaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/agencias/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarAgenciaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarAgenciaService {\n  constructor(private readonly repository: ConsultarAgenciaRepository) {}\n\n  consultarAgenciaService(agenciaId: number, minimo: number) {\n    return this.repository.consultarAgenciaRepository(agenciaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarAgenciaRepository(agenciaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/agencias/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Excursion } from '../../excursiones/entities/excursion.entity';\nimport { Agencia } from '../entities/agencia.entity';\n\n@Injectable()\nexport class ConsultarAgenciaRepository {\n  constructor(\n    @InjectRepository(Excursion) private readonly excursiones: Repository<Excursion>,\n    @InjectRepository(Agencia) private readonly agencias: Repository<Agencia>\n  ) {}\n\n  async consultarAgenciaRepository(agenciaId: number, minimo: number) {\n    const agencia = await this.agencias.createQueryBuilder('h')\n      .where('h.id = :agenciaId', { agenciaId }).getOne();\n    const excursiones = await this.excursiones.createQueryBuilder('p')\n      .innerJoin('p.agencia', 'h')\n      .where('h.id = :agenciaId', { agenciaId })\n      .andWhere('p.duracionHoras >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { agencia, excursiones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.agencia', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa EXCURSION y h representa AGENCIA."
+          },
+          {
+            "text": ".where('h.id = :agenciaId', { agenciaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :agenciaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.duracionHoras >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.DURACION_HORAS >= 7. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /agencias/2/excursiones?minimo=7\n\n200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "AGENCIA  1 ───────── 0..N  EXCURSION\n\nAGENCIA                         EXCURSION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_HORAS\n                               ID_AGENCIA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por excursion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias excursiones",
+            "note": "Un agencia puede tener cero, una o muchas excursiones."
+          },
+          {
+            "text": "ID_AGENCIA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_HORAS",
+        "cues": [
+          {
+            "text": "TableName: AGENCIAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear AGENCIAS."
+          },
+          {
+            "text": "TableName: EXCURSIONES",
+            "title": "Tabla de excursiones",
+            "note": "La tabla usa EXCURSION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorAgencia",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por AGENCIA_ID y ordena por EXCURSION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_HORAS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/agencia-excursion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AGENCIAS = new Table({\n  name: process.env.TABLA_AGENCIAS, documentClient: db,\n  partitionKey: { name: 'AGENCIA_ID', type: 'number' }\n});\n\nexport const TABLA_EXCURSIONES = new Table({\n  name: process.env.TABLA_EXCURSIONES, documentClient: db,\n  partitionKey: { name: 'EXCURSION_ID', type: 'number' },\n  indexes: {\n    PorAgencia: {\n      type: 'global',\n      partitionKey: { name: 'AGENCIA_ID', type: 'number' },\n      sortKey: { name: 'EXCURSION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AGENCIA = new Entity({\n  name: 'Agencia', table: TABLA_AGENCIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    agenciaId: number().key().savedAs('AGENCIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EXCURSION = new Entity({\n  name: 'Excursion', table: TABLA_EXCURSIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    excursionId: number().key().savedAs('EXCURSION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionHoras: number().savedAs('DURACION_HORAS'),\n    agenciaId: number().savedAs('AGENCIA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_EXCURSIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_EXCURSIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'EXCURSION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "EXCURSION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorAgencia: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorAgencia que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es AGENCIA_ID y su sort key EXCURSION_ID: agrupa excursiones de toda la tabla por agencia."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/agencia-excursion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AGENCIAS = new Table({\n  name: process.env.TABLA_AGENCIAS, documentClient: db,\n  partitionKey: { name: 'AGENCIA_ID', type: 'number' }\n});\n\nexport const TABLA_EXCURSIONES = new Table({\n  name: process.env.TABLA_EXCURSIONES, documentClient: db,\n  partitionKey: { name: 'EXCURSION_ID', type: 'number' },\n  indexes: {\n    PorAgencia: {\n      type: 'global',\n      partitionKey: { name: 'AGENCIA_ID', type: 'number' },\n      sortKey: { name: 'EXCURSION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AGENCIA = new Entity({\n  name: 'Agencia', table: TABLA_AGENCIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    agenciaId: number().key().savedAs('AGENCIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EXCURSION = new Entity({\n  name: 'Excursion', table: TABLA_EXCURSIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    excursionId: number().key().savedAs('EXCURSION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionHoras: number().savedAs('DURACION_HORAS'),\n    agenciaId: number().savedAs('AGENCIA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_EXCURSION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_EXCURSION en el repository."
+          },
+          {
+            "text": "name: 'Excursion', table: TABLA_EXCURSIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_EXCURSIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "excursionId: number().key().savedAs('EXCURSION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce excursionId a EXCURSION_ID."
+          },
+          {
+            "text": "duracionHoras: number().savedAs('DURACION_HORAS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. duracionHoras es un número; se guarda como DURACION_HORAS y no forma parte de la clave."
+          },
+          {
+            "text": "agenciaId: number().savedAs('AGENCIA_ID')",
+            "title": "Guardar la referencia",
+            "note": "AGENCIA_ID es un atributo de EXCURSIONES y la clave del índice PorAgencia. Aquí no lleva .key(): la clave de la tabla sigue siendo EXCURSION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/excursiones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function crearExcursionRepository(excursion) {\n  await MODELO_EXCURSION.build(PutItemCommand)\n    .item(excursion)\n    .options({ condition: { attr: 'excursionId', exists: false } })\n    .send();\n}\n\nexport async function listarExcursionesRepository() {\n  const { Items = [] } = await TABLA_EXCURSIONES.build(ScanCommand)\n    .entities(MODELO_EXCURSION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/agencia-excursion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_EXCURSION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_EXCURSION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(excursion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa excursionId, nombre, duracionHoras y agenciaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_EXCURSIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_EXCURSION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_EXCURSION para interpretar los ítems: EXCURSION_ID vuelve a ser excursionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /excursiones }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /excursiones }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /excursiones/{excursionId} }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /excursiones/{excursionId} }\n  trasladarExcursion:\n    handler: src/excursiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /excursiones/{excursionId}/agencia }\n  consultarAgencia:\n    handler: src/agencias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /agencias/{agenciaId}/excursiones }",
+        "cues": [
+          {
+            "text": "src/excursiones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/excursiones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /excursiones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, duracionHoras y agenciaId."
+          },
+          {
+            "text": "path: /excursiones/{excursionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.excursionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/excursiones/crear-listar/handler.mjs",
+        "code": "import { crearExcursionService, listarExcursionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, duracionHoras, agenciaId } = JSON.parse(event.body);\n  const excursion = await crearExcursionService(nombre, duracionHoras, agenciaId);\n  return { statusCode: 201, body: JSON.stringify(excursion) };\n}\n\nexport async function listarHandler() {\n  const excursiones = await listarExcursionesService();\n  return { statusCode: 200, body: JSON.stringify(excursiones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearExcursionService(nombre, duracionHoras, agenciaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/excursiones/crear-listar/service.mjs",
+        "code": "import { crearExcursionRepository, listarExcursionesRepository } from './repository.mjs';\n\nexport async function crearExcursionService(nombre, duracionHoras, agenciaId) {\n  const excursionId = Date.now();\n  const excursion = { excursionId, nombre, duracionHoras, agenciaId };\n  await crearExcursionRepository(excursion);\n  return excursion;\n}\n\nexport function listarExcursionesService() {\n  return listarExcursionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearExcursionRepository(excursion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/excursiones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function crearExcursionRepository(excursion) {\n  await MODELO_EXCURSION.build(PutItemCommand)\n    .item(excursion)\n    .options({ condition: { attr: 'excursionId', exists: false } })\n    .send();\n}\n\nexport async function listarExcursionesRepository() {\n  const { Items = [] } = await TABLA_EXCURSIONES.build(ScanCommand)\n    .entities(MODELO_EXCURSION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(excursion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva excursionId, nombre, duracionHoras y agenciaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /excursiones\n{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}\n\n201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/excursiones/eliminar/handler.mjs",
+        "code": "import { eliminarExcursionService } from './service.mjs';\n\nexport async function handler(event) {\n  const excursionId = Number(event.pathParameters.excursionId);\n  await eliminarExcursionService(excursionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.excursionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarExcursionService(excursionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/excursiones/eliminar/service.mjs",
+        "code": "import { eliminarExcursionRepository } from './repository.mjs';\n\nexport async function eliminarExcursionService(excursionId) {\n  await eliminarExcursionRepository(excursionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarExcursionRepository(excursionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/excursiones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function eliminarExcursionRepository(excursionId) {\n  await MODELO_EXCURSION.build(DeleteItemCommand)\n    .key({ excursionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ excursionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /excursiones/10\n\n204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/excursiones/modificar-duracion-horas/handler.mjs",
+        "code": "import { modificarDuracionHorasService } from './service.mjs';\n\nexport async function handler(event) {\n  const excursionId = Number(event.pathParameters.excursionId);\n  const { duracionHoras } = JSON.parse(event.body);\n  const resultado = await modificarDuracionHorasService(excursionId, duracionHoras);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.excursionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarDuracionHorasService(excursionId, duracionHoras)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/excursiones/modificar-duracion-horas/service.mjs",
+        "code": "import { modificarDuracionHorasRepository } from './repository.mjs';\n\nexport function modificarDuracionHorasService(excursionId, duracionHoras) {\n  return modificarDuracionHorasRepository(excursionId, duracionHoras);\n}",
+        "cues": [
+          {
+            "text": "modificarDuracionHorasRepository(excursionId, duracionHoras)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. duracionHoras es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/excursiones/modificar-duracion-horas/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function modificarDuracionHorasRepository(excursionId, duracionHoras) {\n  const { Attributes } = await MODELO_EXCURSION.build(UpdateItemCommand)\n    .item({ excursionId, duracionHoras })\n    .options({\n      condition: { attr: 'excursionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ excursionId, duracionHoras })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo duracionHoras. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /excursiones/7\n{\"duracionHoras\":8}\n\n200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/excursiones/trasladar/handler.mjs",
+        "code": "import { trasladarExcursionService } from './service.mjs';\n\nexport async function handler(event) {\n  const excursionId = Number(event.pathParameters.excursionId);\n  const { agenciaId } = JSON.parse(event.body);\n  const resultado = await trasladarExcursionService(excursionId, agenciaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.excursionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarExcursionService(excursionId, agenciaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/excursiones/trasladar/service.mjs",
+        "code": "import { trasladarExcursionRepository } from './repository.mjs';\nimport { buscarAgenciaRepository } from '../../agencias/consultar/repository.mjs';\n\nexport async function trasladarExcursionService(excursionId, agenciaId) {\n  const agencia = await buscarAgenciaRepository(agenciaId);\n  if (!agencia) throw new Error('Agencia no encontrado');\n  return trasladarExcursionRepository(excursionId, agenciaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarAgenciaRepository(agenciaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarExcursionRepository(excursionId, agenciaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza AGENCIA_ID. EXCURSION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/excursiones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function trasladarExcursionRepository(excursionId, agenciaId) {\n  const { Attributes } = await MODELO_EXCURSION.build(UpdateItemCommand)\n    .item({ excursionId, agenciaId })\n    .options({\n      condition: { attr: 'excursionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ excursionId, agenciaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo agenciaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /excursiones/7/agencia\n{\"agenciaId\":2}\n\n200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/agencias/consultar/handler.mjs",
+        "code": "import { consultarAgenciaService } from './service.mjs';\n\nexport async function handler(event) {\n  const agenciaId = Number(event.pathParameters.agenciaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarAgenciaService(agenciaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.agenciaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarAgenciaService(agenciaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/agencias/consultar/service.mjs",
+        "code": "import { buscarAgenciaRepository, consultarAgenciaRepository } from './repository.mjs';\n\nexport async function consultarAgenciaService(agenciaId, minimo) {\n  const agencia = await buscarAgenciaRepository(agenciaId);\n  if (!agencia) throw new Error('Agencia no encontrado');\n  const excursiones = await consultarAgenciaRepository(agenciaId, minimo);\n  return { agencia, excursiones };\n}",
+        "cues": [
+          {
+            "text": "await buscarAgenciaRepository(agenciaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarAgenciaRepository(agenciaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { agencia, excursiones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/agencias/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_EXCURSION, MODELO_AGENCIA, TABLA_EXCURSIONES } from '../../models/agencia-excursion.model.mjs';\n\nexport async function buscarAgenciaRepository(agenciaId) {\n  const { Item } = await MODELO_AGENCIA.build(GetItemCommand)\n    .key({ agenciaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAgenciaRepository(agenciaId, minimo) {\n  const { Items = [] } = await TABLA_EXCURSIONES.build(QueryCommand)\n    .entities(MODELO_EXCURSION)\n    .query({ index: 'PorAgencia', partition: agenciaId })\n    .options({ filters: { Excursion: { attr: 'duracionHoras', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con AGENCIA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorAgencia', partition: agenciaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por AGENCIA_ID. No busca por EXCURSION_ID."
+          },
+          {
+            "text": "attr: 'duracionHoras', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /agencias/2/excursiones?minimo=7\n\n200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Ruta del bosque",
+      "value": 2,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Visita al castillo",
+      "value": 6,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Ruta del bosque · nuevo",
+      "value": 10,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/excursiones",
+      "request": "POST /excursiones\n{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}",
+      "fields": "nombre, duracionHoras, agenciaId",
+      "args": "nombre, duracionHoras, agenciaId",
+      "result": "201 · Registro 10 creado → GET /excursiones → 200 · aparecen 4 registros",
+      "service": "crearExcursionService",
+      "repo": "crearExcursionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/excursiones/:excursionId",
+      "request": "DELETE /excursiones/10",
+      "fields": "excursionId",
+      "args": "excursionId",
+      "result": "204 · Registro 10 eliminado → GET /excursiones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarExcursionService",
+      "repo": "eliminarExcursionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-duracion-horas",
+      "title": "Cambiar duración",
+      "verb": "PATCH",
+      "route": "/excursiones/:excursionId",
+      "request": "PATCH /excursiones/7\n{\"duracionHoras\":8}",
+      "fields": "excursionId, duracionHoras",
+      "args": "excursionId, duracionHoras",
+      "result": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+      "service": "modificarDuracionHorasService",
+      "repo": "modificarDuracionHorasRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de agencia",
+      "verb": "PATCH",
+      "route": "/excursiones/:excursionId/agencia",
+      "request": "PATCH /excursiones/7/agencia\n{\"agenciaId\":2}",
+      "fields": "excursionId, agenciaId",
+      "args": "excursionId, agenciaId",
+      "result": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+      "service": "trasladarExcursionService",
+      "repo": "trasladarExcursionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un agencia",
+      "verb": "GET",
+      "route": "/agencias/:agenciaId/excursiones",
+      "request": "GET /agencias/2/excursiones?minimo=7",
+      "fields": "agenciaId, minimo",
+      "args": "agenciaId, minimo",
+      "result": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+      "service": "consultarAgenciaService",
+      "repo": "consultarAgenciaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-07",
+    "title": "Agencia → Excursion",
+    "parent": {
+      "entity": "Agencia",
+      "sql": "AGENCIA",
+      "table": "AGENCIAS",
+      "route": "agencias",
+      "property": "agencia",
+      "input": "agenciaId",
+      "variable": "TABLA_AGENCIAS",
+      "model": "MODELO_AGENCIA",
+      "file": "src/agencias/entities/agencia.entity.ts",
+      "examples": [
+        "Agencia Horizonte",
+        "Agencia Camino"
+      ]
+    },
+    "child": {
+      "entity": "Excursion",
+      "sql": "EXCURSION",
+      "table": "EXCURSIONES",
+      "route": "excursiones",
+      "property": "excursion",
+      "input": "excursionId",
+      "inverse": "excursiones",
+      "variable": "TABLA_EXCURSIONES",
+      "model": "MODELO_EXCURSION",
+      "file": "src/excursiones/entities/excursion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "duracionHoras",
+      "column": "DURACION_HORAS",
+      "label": "Duración",
+      "unit": "h",
+      "initial": 2,
+      "other": 6,
+      "after": 8,
+      "minimum": 7,
+      "create": 3,
+      "unrelated": 10
+    },
+    "foreignKey": "ID_AGENCIA",
+    "index": "PorAgencia",
+    "modelFile": "src/models/agencia-excursion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

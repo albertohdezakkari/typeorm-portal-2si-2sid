@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-22",
+    "sha256": "9e8415e04f173ece7153e27149a0e82bcae0526a227ad397c86bb59fbe7881a9",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar presupuesto",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "AYUNTAMIENTO  1 ───────── 0..N  OBRA\n\nAYUNTAMIENTO                         OBRA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               PRESUPUESTO_EUROS\n                               ID_AYUNTAMIENTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por obra",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias obras",
+            "note": "Un ayuntamiento puede tener cero, una o muchas obras."
+          },
+          {
+            "text": "ID_AYUNTAMIENTO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Ayuntamiento",
+        "path": "src/ayuntamientos/entities/ayuntamiento.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Obra } from '../../obras/entities/obra.entity';\n\n@Entity({ name: 'AYUNTAMIENTO' })\nexport class Ayuntamiento {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Obra, obra => obra.ayuntamiento)\n  obras!: Obra[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'AYUNTAMIENTO' })",
+            "title": "Clase Ayuntamiento → tabla AYUNTAMIENTO",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Obra, obra => obra.ayuntamiento)",
+            "title": "Una colección de obras",
+            "note": "Ayuntamiento.obras representa los registros asociados. obra.ayuntamiento señala la propiedad del otro lado; no crea una segunda FK en AYUNTAMIENTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Obra",
+        "path": "src/obras/entities/obra.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Ayuntamiento } from '../../ayuntamientos/entities/ayuntamiento.entity';\n\n@Entity({ name: 'OBRA' })\nexport class Obra {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PRESUPUESTO_EUROS', type: 'integer' })\n  presupuestoEuros!: number;\n\n  @ManyToOne(() => Ayuntamiento, ayuntamiento => ayuntamiento.obras, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_AYUNTAMIENTO' })\n  ayuntamiento!: Ayuntamiento;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'OBRA' })",
+            "title": "Clase Obra → tabla OBRA",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, presupuesto y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de OBRA. No es el ID del registro principal y no se repite entre obras."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'PRESUPUESTO_EUROS', type: 'integer' })",
+            "title": "Una presupuesto numérica",
+            "note": "presupuestoEuros se guarda en PRESUPUESTO_EUROS, de tipo entero. El siguiente paso detalla la relación con Ayuntamiento."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/obras/entities/obra.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Ayuntamiento } from '../../ayuntamientos/entities/ayuntamiento.entity';\n\n@Entity({ name: 'OBRA' })\nexport class Obra {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PRESUPUESTO_EUROS', type: 'integer' })\n  presupuestoEuros!: number;\n\n  @ManyToOne(() => Ayuntamiento, ayuntamiento => ayuntamiento.obras, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_AYUNTAMIENTO' })\n  ayuntamiento!: Ayuntamiento;\n}",
+        "cues": [
+          {
+            "text": "import { Ayuntamiento } from '../../ayuntamientos/entities/ayuntamiento.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Obra importa la clase Ayuntamiento para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Ayuntamiento, ayuntamiento => ayuntamiento.obras, {",
+            "title": "Muchas obras → un registro principal",
+            "note": "() => Ayuntamiento indica la entidad de destino. ayuntamiento.obras indica la colección inversa, definida con @OneToMany en Ayuntamiento."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda obra tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_AYUNTAMIENTO no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_AYUNTAMIENTO' })",
+            "title": "La FK está en OBRA",
+            "note": "JoinColumn da el nombre físico de la FK: OBRA.ID_AYUNTAMIENTO referencia AYUNTAMIENTO.ID. El mismo ayuntamiento puede aparecer en varias obras."
+          },
+          {
+            "text": "ayuntamiento!: Ayuntamiento;",
+            "title": "Una propiedad de tipo Ayuntamiento",
+            "note": "En el código usamos obra.ayuntamiento; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_AYUNTAMIENTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarPresupuestoEurosController,\n    TrasladarController,\n    ConsultarAyuntamientoController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarPresupuestoEurosService,\n    ModificarPresupuestoEurosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarAyuntamientoService,\n    ConsultarAyuntamientoRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';",
+            "title": "Importar Ayuntamiento",
+            "note": "El módulo utiliza la misma clase Ayuntamiento que has preparado en entities."
+          },
+          {
+            "text": "import { Obra } from './obras/entities/obra.entity';",
+            "title": "Importar Obra",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Ayuntamiento, Obra])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Ayuntamiento> y Repository<Obra>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/obras/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  crearObraRepository(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre, presupuestoEuros, ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObrasRepository() {\n    return this.obras.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Obra } from '../entities/obra.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Obra de su fichero entities/obra.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Obra) private readonly obras: Repository<Obra>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Obra) pide a Nest el repositorio de esa Entity. obras es el nombre de la dependencia; Repository<Obra> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.obras.create({",
+            "title": "Preparar un objeto Obra",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "ayuntamiento: { id: ayuntamientoId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad ayuntamiento existe en la Entity Obra. TypeORM traduce ayuntamiento.id a la FK ID_AYUNTAMIENTO al guardar."
+          },
+          {
+            "text": "this.obras.save(obra)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Obra y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia AYUNTAMIENTO."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Obra>. getMany devuelve objetos Obra, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/obras/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('obras')\n  async ejecutar(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObraService(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObrasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('obras')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearObraService(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/obras/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearObraService(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    return this.repository.crearObraRepository(nombre, presupuestoEuros, ayuntamientoId);\n  }\n\n  listarObrasService() {\n    return this.repository.listarObrasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearObraRepository(nombre, presupuestoEuros, ayuntamientoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/obras/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  crearObraRepository(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre, presupuestoEuros, ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObrasRepository() {\n    return this.obras.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "ayuntamiento: { id: ayuntamientoId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_AYUNTAMIENTO; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.obras.save(obra)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /obras\n{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}\n\n201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/obras/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number) {\n    return this.service.eliminarObraService(obraId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('obras/:obraId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarObraService(obraId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/obras/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarObraService(obraId: number) {\n    return this.repository.eliminarObraRepository(obraId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarObraRepository(obraId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/obras/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async eliminarObraRepository(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.obras.delete(obraId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /obras/10\n\n204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/obras/modificar-presupuesto-euros/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarPresupuestoEurosService } from './service';\n\n@Controller()\nexport class ModificarPresupuestoEurosController {\n  constructor(private readonly service: ModificarPresupuestoEurosService) {}\n\n  @Patch('obras/:obraId')\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number,\n    @Body() datos: { presupuestoEuros: number }) {\n    return this.service.modificarPresupuestoEurosService(obraId, datos.presupuestoEuros);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('obras/:obraId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarPresupuestoEurosService(obraId, datos.presupuestoEuros)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/obras/modificar-presupuesto-euros/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarPresupuestoEurosRepository } from './repository';\n\n@Injectable()\nexport class ModificarPresupuestoEurosService {\n  constructor(private readonly repository: ModificarPresupuestoEurosRepository) {}\n\n  modificarPresupuestoEurosService(obraId: number, presupuestoEuros: number) {\n    return this.repository.modificarPresupuestoEurosRepository(obraId, presupuestoEuros);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarPresupuestoEurosRepository(obraId, presupuestoEuros)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/obras/modificar-presupuesto-euros/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class ModificarPresupuestoEurosRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async modificarPresupuestoEurosRepository(obraId: number, presupuestoEuros: number) {\n    await this.obras.update(obraId, { presupuestoEuros });\n    return this.obras.createQueryBuilder('p')\n      .where('p.id = :obraId', { obraId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.obras.update(obraId, { presupuestoEuros })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :obraId', { obraId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /obras/7\n{\"presupuestoEuros\":15000}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/obras/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('obras/:obraId/ayuntamiento')\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number,\n    @Body() datos: { ayuntamientoId: number }) {\n    return this.service.trasladarObraService(obraId, datos.ayuntamientoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('obras/:obraId/ayuntamiento')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarObraService(obraId, datos.ayuntamientoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/obras/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarObraService(obraId: number, ayuntamientoId: number) {\n    return this.repository.trasladarObraRepository(obraId, ayuntamientoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarObraRepository(obraId, ayuntamientoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/obras/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async trasladarObraRepository(obraId: number, ayuntamientoId: number) {\n    await this.obras.update(obraId, { ayuntamiento: { id: ayuntamientoId } });\n    return this.obras.createQueryBuilder('p')\n      .where('p.id = :obraId', { obraId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.obras.update(obraId, { ayuntamiento: { id: ayuntamientoId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :obraId', { obraId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /obras/7/ayuntamiento\n{\"ayuntamientoId\":2}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/ayuntamientos/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarAyuntamientoService } from './service';\n\n@Controller()\nexport class ConsultarAyuntamientoController {\n  constructor(private readonly service: ConsultarAyuntamientoService) {}\n\n  @Get('ayuntamientos/:ayuntamientoId/obras')\n  async ejecutar(@Param('ayuntamientoId', ParseIntPipe) ayuntamientoId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarAyuntamientoService(ayuntamientoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('ayuntamientos/:ayuntamientoId/obras')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarAyuntamientoService(ayuntamientoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/ayuntamientos/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarAyuntamientoRepository } from './repository';\n\n@Injectable()\nexport class ConsultarAyuntamientoService {\n  constructor(private readonly repository: ConsultarAyuntamientoRepository) {}\n\n  consultarAyuntamientoService(ayuntamientoId: number, minimo: number) {\n    return this.repository.consultarAyuntamientoRepository(ayuntamientoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarAyuntamientoRepository(ayuntamientoId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/ayuntamientos/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../../obras/entities/obra.entity';\nimport { Ayuntamiento } from '../entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ConsultarAyuntamientoRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  async consultarAyuntamientoRepository(ayuntamientoId: number, minimo: number) {\n    const ayuntamiento = await this.ayuntamientos.createQueryBuilder('h')\n      .where('h.id = :ayuntamientoId', { ayuntamientoId }).getOne();\n    const obras = await this.obras.createQueryBuilder('p')\n      .innerJoin('p.ayuntamiento', 'h')\n      .where('h.id = :ayuntamientoId', { ayuntamientoId })\n      .andWhere('p.presupuestoEuros >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { ayuntamiento, obras };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.ayuntamiento', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa OBRA y h representa AYUNTAMIENTO."
+          },
+          {
+            "text": ".where('h.id = :ayuntamientoId', { ayuntamientoId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :ayuntamientoId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.presupuestoEuros >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.PRESUPUESTO_EUROS >= 12001. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /ayuntamientos/2/obras?minimo=12001\n\n200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "AYUNTAMIENTO  1 ───────── 0..N  OBRA\n\nAYUNTAMIENTO                         OBRA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               PRESUPUESTO_EUROS\n                               ID_AYUNTAMIENTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por obra",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias obras",
+            "note": "Un ayuntamiento puede tener cero, una o muchas obras."
+          },
+          {
+            "text": "ID_AYUNTAMIENTO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - PRESUPUESTO_EUROS",
+        "cues": [
+          {
+            "text": "TableName: AYUNTAMIENTOS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear AYUNTAMIENTOS."
+          },
+          {
+            "text": "TableName: OBRAS",
+            "title": "Tabla de obras",
+            "note": "La tabla usa OBRA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorAyuntamiento",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por AYUNTAMIENTO_ID y ordena por OBRA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y PRESUPUESTO_EUROS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/ayuntamiento-obra.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AYUNTAMIENTOS = new Table({\n  name: process.env.TABLA_AYUNTAMIENTOS, documentClient: db,\n  partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }\n});\n\nexport const TABLA_OBRAS = new Table({\n  name: process.env.TABLA_OBRAS, documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  indexes: {\n    PorAyuntamiento: {\n      type: 'global',\n      partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AYUNTAMIENTO = new Entity({\n  name: 'Ayuntamiento', table: TABLA_AYUNTAMIENTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_OBRA = new Entity({\n  name: 'Obra', table: TABLA_OBRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS'),\n    ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_OBRAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_OBRAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'OBRA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "OBRA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorAyuntamiento: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorAyuntamiento que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es AYUNTAMIENTO_ID y su sort key OBRA_ID: agrupa obras de toda la tabla por ayuntamiento."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/ayuntamiento-obra.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AYUNTAMIENTOS = new Table({\n  name: process.env.TABLA_AYUNTAMIENTOS, documentClient: db,\n  partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }\n});\n\nexport const TABLA_OBRAS = new Table({\n  name: process.env.TABLA_OBRAS, documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  indexes: {\n    PorAyuntamiento: {\n      type: 'global',\n      partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AYUNTAMIENTO = new Entity({\n  name: 'Ayuntamiento', table: TABLA_AYUNTAMIENTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_OBRA = new Entity({\n  name: 'Obra', table: TABLA_OBRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS'),\n    ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_OBRA = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_OBRA en el repository."
+          },
+          {
+            "text": "name: 'Obra', table: TABLA_OBRAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_OBRAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "obraId: number().key().savedAs('OBRA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce obraId a OBRA_ID."
+          },
+          {
+            "text": "presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. presupuestoEuros es un número; se guarda como PRESUPUESTO_EUROS y no forma parte de la clave."
+          },
+          {
+            "text": "ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')",
+            "title": "Guardar la referencia",
+            "note": "AYUNTAMIENTO_ID es un atributo de OBRAS y la clave del índice PorAyuntamiento. Aquí no lleva .key(): la clave de la tabla sigue siendo OBRA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/obras/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearObraRepository(obra) {\n  await MODELO_OBRA.build(PutItemCommand)\n    .item(obra)\n    .options({ condition: { attr: 'obraId', exists: false } })\n    .send();\n}\n\nexport async function listarObrasRepository() {\n  const { Items = [] } = await TABLA_OBRAS.build(ScanCommand)\n    .entities(MODELO_OBRA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/ayuntamiento-obra.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_OBRA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_OBRA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(obra)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa obraId, nombre, presupuestoEuros y ayuntamientoId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_OBRAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_OBRA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_OBRA para interpretar los ítems: OBRA_ID vuelve a ser obraId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /obras }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /obras }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /obras/{obraId} }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /obras/{obraId} }\n  trasladarObra:\n    handler: src/obras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /obras/{obraId}/ayuntamiento }\n  consultarAyuntamiento:\n    handler: src/ayuntamientos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /ayuntamientos/{ayuntamientoId}/obras }",
+        "cues": [
+          {
+            "text": "src/obras/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/obras/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /obras",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, presupuestoEuros y ayuntamientoId."
+          },
+          {
+            "text": "path: /obras/{obraId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.obraId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/obras/crear-listar/handler.mjs",
+        "code": "import { crearObraService, listarObrasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, presupuestoEuros, ayuntamientoId } = JSON.parse(event.body);\n  const obra = await crearObraService(nombre, presupuestoEuros, ayuntamientoId);\n  return { statusCode: 201, body: JSON.stringify(obra) };\n}\n\nexport async function listarHandler() {\n  const obras = await listarObrasService();\n  return { statusCode: 200, body: JSON.stringify(obras) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearObraService(nombre, presupuestoEuros, ayuntamientoId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/obras/crear-listar/service.mjs",
+        "code": "import { crearObraRepository, listarObrasRepository } from './repository.mjs';\n\nexport async function crearObraService(nombre, presupuestoEuros, ayuntamientoId) {\n  const obraId = Date.now();\n  const obra = { obraId, nombre, presupuestoEuros, ayuntamientoId };\n  await crearObraRepository(obra);\n  return obra;\n}\n\nexport function listarObrasService() {\n  return listarObrasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearObraRepository(obra)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/obras/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearObraRepository(obra) {\n  await MODELO_OBRA.build(PutItemCommand)\n    .item(obra)\n    .options({ condition: { attr: 'obraId', exists: false } })\n    .send();\n}\n\nexport async function listarObrasRepository() {\n  const { Items = [] } = await TABLA_OBRAS.build(ScanCommand)\n    .entities(MODELO_OBRA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(obra)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva obraId, nombre, presupuestoEuros y ayuntamientoId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /obras\n{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}\n\n201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/obras/eliminar/handler.mjs",
+        "code": "import { eliminarObraService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  await eliminarObraService(obraId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.obraId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarObraService(obraId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/obras/eliminar/service.mjs",
+        "code": "import { eliminarObraRepository } from './repository.mjs';\n\nexport async function eliminarObraService(obraId) {\n  await eliminarObraRepository(obraId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarObraRepository(obraId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/obras/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function eliminarObraRepository(obraId) {\n  await MODELO_OBRA.build(DeleteItemCommand)\n    .key({ obraId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ obraId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /obras/10\n\n204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/obras/modificar-presupuesto-euros/handler.mjs",
+        "code": "import { modificarPresupuestoEurosService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const { presupuestoEuros } = JSON.parse(event.body);\n  const resultado = await modificarPresupuestoEurosService(obraId, presupuestoEuros);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.obraId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarPresupuestoEurosService(obraId, presupuestoEuros)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/obras/modificar-presupuesto-euros/service.mjs",
+        "code": "import { modificarPresupuestoEurosRepository } from './repository.mjs';\n\nexport function modificarPresupuestoEurosService(obraId, presupuestoEuros) {\n  return modificarPresupuestoEurosRepository(obraId, presupuestoEuros);\n}",
+        "cues": [
+          {
+            "text": "modificarPresupuestoEurosRepository(obraId, presupuestoEuros)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. presupuestoEuros es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/obras/modificar-presupuesto-euros/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function modificarPresupuestoEurosRepository(obraId, presupuestoEuros) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, presupuestoEuros })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ obraId, presupuestoEuros })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo presupuestoEuros. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /obras/7\n{\"presupuestoEuros\":15000}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/obras/trasladar/handler.mjs",
+        "code": "import { trasladarObraService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const { ayuntamientoId } = JSON.parse(event.body);\n  const resultado = await trasladarObraService(obraId, ayuntamientoId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.obraId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarObraService(obraId, ayuntamientoId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/obras/trasladar/service.mjs",
+        "code": "import { trasladarObraRepository } from './repository.mjs';\nimport { buscarAyuntamientoRepository } from '../../ayuntamientos/consultar/repository.mjs';\n\nexport async function trasladarObraService(obraId, ayuntamientoId) {\n  const ayuntamiento = await buscarAyuntamientoRepository(ayuntamientoId);\n  if (!ayuntamiento) throw new Error('Ayuntamiento no encontrado');\n  return trasladarObraRepository(obraId, ayuntamientoId);\n}",
+        "cues": [
+          {
+            "text": "await buscarAyuntamientoRepository(ayuntamientoId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarObraRepository(obraId, ayuntamientoId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza AYUNTAMIENTO_ID. OBRA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/obras/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function trasladarObraRepository(obraId, ayuntamientoId) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, ayuntamientoId })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ obraId, ayuntamientoId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo ayuntamientoId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /obras/7/ayuntamiento\n{\"ayuntamientoId\":2}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/ayuntamientos/consultar/handler.mjs",
+        "code": "import { consultarAyuntamientoService } from './service.mjs';\n\nexport async function handler(event) {\n  const ayuntamientoId = Number(event.pathParameters.ayuntamientoId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarAyuntamientoService(ayuntamientoId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.ayuntamientoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarAyuntamientoService(ayuntamientoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/ayuntamientos/consultar/service.mjs",
+        "code": "import { buscarAyuntamientoRepository, consultarAyuntamientoRepository } from './repository.mjs';\n\nexport async function consultarAyuntamientoService(ayuntamientoId, minimo) {\n  const ayuntamiento = await buscarAyuntamientoRepository(ayuntamientoId);\n  if (!ayuntamiento) throw new Error('Ayuntamiento no encontrado');\n  const obras = await consultarAyuntamientoRepository(ayuntamientoId, minimo);\n  return { ayuntamiento, obras };\n}",
+        "cues": [
+          {
+            "text": "await buscarAyuntamientoRepository(ayuntamientoId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarAyuntamientoRepository(ayuntamientoId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { ayuntamiento, obras }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/ayuntamientos/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(GetItemCommand)\n    .key({ ayuntamientoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await TABLA_OBRAS.build(QueryCommand)\n    .entities(MODELO_OBRA)\n    .query({ index: 'PorAyuntamiento', partition: ayuntamientoId })\n    .options({ filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con AYUNTAMIENTO_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorAyuntamiento', partition: ayuntamientoId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por AYUNTAMIENTO_ID. No busca por OBRA_ID."
+          },
+          {
+            "text": "attr: 'presupuestoEuros', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /ayuntamientos/2/obras?minimo=12001\n\n200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Mejora de acera",
+      "value": 3000,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Zona de sombra",
+      "value": 12000,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Mejora de acera · nuevo",
+      "value": 18000,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/obras",
+      "request": "POST /obras\n{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}",
+      "fields": "nombre, presupuestoEuros, ayuntamientoId",
+      "args": "nombre, presupuestoEuros, ayuntamientoId",
+      "result": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros",
+      "service": "crearObraService",
+      "repo": "crearObraRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/obras/:obraId",
+      "request": "DELETE /obras/10",
+      "fields": "obraId",
+      "args": "obraId",
+      "result": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
+      "service": "eliminarObraService",
+      "repo": "eliminarObraRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-presupuesto-euros",
+      "title": "Cambiar presupuesto",
+      "verb": "PATCH",
+      "route": "/obras/:obraId",
+      "request": "PATCH /obras/7\n{\"presupuestoEuros\":15000}",
+      "fields": "obraId, presupuestoEuros",
+      "args": "obraId, presupuestoEuros",
+      "result": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
+      "service": "modificarPresupuestoEurosService",
+      "repo": "modificarPresupuestoEurosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de ayuntamiento",
+      "verb": "PATCH",
+      "route": "/obras/:obraId/ayuntamiento",
+      "request": "PATCH /obras/7/ayuntamiento\n{\"ayuntamientoId\":2}",
+      "fields": "obraId, ayuntamientoId",
+      "args": "obraId, ayuntamientoId",
+      "result": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
+      "service": "trasladarObraService",
+      "repo": "trasladarObraRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un ayuntamiento",
+      "verb": "GET",
+      "route": "/ayuntamientos/:ayuntamientoId/obras",
+      "request": "GET /ayuntamientos/2/obras?minimo=12001",
+      "fields": "ayuntamientoId, minimo",
+      "args": "ayuntamientoId, minimo",
+      "result": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
+      "service": "consultarAyuntamientoService",
+      "repo": "consultarAyuntamientoRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-22",
+    "title": "Ayuntamiento → Obra",
+    "parent": {
+      "entity": "Ayuntamiento",
+      "sql": "AYUNTAMIENTO",
+      "table": "AYUNTAMIENTOS",
+      "route": "ayuntamientos",
+      "property": "ayuntamiento",
+      "input": "ayuntamientoId",
+      "variable": "TABLA_AYUNTAMIENTOS",
+      "model": "MODELO_AYUNTAMIENTO",
+      "file": "src/ayuntamientos/entities/ayuntamiento.entity.ts",
+      "examples": [
+        "Ayuntamiento del Río",
+        "Ayuntamiento del Valle"
+      ]
+    },
+    "child": {
+      "entity": "Obra",
+      "sql": "OBRA",
+      "table": "OBRAS",
+      "route": "obras",
+      "property": "obra",
+      "input": "obraId",
+      "inverse": "obras",
+      "variable": "TABLA_OBRAS",
+      "model": "MODELO_OBRA",
+      "file": "src/obras/entities/obra.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "presupuestoEuros",
+      "column": "PRESUPUESTO_EUROS",
+      "label": "Presupuesto",
+      "unit": "€",
+      "initial": 3000,
+      "other": 12000,
+      "after": 15000,
+      "minimum": 12001,
+      "create": 3001,
+      "unrelated": 18000
+    },
+    "foreignKey": "ID_AYUNTAMIENTO",
+    "index": "PorAyuntamiento",
+    "modelFile": "src/models/ayuntamiento-obra.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

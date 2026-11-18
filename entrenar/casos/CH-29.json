@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-29",
+    "sha256": "47aedccab4ab3e93a0f170b2b6552af8534a01ede4f32dc3e5aa91b8bdeb196f",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar producción",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "GRANJA  1 ───────── 0..N  COSECHA\n\nGRANJA                         COSECHA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               KILOS\n                               ID_GRANJA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por cosecha",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias cosechas",
+            "note": "Un granja puede tener cero, una o muchas cosechas."
+          },
+          {
+            "text": "ID_GRANJA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Granja",
+        "path": "src/granjas/entities/granja.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cosecha } from '../../cosechas/entities/cosecha.entity';\n\n@Entity({ name: 'GRANJA' })\nexport class Granja {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Cosecha, cosecha => cosecha.granja)\n  cosechas!: Cosecha[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'GRANJA' })",
+            "title": "Clase Granja → tabla GRANJA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Cosecha, cosecha => cosecha.granja)",
+            "title": "Una colección de cosechas",
+            "note": "Granja.cosechas representa los registros asociados. cosecha.granja señala la propiedad del otro lado; no crea una segunda FK en GRANJA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Cosecha",
+        "path": "src/cosechas/entities/cosecha.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Granja } from '../../granjas/entities/granja.entity';\n\n@Entity({ name: 'COSECHA' })\nexport class Cosecha {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'KILOS', type: 'integer' })\n  kilos!: number;\n\n  @ManyToOne(() => Granja, granja => granja.cosechas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_GRANJA' })\n  granja!: Granja;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'COSECHA' })",
+            "title": "Clase Cosecha → tabla COSECHA",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, producción y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de COSECHA. No es el ID del registro principal y no se repite entre cosechas."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'KILOS', type: 'integer' })",
+            "title": "Una producción numérica",
+            "note": "kilos se guarda en KILOS, de tipo entero. El siguiente paso detalla la relación con Granja."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/cosechas/entities/cosecha.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Granja } from '../../granjas/entities/granja.entity';\n\n@Entity({ name: 'COSECHA' })\nexport class Cosecha {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'KILOS', type: 'integer' })\n  kilos!: number;\n\n  @ManyToOne(() => Granja, granja => granja.cosechas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_GRANJA' })\n  granja!: Granja;\n}",
+        "cues": [
+          {
+            "text": "import { Granja } from '../../granjas/entities/granja.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Cosecha importa la clase Granja para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Granja, granja => granja.cosechas, {",
+            "title": "Muchas cosechas → un registro principal",
+            "note": "() => Granja indica la entidad de destino. granja.cosechas indica la colección inversa, definida con @OneToMany en Granja."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda cosecha tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_GRANJA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_GRANJA' })",
+            "title": "La FK está en COSECHA",
+            "note": "JoinColumn da el nombre físico de la FK: COSECHA.ID_GRANJA referencia GRANJA.ID. El mismo granja puede aparecer en varias cosechas."
+          },
+          {
+            "text": "granja!: Granja;",
+            "title": "Una propiedad de tipo Granja",
+            "note": "En el código usamos cosecha.granja; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_GRANJA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './granjas/entities/granja.entity';\nimport { Cosecha } from './cosechas/entities/cosecha.entity';\nimport { CrearListarController } from './cosechas/crear-listar/controller';\nimport { CrearListarService } from './cosechas/crear-listar/service';\nimport { CrearListarRepository } from './cosechas/crear-listar/repository';\nimport { EliminarController } from './cosechas/eliminar/controller';\nimport { EliminarService } from './cosechas/eliminar/service';\nimport { EliminarRepository } from './cosechas/eliminar/repository';\nimport { ModificarKilosController } from './cosechas/modificar-kilos/controller';\nimport { ModificarKilosService } from './cosechas/modificar-kilos/service';\nimport { ModificarKilosRepository } from './cosechas/modificar-kilos/repository';\nimport { TrasladarController } from './cosechas/trasladar/controller';\nimport { TrasladarService } from './cosechas/trasladar/service';\nimport { TrasladarRepository } from './cosechas/trasladar/repository';\nimport { ConsultarGranjaController } from './granjas/consultar/controller';\nimport { ConsultarGranjaService } from './granjas/consultar/service';\nimport { ConsultarGranjaRepository } from './granjas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarKilosController,\n    TrasladarController,\n    ConsultarGranjaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarKilosService,\n    ModificarKilosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarGranjaService,\n    ConsultarGranjaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Granja } from './granjas/entities/granja.entity';",
+            "title": "Importar Granja",
+            "note": "El módulo utiliza la misma clase Granja que has preparado en entities."
+          },
+          {
+            "text": "import { Cosecha } from './cosechas/entities/cosecha.entity';",
+            "title": "Importar Cosecha",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Granja, Cosecha])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Granja> y Repository<Cosecha>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/cosechas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  crearCosechaRepository(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre, kilos, granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechasRepository() {\n    return this.cosechas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Cosecha } from '../entities/cosecha.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Cosecha de su fichero entities/cosecha.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Cosecha) pide a Nest el repositorio de esa Entity. cosechas es el nombre de la dependencia; Repository<Cosecha> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.cosechas.create({",
+            "title": "Preparar un objeto Cosecha",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "granja: { id: granjaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad granja existe en la Entity Cosecha. TypeORM traduce granja.id a la FK ID_GRANJA al guardar."
+          },
+          {
+            "text": "this.cosechas.save(cosecha)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Cosecha y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia GRANJA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Cosecha>. getMany devuelve objetos Cosecha, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/cosechas/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('cosechas')\n  async ejecutar(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosechaService(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('cosechas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearCosechaService(datos.nombre, datos.kilos, datos.granjaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/cosechas/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearCosechaService(nombre: string, kilos: number, granjaId: number) {\n    return this.repository.crearCosechaRepository(nombre, kilos, granjaId);\n  }\n\n  listarCosechasService() {\n    return this.repository.listarCosechasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearCosechaRepository(nombre, kilos, granjaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/cosechas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  crearCosechaRepository(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre, kilos, granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechasRepository() {\n    return this.cosechas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "granja: { id: granjaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_GRANJA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.cosechas.save(cosecha)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /cosechas\n{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}\n\n201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/cosechas/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number) {\n    return this.service.eliminarCosechaService(cosechaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('cosechas/:cosechaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarCosechaService(cosechaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/cosechas/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarCosechaService(cosechaId: number) {\n    return this.repository.eliminarCosechaRepository(cosechaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarCosechaRepository(cosechaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/cosechas/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async eliminarCosechaRepository(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.cosechas.delete(cosechaId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /cosechas/10\n\n204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/cosechas/modificar-kilos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarKilosService } from './service';\n\n@Controller()\nexport class ModificarKilosController {\n  constructor(private readonly service: ModificarKilosService) {}\n\n  @Patch('cosechas/:cosechaId')\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number,\n    @Body() datos: { kilos: number }) {\n    return this.service.modificarKilosService(cosechaId, datos.kilos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('cosechas/:cosechaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarKilosService(cosechaId, datos.kilos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/cosechas/modificar-kilos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarKilosRepository } from './repository';\n\n@Injectable()\nexport class ModificarKilosService {\n  constructor(private readonly repository: ModificarKilosRepository) {}\n\n  modificarKilosService(cosechaId: number, kilos: number) {\n    return this.repository.modificarKilosRepository(cosechaId, kilos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarKilosRepository(cosechaId, kilos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/cosechas/modificar-kilos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class ModificarKilosRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async modificarKilosRepository(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.createQueryBuilder('p')\n      .where('p.id = :cosechaId', { cosechaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.cosechas.update(cosechaId, { kilos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :cosechaId', { cosechaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /cosechas/7\n{\"kilos\":300}\n\n200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 300 kg · granjaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/cosechas/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('cosechas/:cosechaId/granja')\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number,\n    @Body() datos: { granjaId: number }) {\n    return this.service.trasladarCosechaService(cosechaId, datos.granjaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('cosechas/:cosechaId/granja')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarCosechaService(cosechaId, datos.granjaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/cosechas/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarCosechaService(cosechaId: number, granjaId: number) {\n    return this.repository.trasladarCosechaRepository(cosechaId, granjaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarCosechaRepository(cosechaId, granjaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/cosechas/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async trasladarCosechaRepository(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.createQueryBuilder('p')\n      .where('p.id = :cosechaId', { cosechaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.cosechas.update(cosechaId, { granja: { id: granjaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :cosechaId', { cosechaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /cosechas/7/granja\n{\"granjaId\":2}\n\n200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/granjas/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarGranjaService } from './service';\n\n@Controller()\nexport class ConsultarGranjaController {\n  constructor(private readonly service: ConsultarGranjaService) {}\n\n  @Get('granjas/:granjaId/cosechas')\n  async ejecutar(@Param('granjaId', ParseIntPipe) granjaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarGranjaService(granjaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('granjas/:granjaId/cosechas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarGranjaService(granjaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/granjas/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarGranjaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarGranjaService {\n  constructor(private readonly repository: ConsultarGranjaRepository) {}\n\n  consultarGranjaService(granjaId: number, minimo: number) {\n    return this.repository.consultarGranjaRepository(granjaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarGranjaRepository(granjaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/granjas/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../../cosechas/entities/cosecha.entity';\nimport { Granja } from '../entities/granja.entity';\n\n@Injectable()\nexport class ConsultarGranjaRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  async consultarGranjaRepository(granjaId: number, minimo: number) {\n    const granja = await this.granjas.createQueryBuilder('h')\n      .where('h.id = :granjaId', { granjaId }).getOne();\n    const cosechas = await this.cosechas.createQueryBuilder('p')\n      .innerJoin('p.granja', 'h')\n      .where('h.id = :granjaId', { granjaId })\n      .andWhere('p.kilos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { granja, cosechas };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.granja', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa COSECHA y h representa GRANJA."
+          },
+          {
+            "text": ".where('h.id = :granjaId', { granjaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :granjaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.kilos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.KILOS >= 221. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /granjas/2/cosechas?minimo=221\n\n200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "GRANJA  1 ───────── 0..N  COSECHA\n\nGRANJA                         COSECHA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               KILOS\n                               ID_GRANJA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por cosecha",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias cosechas",
+            "note": "Un granja puede tener cero, una o muchas cosechas."
+          },
+          {
+            "text": "ID_GRANJA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - KILOS",
+        "cues": [
+          {
+            "text": "TableName: GRANJAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear GRANJAS."
+          },
+          {
+            "text": "TableName: COSECHAS",
+            "title": "Tabla de cosechas",
+            "note": "La tabla usa COSECHA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorGranja",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por GRANJA_ID y ordena por COSECHA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y KILOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/granja-cosecha.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GRANJAS = new Table({\n  name: process.env.TABLA_GRANJAS, documentClient: db,\n  partitionKey: { name: 'GRANJA_ID', type: 'number' }\n});\n\nexport const TABLA_COSECHAS = new Table({\n  name: process.env.TABLA_COSECHAS, documentClient: db,\n  partitionKey: { name: 'COSECHA_ID', type: 'number' },\n  indexes: {\n    PorGranja: {\n      type: 'global',\n      partitionKey: { name: 'GRANJA_ID', type: 'number' },\n      sortKey: { name: 'COSECHA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GRANJA = new Entity({\n  name: 'Granja', table: TABLA_GRANJAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    granjaId: number().key().savedAs('GRANJA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COSECHA = new Entity({\n  name: 'Cosecha', table: TABLA_COSECHAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cosechaId: number().key().savedAs('COSECHA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    granjaId: number().savedAs('GRANJA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_COSECHAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_COSECHAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'COSECHA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "COSECHA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorGranja: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorGranja que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es GRANJA_ID y su sort key COSECHA_ID: agrupa cosechas de toda la tabla por granja."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/granja-cosecha.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GRANJAS = new Table({\n  name: process.env.TABLA_GRANJAS, documentClient: db,\n  partitionKey: { name: 'GRANJA_ID', type: 'number' }\n});\n\nexport const TABLA_COSECHAS = new Table({\n  name: process.env.TABLA_COSECHAS, documentClient: db,\n  partitionKey: { name: 'COSECHA_ID', type: 'number' },\n  indexes: {\n    PorGranja: {\n      type: 'global',\n      partitionKey: { name: 'GRANJA_ID', type: 'number' },\n      sortKey: { name: 'COSECHA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GRANJA = new Entity({\n  name: 'Granja', table: TABLA_GRANJAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    granjaId: number().key().savedAs('GRANJA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COSECHA = new Entity({\n  name: 'Cosecha', table: TABLA_COSECHAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cosechaId: number().key().savedAs('COSECHA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    granjaId: number().savedAs('GRANJA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_COSECHA = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COSECHA en el repository."
+          },
+          {
+            "text": "name: 'Cosecha', table: TABLA_COSECHAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_COSECHAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "cosechaId: number().key().savedAs('COSECHA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce cosechaId a COSECHA_ID."
+          },
+          {
+            "text": "kilos: number().savedAs('KILOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. kilos es un número; se guarda como KILOS y no forma parte de la clave."
+          },
+          {
+            "text": "granjaId: number().savedAs('GRANJA_ID')",
+            "title": "Guardar la referencia",
+            "note": "GRANJA_ID es un atributo de COSECHAS y la clave del índice PorGranja. Aquí no lleva .key(): la clave de la tabla sigue siendo COSECHA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/cosechas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearCosechaRepository(cosecha) {\n  await MODELO_COSECHA.build(PutItemCommand)\n    .item(cosecha)\n    .options({ condition: { attr: 'cosechaId', exists: false } })\n    .send();\n}\n\nexport async function listarCosechasRepository() {\n  const { Items = [] } = await TABLA_COSECHAS.build(ScanCommand)\n    .entities(MODELO_COSECHA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/granja-cosecha.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_COSECHA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_COSECHA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(cosecha)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa cosechaId, nombre, kilos y granjaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_COSECHAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_COSECHA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_COSECHA para interpretar los ítems: COSECHA_ID vuelve a ser cosechaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cosechas }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cosechas }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /cosechas/{cosechaId} }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId} }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId}/granja }\n  consultarGranja:\n    handler: src/granjas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /granjas/{granjaId}/cosechas }",
+        "cues": [
+          {
+            "text": "src/cosechas/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/cosechas/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /cosechas",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, kilos y granjaId."
+          },
+          {
+            "text": "path: /cosechas/{cosechaId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.cosechaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/cosechas/crear-listar/handler.mjs",
+        "code": "import { crearCosechaService, listarCosechasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, kilos, granjaId } = JSON.parse(event.body);\n  const cosecha = await crearCosechaService(nombre, kilos, granjaId);\n  return { statusCode: 201, body: JSON.stringify(cosecha) };\n}\n\nexport async function listarHandler() {\n  const cosechas = await listarCosechasService();\n  return { statusCode: 200, body: JSON.stringify(cosechas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearCosechaService(nombre, kilos, granjaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/cosechas/crear-listar/service.mjs",
+        "code": "import { crearCosechaRepository, listarCosechasRepository } from './repository.mjs';\n\nexport async function crearCosechaService(nombre, kilos, granjaId) {\n  const cosechaId = Date.now();\n  const cosecha = { cosechaId, nombre, kilos, granjaId };\n  await crearCosechaRepository(cosecha);\n  return cosecha;\n}\n\nexport function listarCosechasService() {\n  return listarCosechasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearCosechaRepository(cosecha)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/cosechas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearCosechaRepository(cosecha) {\n  await MODELO_COSECHA.build(PutItemCommand)\n    .item(cosecha)\n    .options({ condition: { attr: 'cosechaId', exists: false } })\n    .send();\n}\n\nexport async function listarCosechasRepository() {\n  const { Items = [] } = await TABLA_COSECHAS.build(ScanCommand)\n    .entities(MODELO_COSECHA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(cosecha)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva cosechaId, nombre, kilos y granjaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /cosechas\n{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}\n\n201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/cosechas/eliminar/handler.mjs",
+        "code": "import { eliminarCosechaService } from './service.mjs';\n\nexport async function handler(event) {\n  const cosechaId = Number(event.pathParameters.cosechaId);\n  await eliminarCosechaService(cosechaId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cosechaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarCosechaService(cosechaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/cosechas/eliminar/service.mjs",
+        "code": "import { eliminarCosechaRepository } from './repository.mjs';\n\nexport async function eliminarCosechaService(cosechaId) {\n  await eliminarCosechaRepository(cosechaId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarCosechaRepository(cosechaId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/cosechas/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function eliminarCosechaRepository(cosechaId) {\n  await MODELO_COSECHA.build(DeleteItemCommand)\n    .key({ cosechaId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ cosechaId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /cosechas/10\n\n204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/cosechas/modificar-kilos/handler.mjs",
+        "code": "import { modificarKilosService } from './service.mjs';\n\nexport async function handler(event) {\n  const cosechaId = Number(event.pathParameters.cosechaId);\n  const { kilos } = JSON.parse(event.body);\n  const resultado = await modificarKilosService(cosechaId, kilos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cosechaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarKilosService(cosechaId, kilos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/cosechas/modificar-kilos/service.mjs",
+        "code": "import { modificarKilosRepository } from './repository.mjs';\n\nexport function modificarKilosService(cosechaId, kilos) {\n  return modificarKilosRepository(cosechaId, kilos);\n}",
+        "cues": [
+          {
+            "text": "modificarKilosRepository(cosechaId, kilos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. kilos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/cosechas/modificar-kilos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function modificarKilosRepository(cosechaId, kilos) {\n  const { Attributes } = await MODELO_COSECHA.build(UpdateItemCommand)\n    .item({ cosechaId, kilos })\n    .options({\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ cosechaId, kilos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo kilos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /cosechas/7\n{\"kilos\":300}\n\n200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 300 kg · granjaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/cosechas/trasladar/handler.mjs",
+        "code": "import { trasladarCosechaService } from './service.mjs';\n\nexport async function handler(event) {\n  const cosechaId = Number(event.pathParameters.cosechaId);\n  const { granjaId } = JSON.parse(event.body);\n  const resultado = await trasladarCosechaService(cosechaId, granjaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cosechaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarCosechaService(cosechaId, granjaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/cosechas/trasladar/service.mjs",
+        "code": "import { trasladarCosechaRepository } from './repository.mjs';\nimport { buscarGranjaRepository } from '../../granjas/consultar/repository.mjs';\n\nexport async function trasladarCosechaService(cosechaId, granjaId) {\n  const granja = await buscarGranjaRepository(granjaId);\n  if (!granja) throw new Error('Granja no encontrado');\n  return trasladarCosechaRepository(cosechaId, granjaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarGranjaRepository(granjaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarCosechaRepository(cosechaId, granjaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza GRANJA_ID. COSECHA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/cosechas/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function trasladarCosechaRepository(cosechaId, granjaId) {\n  const { Attributes } = await MODELO_COSECHA.build(UpdateItemCommand)\n    .item({ cosechaId, granjaId })\n    .options({\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ cosechaId, granjaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo granjaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /cosechas/7/granja\n{\"granjaId\":2}\n\n200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/granjas/consultar/handler.mjs",
+        "code": "import { consultarGranjaService } from './service.mjs';\n\nexport async function handler(event) {\n  const granjaId = Number(event.pathParameters.granjaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarGranjaService(granjaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.granjaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarGranjaService(granjaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/granjas/consultar/service.mjs",
+        "code": "import { buscarGranjaRepository, consultarGranjaRepository } from './repository.mjs';\n\nexport async function consultarGranjaService(granjaId, minimo) {\n  const granja = await buscarGranjaRepository(granjaId);\n  if (!granja) throw new Error('Granja no encontrado');\n  const cosechas = await consultarGranjaRepository(granjaId, minimo);\n  return { granja, cosechas };\n}",
+        "cues": [
+          {
+            "text": "await buscarGranjaRepository(granjaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarGranjaRepository(granjaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { granja, cosechas }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/granjas/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function buscarGranjaRepository(granjaId) {\n  const { Item } = await MODELO_GRANJA.build(GetItemCommand)\n    .key({ granjaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarGranjaRepository(granjaId, minimo) {\n  const { Items = [] } = await TABLA_COSECHAS.build(QueryCommand)\n    .entities(MODELO_COSECHA)\n    .query({ index: 'PorGranja', partition: granjaId })\n    .options({ filters: { Cosecha: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con GRANJA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorGranja', partition: granjaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por GRANJA_ID. No busca por COSECHA_ID."
+          },
+          {
+            "text": "attr: 'kilos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /granjas/2/cosechas?minimo=221\n\n200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Cosecha de tomate",
+      "value": 80,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Cosecha de calabaza",
+      "value": 220,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Cosecha de tomate · nuevo",
+      "value": 380,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/cosechas",
+      "request": "POST /cosechas\n{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}",
+      "fields": "nombre, kilos, granjaId",
+      "args": "nombre, kilos, granjaId",
+      "result": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
+      "service": "crearCosechaService",
+      "repo": "crearCosechaRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/cosechas/:cosechaId",
+      "request": "DELETE /cosechas/10",
+      "fields": "cosechaId",
+      "args": "cosechaId",
+      "result": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
+      "service": "eliminarCosechaService",
+      "repo": "eliminarCosechaRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-kilos",
+      "title": "Cambiar producción",
+      "verb": "PATCH",
+      "route": "/cosechas/:cosechaId",
+      "request": "PATCH /cosechas/7\n{\"kilos\":300}",
+      "fields": "cosechaId, kilos",
+      "args": "cosechaId, kilos",
+      "result": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+      "service": "modificarKilosService",
+      "repo": "modificarKilosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de granja",
+      "verb": "PATCH",
+      "route": "/cosechas/:cosechaId/granja",
+      "request": "PATCH /cosechas/7/granja\n{\"granjaId\":2}",
+      "fields": "cosechaId, granjaId",
+      "args": "cosechaId, granjaId",
+      "result": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+      "service": "trasladarCosechaService",
+      "repo": "trasladarCosechaRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un granja",
+      "verb": "GET",
+      "route": "/granjas/:granjaId/cosechas",
+      "request": "GET /granjas/2/cosechas?minimo=221",
+      "fields": "granjaId, minimo",
+      "args": "granjaId, minimo",
+      "result": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+      "service": "consultarGranjaService",
+      "repo": "consultarGranjaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-29",
+    "title": "Granja → Cosecha",
+    "parent": {
+      "entity": "Granja",
+      "sql": "GRANJA",
+      "table": "GRANJAS",
+      "route": "granjas",
+      "property": "granja",
+      "input": "granjaId",
+      "variable": "TABLA_GRANJAS",
+      "model": "MODELO_GRANJA",
+      "file": "src/granjas/entities/granja.entity.ts",
+      "examples": [
+        "Granja del Sol",
+        "Granja del Monte"
+      ]
+    },
+    "child": {
+      "entity": "Cosecha",
+      "sql": "COSECHA",
+      "table": "COSECHAS",
+      "route": "cosechas",
+      "property": "cosecha",
+      "input": "cosechaId",
+      "inverse": "cosechas",
+      "variable": "TABLA_COSECHAS",
+      "model": "MODELO_COSECHA",
+      "file": "src/cosechas/entities/cosecha.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "kilos",
+      "column": "KILOS",
+      "label": "Producción",
+      "unit": "kg",
+      "initial": 80,
+      "other": 220,
+      "after": 300,
+      "minimum": 221,
+      "create": 81,
+      "unrelated": 380
+    },
+    "foreignKey": "ID_GRANJA",
+    "index": "PorGranja",
+    "modelFile": "src/models/granja-cosecha.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

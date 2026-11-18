@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-06",
+    "sha256": "f0726ba5adef98f44b093ce5d15f75400effbfb2b4d963a3d0e021eeeb4aa0f2",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar plazas",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "GIMNASIO  1 ───────── 0..N  SESION\n\nGIMNASIO                         SESION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               PLAZAS\n                               ID_GIMNASIO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por sesion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias sesiones",
+            "note": "Un gimnasio puede tener cero, una o muchas sesiones."
+          },
+          {
+            "text": "ID_GIMNASIO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Gimnasio",
+        "path": "src/gimnasios/entities/gimnasio.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Sesion } from '../../sesiones/entities/sesion.entity';\n\n@Entity({ name: 'GIMNASIO' })\nexport class Gimnasio {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Sesion, sesion => sesion.gimnasio)\n  sesiones!: Sesion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'GIMNASIO' })",
+            "title": "Clase Gimnasio → tabla GIMNASIO",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Sesion, sesion => sesion.gimnasio)",
+            "title": "Una colección de sesiones",
+            "note": "Gimnasio.sesiones representa los registros asociados. sesion.gimnasio señala la propiedad del otro lado; no crea una segunda FK en GIMNASIO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Sesion",
+        "path": "src/sesiones/entities/sesion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Gimnasio } from '../../gimnasios/entities/gimnasio.entity';\n\n@Entity({ name: 'SESION' })\nexport class Sesion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PLAZAS', type: 'integer' })\n  plazas!: number;\n\n  @ManyToOne(() => Gimnasio, gimnasio => gimnasio.sesiones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_GIMNASIO' })\n  gimnasio!: Gimnasio;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'SESION' })",
+            "title": "Clase Sesion → tabla SESION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, plazas y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de SESION. No es el ID del registro principal y no se repite entre sesiones."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'PLAZAS', type: 'integer' })",
+            "title": "Una plazas numérica",
+            "note": "plazas se guarda en PLAZAS, de tipo entero. El siguiente paso detalla la relación con Gimnasio."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/sesiones/entities/sesion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Gimnasio } from '../../gimnasios/entities/gimnasio.entity';\n\n@Entity({ name: 'SESION' })\nexport class Sesion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PLAZAS', type: 'integer' })\n  plazas!: number;\n\n  @ManyToOne(() => Gimnasio, gimnasio => gimnasio.sesiones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_GIMNASIO' })\n  gimnasio!: Gimnasio;\n}",
+        "cues": [
+          {
+            "text": "import { Gimnasio } from '../../gimnasios/entities/gimnasio.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Sesion importa la clase Gimnasio para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Gimnasio, gimnasio => gimnasio.sesiones, {",
+            "title": "Muchas sesiones → un registro principal",
+            "note": "() => Gimnasio indica la entidad de destino. gimnasio.sesiones indica la colección inversa, definida con @OneToMany en Gimnasio."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda sesion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_GIMNASIO no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_GIMNASIO' })",
+            "title": "La FK está en SESION",
+            "note": "JoinColumn da el nombre físico de la FK: SESION.ID_GIMNASIO referencia GIMNASIO.ID. El mismo gimnasio puede aparecer en varias sesiones."
+          },
+          {
+            "text": "gimnasio!: Gimnasio;",
+            "title": "Una propiedad de tipo Gimnasio",
+            "note": "En el código usamos sesion.gimnasio; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_GIMNASIO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Gimnasio } from './gimnasios/entities/gimnasio.entity';\nimport { Sesion } from './sesiones/entities/sesion.entity';\nimport { CrearListarController } from './sesiones/crear-listar/controller';\nimport { CrearListarService } from './sesiones/crear-listar/service';\nimport { CrearListarRepository } from './sesiones/crear-listar/repository';\nimport { EliminarController } from './sesiones/eliminar/controller';\nimport { EliminarService } from './sesiones/eliminar/service';\nimport { EliminarRepository } from './sesiones/eliminar/repository';\nimport { ModificarPlazasController } from './sesiones/modificar-plazas/controller';\nimport { ModificarPlazasService } from './sesiones/modificar-plazas/service';\nimport { ModificarPlazasRepository } from './sesiones/modificar-plazas/repository';\nimport { TrasladarController } from './sesiones/trasladar/controller';\nimport { TrasladarService } from './sesiones/trasladar/service';\nimport { TrasladarRepository } from './sesiones/trasladar/repository';\nimport { ConsultarGimnasioController } from './gimnasios/consultar/controller';\nimport { ConsultarGimnasioService } from './gimnasios/consultar/service';\nimport { ConsultarGimnasioRepository } from './gimnasios/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Gimnasio, Sesion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarPlazasController,\n    TrasladarController,\n    ConsultarGimnasioController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarPlazasService,\n    ModificarPlazasRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarGimnasioService,\n    ConsultarGimnasioRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Gimnasio } from './gimnasios/entities/gimnasio.entity';",
+            "title": "Importar Gimnasio",
+            "note": "El módulo utiliza la misma clase Gimnasio que has preparado en entities."
+          },
+          {
+            "text": "import { Sesion } from './sesiones/entities/sesion.entity';",
+            "title": "Importar Sesion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Gimnasio, Sesion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Gimnasio> y Repository<Sesion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/sesiones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../entities/sesion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>\n  ) {}\n\n  crearSesionRepository(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre, plazas, gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesionesRepository() {\n    return this.sesiones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Sesion } from '../entities/sesion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Sesion de su fichero entities/sesion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Sesion) pide a Nest el repositorio de esa Entity. sesiones es el nombre de la dependencia; Repository<Sesion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.sesiones.create({",
+            "title": "Preparar un objeto Sesion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "gimnasio: { id: gimnasioId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad gimnasio existe en la Entity Sesion. TypeORM traduce gimnasio.id a la FK ID_GIMNASIO al guardar."
+          },
+          {
+            "text": "this.sesiones.save(sesion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Sesion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia GIMNASIO."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Sesion>. getMany devuelve objetos Sesion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/sesiones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('sesiones')\n  async ejecutar(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesionService(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('sesiones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearSesionService(datos.nombre, datos.plazas, datos.gimnasioId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/sesiones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearSesionService(nombre: string, plazas: number, gimnasioId: number) {\n    return this.repository.crearSesionRepository(nombre, plazas, gimnasioId);\n  }\n\n  listarSesionesService() {\n    return this.repository.listarSesionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearSesionRepository(nombre, plazas, gimnasioId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/sesiones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../entities/sesion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>\n  ) {}\n\n  crearSesionRepository(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre, plazas, gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesionesRepository() {\n    return this.sesiones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "gimnasio: { id: gimnasioId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_GIMNASIO; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.sesiones.save(sesion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /sesiones\n{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}\n\n201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/sesiones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('sesiones/:sesionId')\n  @HttpCode(204)\n  async ejecutar(@Param('sesionId', ParseIntPipe) sesionId: number) {\n    return this.service.eliminarSesionService(sesionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('sesiones/:sesionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarSesionService(sesionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/sesiones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarSesionService(sesionId: number) {\n    return this.repository.eliminarSesionRepository(sesionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarSesionRepository(sesionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/sesiones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../entities/sesion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>\n  ) {}\n\n  async eliminarSesionRepository(sesionId: number) {\n    await this.sesiones.delete(sesionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.sesiones.delete(sesionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /sesiones/10\n\n204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/sesiones/modificar-plazas/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarPlazasService } from './service';\n\n@Controller()\nexport class ModificarPlazasController {\n  constructor(private readonly service: ModificarPlazasService) {}\n\n  @Patch('sesiones/:sesionId')\n  async ejecutar(@Param('sesionId', ParseIntPipe) sesionId: number,\n    @Body() datos: { plazas: number }) {\n    return this.service.modificarPlazasService(sesionId, datos.plazas);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('sesiones/:sesionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarPlazasService(sesionId, datos.plazas)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/sesiones/modificar-plazas/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarPlazasRepository } from './repository';\n\n@Injectable()\nexport class ModificarPlazasService {\n  constructor(private readonly repository: ModificarPlazasRepository) {}\n\n  modificarPlazasService(sesionId: number, plazas: number) {\n    return this.repository.modificarPlazasRepository(sesionId, plazas);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarPlazasRepository(sesionId, plazas)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/sesiones/modificar-plazas/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../entities/sesion.entity';\n\n@Injectable()\nexport class ModificarPlazasRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>\n  ) {}\n\n  async modificarPlazasRepository(sesionId: number, plazas: number) {\n    await this.sesiones.update(sesionId, { plazas });\n    return this.sesiones.createQueryBuilder('p')\n      .where('p.id = :sesionId', { sesionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.sesiones.update(sesionId, { plazas })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :sesionId', { sesionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /sesiones/7\n{\"plazas\":34}\n\n200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/sesiones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('sesiones/:sesionId/gimnasio')\n  async ejecutar(@Param('sesionId', ParseIntPipe) sesionId: number,\n    @Body() datos: { gimnasioId: number }) {\n    return this.service.trasladarSesionService(sesionId, datos.gimnasioId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('sesiones/:sesionId/gimnasio')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarSesionService(sesionId, datos.gimnasioId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/sesiones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarSesionService(sesionId: number, gimnasioId: number) {\n    return this.repository.trasladarSesionRepository(sesionId, gimnasioId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarSesionRepository(sesionId, gimnasioId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/sesiones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../entities/sesion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>\n  ) {}\n\n  async trasladarSesionRepository(sesionId: number, gimnasioId: number) {\n    await this.sesiones.update(sesionId, { gimnasio: { id: gimnasioId } });\n    return this.sesiones.createQueryBuilder('p')\n      .where('p.id = :sesionId', { sesionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.sesiones.update(sesionId, { gimnasio: { id: gimnasioId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :sesionId', { sesionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /sesiones/7/gimnasio\n{\"gimnasioId\":2}\n\n200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/gimnasios/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarGimnasioService } from './service';\n\n@Controller()\nexport class ConsultarGimnasioController {\n  constructor(private readonly service: ConsultarGimnasioService) {}\n\n  @Get('gimnasios/:gimnasioId/sesiones')\n  async ejecutar(@Param('gimnasioId', ParseIntPipe) gimnasioId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarGimnasioService(gimnasioId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('gimnasios/:gimnasioId/sesiones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarGimnasioService(gimnasioId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/gimnasios/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarGimnasioRepository } from './repository';\n\n@Injectable()\nexport class ConsultarGimnasioService {\n  constructor(private readonly repository: ConsultarGimnasioRepository) {}\n\n  consultarGimnasioService(gimnasioId: number, minimo: number) {\n    return this.repository.consultarGimnasioRepository(gimnasioId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarGimnasioRepository(gimnasioId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/gimnasios/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from '../../sesiones/entities/sesion.entity';\nimport { Gimnasio } from '../entities/gimnasio.entity';\n\n@Injectable()\nexport class ConsultarGimnasioRepository {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  async consultarGimnasioRepository(gimnasioId: number, minimo: number) {\n    const gimnasio = await this.gimnasios.createQueryBuilder('h')\n      .where('h.id = :gimnasioId', { gimnasioId }).getOne();\n    const sesiones = await this.sesiones.createQueryBuilder('p')\n      .innerJoin('p.gimnasio', 'h')\n      .where('h.id = :gimnasioId', { gimnasioId })\n      .andWhere('p.plazas >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { gimnasio, sesiones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.gimnasio', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa SESION y h representa GIMNASIO."
+          },
+          {
+            "text": ".where('h.id = :gimnasioId', { gimnasioId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :gimnasioId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.plazas >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.PLAZAS >= 25. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /gimnasios/2/sesiones?minimo=25\n\n200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "GIMNASIO  1 ───────── 0..N  SESION\n\nGIMNASIO                         SESION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               PLAZAS\n                               ID_GIMNASIO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por sesion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias sesiones",
+            "note": "Un gimnasio puede tener cero, una o muchas sesiones."
+          },
+          {
+            "text": "ID_GIMNASIO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - PLAZAS",
+        "cues": [
+          {
+            "text": "TableName: GIMNASIOS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear GIMNASIOS."
+          },
+          {
+            "text": "TableName: SESIONES",
+            "title": "Tabla de sesiones",
+            "note": "La tabla usa SESION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorGimnasio",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por GIMNASIO_ID y ordena por SESION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y PLAZAS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/gimnasio-sesion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GIMNASIOS = new Table({\n  name: process.env.TABLA_GIMNASIOS, documentClient: db,\n  partitionKey: { name: 'GIMNASIO_ID', type: 'number' }\n});\n\nexport const TABLA_SESIONES = new Table({\n  name: process.env.TABLA_SESIONES, documentClient: db,\n  partitionKey: { name: 'SESION_ID', type: 'number' },\n  indexes: {\n    PorGimnasio: {\n      type: 'global',\n      partitionKey: { name: 'GIMNASIO_ID', type: 'number' },\n      sortKey: { name: 'SESION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GIMNASIO = new Entity({\n  name: 'Gimnasio', table: TABLA_GIMNASIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    gimnasioId: number().key().savedAs('GIMNASIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_SESION = new Entity({\n  name: 'Sesion', table: TABLA_SESIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    sesionId: number().key().savedAs('SESION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    plazas: number().savedAs('PLAZAS'),\n    gimnasioId: number().savedAs('GIMNASIO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_SESIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_SESIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'SESION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "SESION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorGimnasio: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorGimnasio que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es GIMNASIO_ID y su sort key SESION_ID: agrupa sesiones de toda la tabla por gimnasio."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/gimnasio-sesion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GIMNASIOS = new Table({\n  name: process.env.TABLA_GIMNASIOS, documentClient: db,\n  partitionKey: { name: 'GIMNASIO_ID', type: 'number' }\n});\n\nexport const TABLA_SESIONES = new Table({\n  name: process.env.TABLA_SESIONES, documentClient: db,\n  partitionKey: { name: 'SESION_ID', type: 'number' },\n  indexes: {\n    PorGimnasio: {\n      type: 'global',\n      partitionKey: { name: 'GIMNASIO_ID', type: 'number' },\n      sortKey: { name: 'SESION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GIMNASIO = new Entity({\n  name: 'Gimnasio', table: TABLA_GIMNASIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    gimnasioId: number().key().savedAs('GIMNASIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_SESION = new Entity({\n  name: 'Sesion', table: TABLA_SESIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    sesionId: number().key().savedAs('SESION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    plazas: number().savedAs('PLAZAS'),\n    gimnasioId: number().savedAs('GIMNASIO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_SESION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_SESION en el repository."
+          },
+          {
+            "text": "name: 'Sesion', table: TABLA_SESIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_SESIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "sesionId: number().key().savedAs('SESION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce sesionId a SESION_ID."
+          },
+          {
+            "text": "plazas: number().savedAs('PLAZAS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. plazas es un número; se guarda como PLAZAS y no forma parte de la clave."
+          },
+          {
+            "text": "gimnasioId: number().savedAs('GIMNASIO_ID')",
+            "title": "Guardar la referencia",
+            "note": "GIMNASIO_ID es un atributo de SESIONES y la clave del índice PorGimnasio. Aquí no lleva .key(): la clave de la tabla sigue siendo SESION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/sesiones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function crearSesionRepository(sesion) {\n  await MODELO_SESION.build(PutItemCommand)\n    .item(sesion)\n    .options({ condition: { attr: 'sesionId', exists: false } })\n    .send();\n}\n\nexport async function listarSesionesRepository() {\n  const { Items = [] } = await TABLA_SESIONES.build(ScanCommand)\n    .entities(MODELO_SESION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/gimnasio-sesion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_SESION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_SESION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(sesion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa sesionId, nombre, plazas y gimnasioId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_SESIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_SESION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_SESION para interpretar los ítems: SESION_ID vuelve a ser sesionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /sesiones }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /sesiones }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /sesiones/{sesionId} }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /sesiones/{sesionId} }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /sesiones/{sesionId}/gimnasio }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /gimnasios/{gimnasioId}/sesiones }",
+        "cues": [
+          {
+            "text": "src/sesiones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/sesiones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /sesiones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, plazas y gimnasioId."
+          },
+          {
+            "text": "path: /sesiones/{sesionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.sesionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/sesiones/crear-listar/handler.mjs",
+        "code": "import { crearSesionService, listarSesionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, plazas, gimnasioId } = JSON.parse(event.body);\n  const sesion = await crearSesionService(nombre, plazas, gimnasioId);\n  return { statusCode: 201, body: JSON.stringify(sesion) };\n}\n\nexport async function listarHandler() {\n  const sesiones = await listarSesionesService();\n  return { statusCode: 200, body: JSON.stringify(sesiones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearSesionService(nombre, plazas, gimnasioId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/sesiones/crear-listar/service.mjs",
+        "code": "import { crearSesionRepository, listarSesionesRepository } from './repository.mjs';\n\nexport async function crearSesionService(nombre, plazas, gimnasioId) {\n  const sesionId = Date.now();\n  const sesion = { sesionId, nombre, plazas, gimnasioId };\n  await crearSesionRepository(sesion);\n  return sesion;\n}\n\nexport function listarSesionesService() {\n  return listarSesionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearSesionRepository(sesion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/sesiones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function crearSesionRepository(sesion) {\n  await MODELO_SESION.build(PutItemCommand)\n    .item(sesion)\n    .options({ condition: { attr: 'sesionId', exists: false } })\n    .send();\n}\n\nexport async function listarSesionesRepository() {\n  const { Items = [] } = await TABLA_SESIONES.build(ScanCommand)\n    .entities(MODELO_SESION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(sesion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva sesionId, nombre, plazas y gimnasioId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /sesiones\n{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}\n\n201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/sesiones/eliminar/handler.mjs",
+        "code": "import { eliminarSesionService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  await eliminarSesionService(sesionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.sesionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarSesionService(sesionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/sesiones/eliminar/service.mjs",
+        "code": "import { eliminarSesionRepository } from './repository.mjs';\n\nexport async function eliminarSesionService(sesionId) {\n  await eliminarSesionRepository(sesionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarSesionRepository(sesionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/sesiones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function eliminarSesionRepository(sesionId) {\n  await MODELO_SESION.build(DeleteItemCommand)\n    .key({ sesionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ sesionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /sesiones/10\n\n204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/sesiones/modificar-plazas/handler.mjs",
+        "code": "import { modificarPlazasService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const { plazas } = JSON.parse(event.body);\n  const resultado = await modificarPlazasService(sesionId, plazas);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.sesionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarPlazasService(sesionId, plazas)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/sesiones/modificar-plazas/service.mjs",
+        "code": "import { modificarPlazasRepository } from './repository.mjs';\n\nexport function modificarPlazasService(sesionId, plazas) {\n  return modificarPlazasRepository(sesionId, plazas);\n}",
+        "cues": [
+          {
+            "text": "modificarPlazasRepository(sesionId, plazas)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. plazas es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/sesiones/modificar-plazas/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function modificarPlazasRepository(sesionId, plazas) {\n  const { Attributes } = await MODELO_SESION.build(UpdateItemCommand)\n    .item({ sesionId, plazas })\n    .options({\n      condition: { attr: 'sesionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ sesionId, plazas })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo plazas. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /sesiones/7\n{\"plazas\":34}\n\n200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/sesiones/trasladar/handler.mjs",
+        "code": "import { trasladarSesionService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const { gimnasioId } = JSON.parse(event.body);\n  const resultado = await trasladarSesionService(sesionId, gimnasioId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.sesionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarSesionService(sesionId, gimnasioId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/sesiones/trasladar/service.mjs",
+        "code": "import { trasladarSesionRepository } from './repository.mjs';\nimport { buscarGimnasioRepository } from '../../gimnasios/consultar/repository.mjs';\n\nexport async function trasladarSesionService(sesionId, gimnasioId) {\n  const gimnasio = await buscarGimnasioRepository(gimnasioId);\n  if (!gimnasio) throw new Error('Gimnasio no encontrado');\n  return trasladarSesionRepository(sesionId, gimnasioId);\n}",
+        "cues": [
+          {
+            "text": "await buscarGimnasioRepository(gimnasioId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarSesionRepository(sesionId, gimnasioId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza GIMNASIO_ID. SESION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/sesiones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function trasladarSesionRepository(sesionId, gimnasioId) {\n  const { Attributes } = await MODELO_SESION.build(UpdateItemCommand)\n    .item({ sesionId, gimnasioId })\n    .options({\n      condition: { attr: 'sesionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ sesionId, gimnasioId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo gimnasioId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /sesiones/7/gimnasio\n{\"gimnasioId\":2}\n\n200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/gimnasios/consultar/handler.mjs",
+        "code": "import { consultarGimnasioService } from './service.mjs';\n\nexport async function handler(event) {\n  const gimnasioId = Number(event.pathParameters.gimnasioId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarGimnasioService(gimnasioId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.gimnasioId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarGimnasioService(gimnasioId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/gimnasios/consultar/service.mjs",
+        "code": "import { buscarGimnasioRepository, consultarGimnasioRepository } from './repository.mjs';\n\nexport async function consultarGimnasioService(gimnasioId, minimo) {\n  const gimnasio = await buscarGimnasioRepository(gimnasioId);\n  if (!gimnasio) throw new Error('Gimnasio no encontrado');\n  const sesiones = await consultarGimnasioRepository(gimnasioId, minimo);\n  return { gimnasio, sesiones };\n}",
+        "cues": [
+          {
+            "text": "await buscarGimnasioRepository(gimnasioId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarGimnasioRepository(gimnasioId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { gimnasio, sesiones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/gimnasios/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_SESION, MODELO_GIMNASIO, TABLA_SESIONES } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function buscarGimnasioRepository(gimnasioId) {\n  const { Item } = await MODELO_GIMNASIO.build(GetItemCommand)\n    .key({ gimnasioId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarGimnasioRepository(gimnasioId, minimo) {\n  const { Items = [] } = await TABLA_SESIONES.build(QueryCommand)\n    .entities(MODELO_SESION)\n    .query({ index: 'PorGimnasio', partition: gimnasioId })\n    .options({ filters: { Sesion: { attr: 'plazas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con GIMNASIO_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorGimnasio', partition: gimnasioId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por GIMNASIO_ID. No busca por SESION_ID."
+          },
+          {
+            "text": "attr: 'plazas', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /gimnasios/2/sesiones?minimo=25\n\n200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Pilates inicial",
+      "value": 10,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Entrenamiento funcional",
+      "value": 24,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Pilates inicial · nuevo",
+      "value": 44,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/sesiones",
+      "request": "POST /sesiones\n{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}",
+      "fields": "nombre, plazas, gimnasioId",
+      "args": "nombre, plazas, gimnasioId",
+      "result": "201 · Registro 10 creado → GET /sesiones → 200 · aparecen 4 registros",
+      "service": "crearSesionService",
+      "repo": "crearSesionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/sesiones/:sesionId",
+      "request": "DELETE /sesiones/10",
+      "fields": "sesionId",
+      "args": "sesionId",
+      "result": "204 · Registro 10 eliminado → GET /sesiones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarSesionService",
+      "repo": "eliminarSesionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-plazas",
+      "title": "Cambiar plazas",
+      "verb": "PATCH",
+      "route": "/sesiones/:sesionId",
+      "request": "PATCH /sesiones/7\n{\"plazas\":34}",
+      "fields": "sesionId, plazas",
+      "args": "sesionId, plazas",
+      "result": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+      "service": "modificarPlazasService",
+      "repo": "modificarPlazasRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de gimnasio",
+      "verb": "PATCH",
+      "route": "/sesiones/:sesionId/gimnasio",
+      "request": "PATCH /sesiones/7/gimnasio\n{\"gimnasioId\":2}",
+      "fields": "sesionId, gimnasioId",
+      "args": "sesionId, gimnasioId",
+      "result": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+      "service": "trasladarSesionService",
+      "repo": "trasladarSesionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un gimnasio",
+      "verb": "GET",
+      "route": "/gimnasios/:gimnasioId/sesiones",
+      "request": "GET /gimnasios/2/sesiones?minimo=25",
+      "fields": "gimnasioId, minimo",
+      "args": "gimnasioId, minimo",
+      "result": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+      "service": "consultarGimnasioService",
+      "repo": "consultarGimnasioRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-06",
+    "title": "Gimnasio → Sesion",
+    "parent": {
+      "entity": "Gimnasio",
+      "sql": "GIMNASIO",
+      "table": "GIMNASIOS",
+      "route": "gimnasios",
+      "property": "gimnasio",
+      "input": "gimnasioId",
+      "variable": "TABLA_GIMNASIOS",
+      "model": "MODELO_GIMNASIO",
+      "file": "src/gimnasios/entities/gimnasio.entity.ts",
+      "examples": [
+        "Gimnasio Norte",
+        "Gimnasio Centro"
+      ]
+    },
+    "child": {
+      "entity": "Sesion",
+      "sql": "SESION",
+      "table": "SESIONES",
+      "route": "sesiones",
+      "property": "sesion",
+      "input": "sesionId",
+      "inverse": "sesiones",
+      "variable": "TABLA_SESIONES",
+      "model": "MODELO_SESION",
+      "file": "src/sesiones/entities/sesion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "plazas",
+      "column": "PLAZAS",
+      "label": "Plazas",
+      "unit": "personas",
+      "initial": 10,
+      "other": 24,
+      "after": 34,
+      "minimum": 25,
+      "create": 11,
+      "unrelated": 44
+    },
+    "foreignKey": "ID_GIMNASIO",
+    "index": "PorGimnasio",
+    "modelFile": "src/models/gimnasio-sesion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

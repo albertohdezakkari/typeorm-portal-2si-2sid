@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-02",
+    "sha256": "02b159e5bcf6dddf85202aadc67ce99759d7f84016e3cf3eb82c8b4f829c68c5",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar la de prueba",
+    "Cambiar superficie",
+    "Trasladar de huerto",
+    "Leer un huerto"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "HUERTO  1 ───────── 0..N  PARCELA\n\nHUERTO                         PARCELA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_HUERTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por parcela",
+            "note": "Cada parcela pertenece a un huerto."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias parcelas",
+            "note": "Un huerto puede tener cero, una o muchas parcelas."
+          },
+          {
+            "text": "ID_HUERTO",
+            "title": "El enlace",
+            "note": "La parcela guarda el ID del huerto. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Huerto",
+        "path": "src/huertos/entities/huerto.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Parcela } from '../../parcelas/entities/parcela.entity';\n\n@Entity({ name: 'HUERTO' })\nexport class Huerto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Parcela, parcela => parcela.huerto)\n  parcelas!: Parcela[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'HUERTO' })",
+            "title": "Clase Huerto → tabla HUERTO",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Parcela, parcela => parcela.huerto)",
+            "title": "Una colección de parcelas",
+            "note": "Huerto.parcelas representa las parcelas asociadas. parcela.huerto señala la propiedad del otro lado; no crea una segunda FK en HUERTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Parcela",
+        "path": "src/parcelas/entities/parcela.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Huerto } from '../../huertos/entities/huerto.entity';\n\n@Entity({ name: 'PARCELA' })\nexport class Parcela {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Huerto, huerto => huerto.parcelas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_HUERTO' })\n  huerto!: Huerto;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PARCELA' })",
+            "title": "Clase Parcela → tabla PARCELA",
+            "note": "Esta entidad describe una parcela: su ID, nombre, superficie y relación con un huerto."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada parcela tiene su propio ID",
+            "note": "Es la clave primaria de PARCELA. No es el ID del huerto y no se repite entre parcelas."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de la parcela",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
+            "title": "Una superficie numérica",
+            "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Huerto."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/parcelas/entities/parcela.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Huerto } from '../../huertos/entities/huerto.entity';\n\n@Entity({ name: 'PARCELA' })\nexport class Parcela {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Huerto, huerto => huerto.parcelas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_HUERTO' })\n  huerto!: Huerto;\n}",
+        "cues": [
+          {
+            "text": "import { Huerto } from '../../huertos/entities/huerto.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Parcela importa la clase Huerto para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Huerto, huerto => huerto.parcelas, {",
+            "title": "Muchas parcelas → un huerto",
+            "note": "() => Huerto indica la entidad de destino. huerto.parcelas indica la colección inversa, definida con @OneToMany en Huerto."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda parcela tiene un huerto",
+            "note": "La relación es obligatoria. La FK ID_HUERTO no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_HUERTO' })",
+            "title": "La FK está en PARCELA",
+            "note": "JoinColumn da el nombre físico de la FK: PARCELA.ID_HUERTO referencia HUERTO.ID. El mismo huerto puede aparecer en varias parcelas."
+          },
+          {
+            "text": "huerto!: Huerto;",
+            "title": "Una propiedad de tipo Huerto",
+            "note": "En el código usamos parcela.huerto; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_HUERTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from './huertos/entities/huerto.entity';\nimport { Parcela } from './parcelas/entities/parcela.entity';\nimport { CrearListarController } from './parcelas/crear-listar/controller';\nimport { CrearListarService } from './parcelas/crear-listar/service';\nimport { CrearListarRepository } from './parcelas/crear-listar/repository';\nimport { EliminarController } from './parcelas/eliminar/controller';\nimport { EliminarService } from './parcelas/eliminar/service';\nimport { EliminarRepository } from './parcelas/eliminar/repository';\nimport { ModificarSuperficieController } from './parcelas/modificar-superficie/controller';\nimport { ModificarSuperficieService } from './parcelas/modificar-superficie/service';\nimport { ModificarSuperficieRepository } from './parcelas/modificar-superficie/repository';\nimport { TrasladarController } from './parcelas/trasladar/controller';\nimport { TrasladarService } from './parcelas/trasladar/service';\nimport { TrasladarRepository } from './parcelas/trasladar/repository';\nimport { ConsultarHuertoController } from './huertos/consultar/controller';\nimport { ConsultarHuertoService } from './huertos/consultar/service';\nimport { ConsultarHuertoRepository } from './huertos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto, Parcela])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarSuperficieController,\n    TrasladarController,\n    ConsultarHuertoController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarSuperficieService,\n    ModificarSuperficieRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarHuertoService,\n    ConsultarHuertoRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Huerto } from './huertos/entities/huerto.entity';",
+            "title": "Importar Huerto",
+            "note": "El módulo utiliza la misma clase Huerto que has preparado en entities."
+          },
+          {
+            "text": "import { Parcela } from './parcelas/entities/parcela.entity';",
+            "title": "Importar Parcela",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Huerto, Parcela])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Huerto> y Repository<Parcela>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/parcelas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../entities/parcela.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>\n  ) {}\n\n  crearParcelaRepository(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre, superficieM2, huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelasRepository() {\n    return this.parcelas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Parcela } from '../entities/parcela.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Parcela de su fichero entities/parcela.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Parcela) pide a Nest el repositorio de esa Entity. parcelas es el nombre de la dependencia; Repository<Parcela> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.parcelas.create({",
+            "title": "Preparar un objeto Parcela",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "huerto: { id: huertoId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad huerto existe en la Entity Parcela. TypeORM traduce huerto.id a la FK ID_HUERTO al guardar."
+          },
+          {
+            "text": "this.parcelas.save(parcela)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Parcela y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia HUERTO."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Parcela>. getMany devuelve objetos Parcela, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/parcelas/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('parcelas')\n  async ejecutar(@Body() datos: { nombre: string; superficieM2: number; huertoId: number }) {\n    return this.service.crearParcelaService(datos.nombre, datos.superficieM2, datos.huertoId);\n  }\n\n  @Get('parcelas')\n  listar() {\n    return this.service.listarParcelasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('parcelas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearParcelaService(datos.nombre, datos.superficieM2, datos.huertoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/parcelas/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearParcelaService(nombre: string, superficieM2: number, huertoId: number) {\n    return this.repository.crearParcelaRepository(nombre, superficieM2, huertoId);\n  }\n\n  listarParcelasService() {\n    return this.repository.listarParcelasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearParcelaRepository(nombre, superficieM2, huertoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/parcelas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../entities/parcela.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>\n  ) {}\n\n  crearParcelaRepository(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre, superficieM2, huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelasRepository() {\n    return this.parcelas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "huerto: { id: huertoId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_HUERTO; la FK de PostgreSQL exige un huerto existente."
+          },
+          {
+            "text": "this.parcelas.save(parcela)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve las parcelas ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /parcelas\n{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}\n\n201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas\n\nID 10: valor ficticio de la animación; usa el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas",
+            "title": "Comprobar lo observable",
+            "note": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/parcelas/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('parcelas/:parcelaId')\n  @HttpCode(204)\n  async ejecutar(@Param('parcelaId', ParseIntPipe) parcelaId: number) {\n    return this.service.eliminarParcelaService(parcelaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('parcelas/:parcelaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarParcelaService(parcelaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/parcelas/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarParcelaService(parcelaId: number) {\n    return this.repository.eliminarParcelaRepository(parcelaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarParcelaRepository(parcelaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/parcelas/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../entities/parcela.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>\n  ) {}\n\n  async eliminarParcelaRepository(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.parcelas.delete(parcelaId)",
+            "title": "DELETE por ID",
+            "note": "Borra la parcela de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /parcelas/10\n\n204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar lo observable",
+            "note": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/parcelas/modificar-superficie/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarSuperficieService } from './service';\n\n@Controller()\nexport class ModificarSuperficieController {\n  constructor(private readonly service: ModificarSuperficieService) {}\n\n  @Patch('parcelas/:parcelaId')\n  async ejecutar(@Param('parcelaId', ParseIntPipe) parcelaId: number,\n    @Body() datos: { superficieM2: number }) {\n    return this.service.modificarSuperficieService(parcelaId, datos.superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('parcelas/:parcelaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarSuperficieService(parcelaId, datos.superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/parcelas/modificar-superficie/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarSuperficieRepository } from './repository';\n\n@Injectable()\nexport class ModificarSuperficieService {\n  constructor(private readonly repository: ModificarSuperficieRepository) {}\n\n  modificarSuperficieService(parcelaId: number, superficieM2: number) {\n    return this.repository.modificarSuperficieRepository(parcelaId, superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarSuperficieRepository(parcelaId, superficieM2)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/parcelas/modificar-superficie/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../entities/parcela.entity';\n\n@Injectable()\nexport class ModificarSuperficieRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>\n  ) {}\n\n  async modificarSuperficieRepository(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.createQueryBuilder('p')\n      .where('p.id = :parcelaId', { parcelaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.parcelas.update(parcelaId, { superficieM2 })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :parcelaId', { parcelaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve una parcela."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /parcelas/7\n{\"superficieM2\":65}\n\n200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+        "cues": [
+          {
+            "text": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+            "title": "Comprobar lo observable",
+            "note": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/parcelas/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('parcelas/:parcelaId/huerto')\n  async ejecutar(@Param('parcelaId', ParseIntPipe) parcelaId: number,\n    @Body() datos: { huertoId: number }) {\n    return this.service.trasladarParcelaService(parcelaId, datos.huertoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('parcelas/:parcelaId/huerto')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarParcelaService(parcelaId, datos.huertoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/parcelas/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarParcelaService(parcelaId: number, huertoId: number) {\n    return this.repository.trasladarParcelaRepository(parcelaId, huertoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarParcelaRepository(parcelaId, huertoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/parcelas/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../entities/parcela.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>\n  ) {}\n\n  async trasladarParcelaRepository(parcelaId: number, huertoId: number) {\n    await this.parcelas.update(parcelaId, { huerto: { id: huertoId } });\n    return this.parcelas.createQueryBuilder('p')\n      .where('p.id = :parcelaId', { parcelaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.parcelas.update(parcelaId, { huerto: { id: huertoId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :parcelaId', { parcelaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve una parcela."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /parcelas/7/huerto\n{\"huertoId\":2}\n\n200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
+        "cues": [
+          {
+            "text": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
+            "title": "Comprobar lo observable",
+            "note": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/huertos/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarHuertoService } from './service';\n\n@Controller()\nexport class ConsultarHuertoController {\n  constructor(private readonly service: ConsultarHuertoService) {}\n\n  @Get('huertos/:huertoId/parcelas')\n  async ejecutar(@Param('huertoId', ParseIntPipe) huertoId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarHuertoService(huertoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('huertos/:huertoId/parcelas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarHuertoService(huertoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/huertos/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarHuertoRepository } from './repository';\n\n@Injectable()\nexport class ConsultarHuertoService {\n  constructor(private readonly repository: ConsultarHuertoRepository) {}\n\n  consultarHuertoService(huertoId: number, minimo: number) {\n    return this.repository.consultarHuertoRepository(huertoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarHuertoRepository(huertoId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/huertos/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from '../../parcelas/entities/parcela.entity';\nimport { Huerto } from '../entities/huerto.entity';\n\n@Injectable()\nexport class ConsultarHuertoRepository {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  async consultarHuertoRepository(huertoId: number, minimo: number) {\n    const huerto = await this.huertos.createQueryBuilder('h')\n      .where('h.id = :huertoId', { huertoId }).getOne();\n    const parcelas = await this.parcelas.createQueryBuilder('p')\n      .innerJoin('p.huerto', 'h')\n      .where('h.id = :huertoId', { huertoId })\n      .andWhere('p.superficieM2 >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { huerto, parcelas };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.huerto', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa PARCELA y h representa HUERTO."
+          },
+          {
+            "text": ".where('h.id = :huertoId', { huertoId })",
+            "title": "Seleccionar el huerto",
+            "note": "WHERE h.ID = 2. :huertoId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.superficieM2 >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.SUPERFICIE_M2 >= 60. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /huertos/2/parcelas?minimo=60\n\n200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
+        "cues": [
+          {
+            "text": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
+            "title": "Comprobar lo observable",
+            "note": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "HUERTO  1 ───────── 0..N  PARCELA\n\nHUERTO                         PARCELA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_HUERTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por parcela",
+            "note": "Cada parcela pertenece a un huerto."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias parcelas",
+            "note": "Un huerto puede tener cero, una o muchas parcelas."
+          },
+          {
+            "text": "ID_HUERTO",
+            "title": "El enlace",
+            "note": "La parcela guarda el ID del huerto. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "cues": [
+          {
+            "text": "TableName: HUERTOS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear HUERTOS."
+          },
+          {
+            "text": "TableName: PARCELAS",
+            "title": "Tabla de parcelas",
+            "note": "La tabla usa PARCELA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorHuerto",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por HUERTO_ID y ordena por PARCELA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/huerto-parcela.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HUERTOS = new Table({\n  name: process.env.TABLA_HUERTOS, documentClient: db,\n  partitionKey: { name: 'HUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_PARCELAS = new Table({\n  name: process.env.TABLA_PARCELAS, documentClient: db,\n  partitionKey: { name: 'PARCELA_ID', type: 'number' },\n  indexes: {\n    PorHuerto: {\n      type: 'global',\n      partitionKey: { name: 'HUERTO_ID', type: 'number' },\n      sortKey: { name: 'PARCELA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HUERTO = new Entity({\n  name: 'Huerto', table: TABLA_HUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    huertoId: number().key().savedAs('HUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PARCELA = new Entity({\n  name: 'Parcela', table: TABLA_PARCELAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    parcelaId: number().key().savedAs('PARCELA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    huertoId: number().savedAs('HUERTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_PARCELAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_PARCELAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'PARCELA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "PARCELA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorHuerto: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorHuerto que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es HUERTO_ID y su sort key PARCELA_ID: agrupa parcelas de toda la tabla por huerto."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/huerto-parcela.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HUERTOS = new Table({\n  name: process.env.TABLA_HUERTOS, documentClient: db,\n  partitionKey: { name: 'HUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_PARCELAS = new Table({\n  name: process.env.TABLA_PARCELAS, documentClient: db,\n  partitionKey: { name: 'PARCELA_ID', type: 'number' },\n  indexes: {\n    PorHuerto: {\n      type: 'global',\n      partitionKey: { name: 'HUERTO_ID', type: 'number' },\n      sortKey: { name: 'PARCELA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HUERTO = new Entity({\n  name: 'Huerto', table: TABLA_HUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    huertoId: number().key().savedAs('HUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PARCELA = new Entity({\n  name: 'Parcela', table: TABLA_PARCELAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    parcelaId: number().key().savedAs('PARCELA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    huertoId: number().savedAs('HUERTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_PARCELA = new Entity({",
+            "title": "La ficha de una parcela",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PARCELA en el repository."
+          },
+          {
+            "text": "name: 'Parcela', table: TABLA_PARCELAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_PARCELAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "parcelaId: number().key().savedAs('PARCELA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce parcelaId a PARCELA_ID."
+          },
+          {
+            "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+          },
+          {
+            "text": "huertoId: number().savedAs('HUERTO_ID')",
+            "title": "Guardar la referencia",
+            "note": "HUERTO_ID es un atributo de PARCELAS y la clave del índice PorHuerto. Aquí no lleva .key(): la clave de la tabla sigue siendo PARCELA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/parcelas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function crearParcelaRepository(parcela) {\n  await MODELO_PARCELA.build(PutItemCommand)\n    .item(parcela)\n    .options({ condition: { attr: 'parcelaId', exists: false } })\n    .send();\n}\n\nexport async function listarParcelasRepository() {\n  const { Items = [] } = await TABLA_PARCELAS.build(ScanCommand)\n    .entities(MODELO_PARCELA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/huerto-parcela.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_PARCELA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_PARCELA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(parcela)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa parcelaId, nombre, superficieM2 y huertoId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir una parcela con la misma clave."
+          },
+          {
+            "text": "TABLA_PARCELAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_PARCELA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_PARCELA para interpretar los ítems: PARCELA_ID vuelve a ser parcelaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parcelas }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parcelas }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /parcelas/{parcelaId} }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /parcelas/{parcelaId} }\n  trasladarParcela:\n    handler: src/parcelas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /parcelas/{parcelaId}/huerto }\n  consultarHuerto:\n    handler: src/huertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /huertos/{huertoId}/parcelas }",
+        "cues": [
+          {
+            "text": "src/parcelas/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/parcelas/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /parcelas",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, superficieM2 y huertoId."
+          },
+          {
+            "text": "path: /parcelas/{parcelaId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.parcelaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/parcelas/crear-listar/handler.mjs",
+        "code": "import { crearParcelaService, listarParcelasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, superficieM2, huertoId } = JSON.parse(event.body);\n  const parcela = await crearParcelaService(nombre, superficieM2, huertoId);\n  return { statusCode: 201, body: JSON.stringify(parcela) };\n}\n\nexport async function listarHandler() {\n  const parcelas = await listarParcelasService();\n  return { statusCode: 200, body: JSON.stringify(parcelas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearParcelaService(nombre, superficieM2, huertoId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve la parcela creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/parcelas/crear-listar/service.mjs",
+        "code": "import { crearParcelaRepository, listarParcelasRepository } from './repository.mjs';\n\nexport async function crearParcelaService(nombre, superficieM2, huertoId) {\n  const parcelaId = Date.now();\n  const parcela = { parcelaId, nombre, superficieM2, huertoId };\n  await crearParcelaRepository(parcela);\n  return parcela;\n}\n\nexport function listarParcelasService() {\n  return listarParcelasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearParcelaRepository(parcela)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/parcelas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function crearParcelaRepository(parcela) {\n  await MODELO_PARCELA.build(PutItemCommand)\n    .item(parcela)\n    .options({ condition: { attr: 'parcelaId', exists: false } })\n    .send();\n}\n\nexport async function listarParcelasRepository() {\n  const { Items = [] } = await TABLA_PARCELAS.build(ScanCommand)\n    .entities(MODELO_PARCELA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(parcela)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva parcelaId, nombre, superficieM2 y huertoId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /parcelas\n{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}\n\n201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas\n\nID 10: valor ficticio de la animación; usa el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas",
+            "title": "Comprobar lo observable",
+            "note": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/parcelas/eliminar/handler.mjs",
+        "code": "import { eliminarParcelaService } from './service.mjs';\n\nexport async function handler(event) {\n  const parcelaId = Number(event.pathParameters.parcelaId);\n  await eliminarParcelaService(parcelaId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.parcelaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarParcelaService(parcelaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/parcelas/eliminar/service.mjs",
+        "code": "import { eliminarParcelaRepository } from './repository.mjs';\n\nexport async function eliminarParcelaService(parcelaId) {\n  await eliminarParcelaRepository(parcelaId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarParcelaRepository(parcelaId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/parcelas/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function eliminarParcelaRepository(parcelaId) {\n  await MODELO_PARCELA.build(DeleteItemCommand)\n    .key({ parcelaId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ parcelaId })",
+            "title": "La dirección exacta",
+            "note": "Solo la parcela 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /parcelas/10\n\n204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar lo observable",
+            "note": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/parcelas/modificar-superficie/handler.mjs",
+        "code": "import { modificarSuperficieService } from './service.mjs';\n\nexport async function handler(event) {\n  const parcelaId = Number(event.pathParameters.parcelaId);\n  const { superficieM2 } = JSON.parse(event.body);\n  const resultado = await modificarSuperficieService(parcelaId, superficieM2);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.parcelaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarSuperficieService(parcelaId, superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/parcelas/modificar-superficie/service.mjs",
+        "code": "import { modificarSuperficieRepository } from './repository.mjs';\n\nexport function modificarSuperficieService(parcelaId, superficieM2) {\n  return modificarSuperficieRepository(parcelaId, superficieM2);\n}",
+        "cues": [
+          {
+            "text": "modificarSuperficieRepository(parcelaId, superficieM2)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. superficieM2 es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/parcelas/modificar-superficie/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function modificarSuperficieRepository(parcelaId, superficieM2) {\n  const { Attributes } = await MODELO_PARCELA.build(UpdateItemCommand)\n    .item({ parcelaId, superficieM2 })\n    .options({\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ parcelaId, superficieM2 })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza la parcela 7 y cambia solo superficieM2. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /parcelas/7\n{\"superficieM2\":65}\n\n200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+        "cues": [
+          {
+            "text": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+            "title": "Comprobar lo observable",
+            "note": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/parcelas/trasladar/handler.mjs",
+        "code": "import { trasladarParcelaService } from './service.mjs';\n\nexport async function handler(event) {\n  const parcelaId = Number(event.pathParameters.parcelaId);\n  const { huertoId } = JSON.parse(event.body);\n  const resultado = await trasladarParcelaService(parcelaId, huertoId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.parcelaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarParcelaService(parcelaId, huertoId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/parcelas/trasladar/service.mjs",
+        "code": "import { trasladarParcelaRepository } from './repository.mjs';\nimport { buscarHuertoRepository } from '../../huertos/consultar/repository.mjs';\n\nexport async function trasladarParcelaService(parcelaId, huertoId) {\n  const huerto = await buscarHuertoRepository(huertoId);\n  if (!huerto) throw new Error('Huerto no encontrado');\n  return trasladarParcelaRepository(parcelaId, huertoId);\n}",
+        "cues": [
+          {
+            "text": "await buscarHuertoRepository(huertoId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el huerto 2 existe."
+          },
+          {
+            "text": "trasladarParcelaRepository(parcelaId, huertoId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza HUERTO_ID. PARCELA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/parcelas/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function trasladarParcelaRepository(parcelaId, huertoId) {\n  const { Attributes } = await MODELO_PARCELA.build(UpdateItemCommand)\n    .item({ parcelaId, huertoId })\n    .options({\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ parcelaId, huertoId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza la parcela 7 y cambia solo huertoId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /parcelas/7/huerto\n{\"huertoId\":2}\n\n200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2\n\nPorHuerto se actualiza de forma asíncrona; vuelve a consultar si aún ves la versión anterior.",
+        "cues": [
+          {
+            "text": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
+            "title": "Comprobar lo observable",
+            "note": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/huertos/consultar/handler.mjs",
+        "code": "import { consultarHuertoService } from './service.mjs';\n\nexport async function handler(event) {\n  const huertoId = Number(event.pathParameters.huertoId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarHuertoService(huertoId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.huertoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarHuertoService(huertoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/huertos/consultar/service.mjs",
+        "code": "import { buscarHuertoRepository, consultarHuertoRepository } from './repository.mjs';\n\nexport async function consultarHuertoService(huertoId, minimo) {\n  const huerto = await buscarHuertoRepository(huertoId);\n  if (!huerto) throw new Error('Huerto no encontrado');\n  const parcelas = await consultarHuertoRepository(huertoId, minimo);\n  return { huerto, parcelas };\n}",
+        "cues": [
+          {
+            "text": "await buscarHuertoRepository(huertoId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el huerto 2 por su clave."
+          },
+          {
+            "text": "await consultarHuertoRepository(huertoId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta las parcelas del huerto y aplica el mínimo."
+          },
+          {
+            "text": "return { huerto, parcelas }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/huertos/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function buscarHuertoRepository(huertoId) {\n  const { Item } = await MODELO_HUERTO.build(GetItemCommand)\n    .key({ huertoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHuertoRepository(huertoId, minimo) {\n  const { Items = [] } = await TABLA_PARCELAS.build(QueryCommand)\n    .entities(MODELO_PARCELA)\n    .query({ index: 'PorHuerto', partition: huertoId })\n    .options({ filters: { Parcela: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el huerto 2 con HUERTO_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorHuerto', partition: huertoId })",
+            "title": "Abrir el grupo del huerto",
+            "note": "Query lee el índice por HUERTO_ID. No busca por PARCELA_ID."
+          },
+          {
+            "text": "attr: 'superficieM2', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /huertos/2/parcelas?minimo=60\n\n200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).\n\nPorHuerto se actualiza de forma asíncrona; vuelve a consultar si aún ves la versión anterior.",
+        "cues": [
+          {
+            "text": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
+            "title": "Comprobar lo observable",
+            "note": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Parcela A",
+      "value": 20,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Parcela B",
+      "value": 45,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Parcela C",
+      "value": 80,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/parcelas",
+      "request": "POST /parcelas\n{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}",
+      "fields": "nombre, superficieM2, huertoId",
+      "args": "nombre, superficieM2, huertoId",
+      "result": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas",
+      "service": "crearParcelaService",
+      "repo": "crearParcelaRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/parcelas/:parcelaId",
+      "request": "DELETE /parcelas/10",
+      "fields": "parcelaId",
+      "args": "parcelaId",
+      "result": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
+      "service": "eliminarParcelaService",
+      "repo": "eliminarParcelaRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-superficie",
+      "title": "Cambiar superficie",
+      "verb": "PATCH",
+      "route": "/parcelas/:parcelaId",
+      "request": "PATCH /parcelas/7\n{\"superficieM2\":65}",
+      "fields": "parcelaId, superficieM2",
+      "args": "parcelaId, superficieM2",
+      "result": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+      "service": "modificarSuperficieService",
+      "repo": "modificarSuperficieRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de huerto",
+      "verb": "PATCH",
+      "route": "/parcelas/:parcelaId/huerto",
+      "request": "PATCH /parcelas/7/huerto\n{\"huertoId\":2}",
+      "fields": "parcelaId, huertoId",
+      "args": "parcelaId, huertoId",
+      "result": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
+      "service": "trasladarParcelaService",
+      "repo": "trasladarParcelaRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un huerto",
+      "verb": "GET",
+      "route": "/huertos/:huertoId/parcelas",
+      "request": "GET /huertos/2/parcelas?minimo=60",
+      "fields": "huertoId, minimo",
+      "args": "huertoId, minimo",
+      "result": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
+      "service": "consultarHuertoService",
+      "repo": "consultarHuertoRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-02",
+    "title": "Huerto → Parcela",
+    "parent": {
+      "entity": "Huerto",
+      "sql": "HUERTO",
+      "table": "HUERTOS",
+      "route": "huertos",
+      "property": "huerto",
+      "input": "huertoId",
+      "variable": "TABLA_HUERTOS",
+      "model": "MODELO_HUERTO",
+      "file": "src/huertos/entities/huerto.entity.ts",
+      "examples": [
+        "Huerto del Río",
+        "Huerto del Parque"
+      ]
+    },
+    "child": {
+      "entity": "Parcela",
+      "sql": "PARCELA",
+      "table": "PARCELAS",
+      "route": "parcelas",
+      "property": "parcela",
+      "input": "parcelaId",
+      "inverse": "parcelas",
+      "variable": "TABLA_PARCELAS",
+      "model": "MODELO_PARCELA",
+      "file": "src/parcelas/entities/parcela.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "superficieM2",
+      "column": "SUPERFICIE_M2",
+      "label": "Superficie",
+      "unit": "m²",
+      "initial": 20,
+      "other": 45,
+      "after": 65,
+      "minimum": 60,
+      "create": 32,
+      "unrelated": 80
+    },
+    "foreignKey": "ID_HUERTO",
+    "index": "PorHuerto",
+    "modelFile": "src/models/huerto-parcela.model.mjs",
+    "createName": "Parcela de prueba"
+  }
+}

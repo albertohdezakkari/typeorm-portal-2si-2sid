@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-27",
+    "sha256": "15ba462a05bba36c15252ce3cbcdddfd974bc5b0debc2034d549cbb885508244",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar superficie",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "URBANIZACION  1 ───────── 0..N  PLAZA\n\nURBANIZACION                         PLAZA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_URBANIZACION      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por plaza",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias plazas",
+            "note": "Un urbanizacion puede tener cero, una o muchas plazas."
+          },
+          {
+            "text": "ID_URBANIZACION",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Urbanizacion",
+        "path": "src/urbanizaciones/entities/urbanizacion.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Plaza } from '../../plazas/entities/plaza.entity';\n\n@Entity({ name: 'URBANIZACION' })\nexport class Urbanizacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Plaza, plaza => plaza.urbanizacion)\n  plazas!: Plaza[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'URBANIZACION' })",
+            "title": "Clase Urbanizacion → tabla URBANIZACION",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Plaza, plaza => plaza.urbanizacion)",
+            "title": "Una colección de plazas",
+            "note": "Urbanizacion.plazas representa los registros asociados. plaza.urbanizacion señala la propiedad del otro lado; no crea una segunda FK en URBANIZACION."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Plaza",
+        "path": "src/plazas/entities/plaza.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Urbanizacion } from '../../urbanizaciones/entities/urbanizacion.entity';\n\n@Entity({ name: 'PLAZA' })\nexport class Plaza {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Urbanizacion, urbanizacion => urbanizacion.plazas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_URBANIZACION' })\n  urbanizacion!: Urbanizacion;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PLAZA' })",
+            "title": "Clase Plaza → tabla PLAZA",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, superficie y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de PLAZA. No es el ID del registro principal y no se repite entre plazas."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
+            "title": "Una superficie numérica",
+            "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Urbanizacion."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/plazas/entities/plaza.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Urbanizacion } from '../../urbanizaciones/entities/urbanizacion.entity';\n\n@Entity({ name: 'PLAZA' })\nexport class Plaza {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Urbanizacion, urbanizacion => urbanizacion.plazas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_URBANIZACION' })\n  urbanizacion!: Urbanizacion;\n}",
+        "cues": [
+          {
+            "text": "import { Urbanizacion } from '../../urbanizaciones/entities/urbanizacion.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Plaza importa la clase Urbanizacion para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Urbanizacion, urbanizacion => urbanizacion.plazas, {",
+            "title": "Muchas plazas → un registro principal",
+            "note": "() => Urbanizacion indica la entidad de destino. urbanizacion.plazas indica la colección inversa, definida con @OneToMany en Urbanizacion."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda plaza tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_URBANIZACION no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_URBANIZACION' })",
+            "title": "La FK está en PLAZA",
+            "note": "JoinColumn da el nombre físico de la FK: PLAZA.ID_URBANIZACION referencia URBANIZACION.ID. El mismo urbanizacion puede aparecer en varias plazas."
+          },
+          {
+            "text": "urbanizacion!: Urbanizacion;",
+            "title": "Una propiedad de tipo Urbanizacion",
+            "note": "En el código usamos plaza.urbanizacion; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_URBANIZACION."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Urbanizacion } from './urbanizaciones/entities/urbanizacion.entity';\nimport { Plaza } from './plazas/entities/plaza.entity';\nimport { CrearListarController } from './plazas/crear-listar/controller';\nimport { CrearListarService } from './plazas/crear-listar/service';\nimport { CrearListarRepository } from './plazas/crear-listar/repository';\nimport { EliminarController } from './plazas/eliminar/controller';\nimport { EliminarService } from './plazas/eliminar/service';\nimport { EliminarRepository } from './plazas/eliminar/repository';\nimport { ModificarSuperficieM2Controller } from './plazas/modificar-superficie-m2/controller';\nimport { ModificarSuperficieM2Service } from './plazas/modificar-superficie-m2/service';\nimport { ModificarSuperficieM2Repository } from './plazas/modificar-superficie-m2/repository';\nimport { TrasladarController } from './plazas/trasladar/controller';\nimport { TrasladarService } from './plazas/trasladar/service';\nimport { TrasladarRepository } from './plazas/trasladar/repository';\nimport { ConsultarUrbanizacionController } from './urbanizaciones/consultar/controller';\nimport { ConsultarUrbanizacionService } from './urbanizaciones/consultar/service';\nimport { ConsultarUrbanizacionRepository } from './urbanizaciones/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Urbanizacion, Plaza])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarSuperficieM2Controller,\n    TrasladarController,\n    ConsultarUrbanizacionController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarSuperficieM2Service,\n    ModificarSuperficieM2Repository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarUrbanizacionService,\n    ConsultarUrbanizacionRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Urbanizacion } from './urbanizaciones/entities/urbanizacion.entity';",
+            "title": "Importar Urbanizacion",
+            "note": "El módulo utiliza la misma clase Urbanizacion que has preparado en entities."
+          },
+          {
+            "text": "import { Plaza } from './plazas/entities/plaza.entity';",
+            "title": "Importar Plaza",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Urbanizacion, Plaza])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Urbanizacion> y Repository<Plaza>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/plazas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../entities/plaza.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>\n  ) {}\n\n  crearPlazaRepository(nombre: string, superficieM2: number, urbanizacionId: number) {\n    const plaza = this.plazas.create({\n      nombre, superficieM2, urbanizacion: { id: urbanizacionId }\n    });\n    return this.plazas.save(plaza);\n  }\n\n  listarPlazasRepository() {\n    return this.plazas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Plaza } from '../entities/plaza.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Plaza de su fichero entities/plaza.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Plaza) private readonly plazas: Repository<Plaza>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Plaza) pide a Nest el repositorio de esa Entity. plazas es el nombre de la dependencia; Repository<Plaza> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.plazas.create({",
+            "title": "Preparar un objeto Plaza",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "urbanizacion: { id: urbanizacionId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad urbanizacion existe en la Entity Plaza. TypeORM traduce urbanizacion.id a la FK ID_URBANIZACION al guardar."
+          },
+          {
+            "text": "this.plazas.save(plaza)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Plaza y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia URBANIZACION."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Plaza>. getMany devuelve objetos Plaza, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/plazas/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('plazas')\n  async ejecutar(@Body() datos: { nombre: string; superficieM2: number; urbanizacionId: number }) {\n    return this.service.crearPlazaService(datos.nombre, datos.superficieM2, datos.urbanizacionId);\n  }\n\n  @Get('plazas')\n  listar() {\n    return this.service.listarPlazasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('plazas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearPlazaService(datos.nombre, datos.superficieM2, datos.urbanizacionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/plazas/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearPlazaService(nombre: string, superficieM2: number, urbanizacionId: number) {\n    return this.repository.crearPlazaRepository(nombre, superficieM2, urbanizacionId);\n  }\n\n  listarPlazasService() {\n    return this.repository.listarPlazasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearPlazaRepository(nombre, superficieM2, urbanizacionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/plazas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../entities/plaza.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>\n  ) {}\n\n  crearPlazaRepository(nombre: string, superficieM2: number, urbanizacionId: number) {\n    const plaza = this.plazas.create({\n      nombre, superficieM2, urbanizacion: { id: urbanizacionId }\n    });\n    return this.plazas.save(plaza);\n  }\n\n  listarPlazasRepository() {\n    return this.plazas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "urbanizacion: { id: urbanizacionId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_URBANIZACION; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.plazas.save(plaza)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /plazas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":11,\"urbanizacionId\":2}\n\n201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/plazas/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('plazas/:plazaId')\n  @HttpCode(204)\n  async ejecutar(@Param('plazaId', ParseIntPipe) plazaId: number) {\n    return this.service.eliminarPlazaService(plazaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('plazas/:plazaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarPlazaService(plazaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/plazas/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarPlazaService(plazaId: number) {\n    return this.repository.eliminarPlazaRepository(plazaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarPlazaRepository(plazaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/plazas/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../entities/plaza.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>\n  ) {}\n\n  async eliminarPlazaRepository(plazaId: number) {\n    await this.plazas.delete(plazaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.plazas.delete(plazaId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /plazas/10\n\n204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/plazas/modificar-superficie-m2/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarSuperficieM2Service } from './service';\n\n@Controller()\nexport class ModificarSuperficieM2Controller {\n  constructor(private readonly service: ModificarSuperficieM2Service) {}\n\n  @Patch('plazas/:plazaId')\n  async ejecutar(@Param('plazaId', ParseIntPipe) plazaId: number,\n    @Body() datos: { superficieM2: number }) {\n    return this.service.modificarSuperficieM2Service(plazaId, datos.superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('plazas/:plazaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarSuperficieM2Service(plazaId, datos.superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/plazas/modificar-superficie-m2/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarSuperficieM2Repository } from './repository';\n\n@Injectable()\nexport class ModificarSuperficieM2Service {\n  constructor(private readonly repository: ModificarSuperficieM2Repository) {}\n\n  modificarSuperficieM2Service(plazaId: number, superficieM2: number) {\n    return this.repository.modificarSuperficieM2Repository(plazaId, superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarSuperficieM2Repository(plazaId, superficieM2)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/plazas/modificar-superficie-m2/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../entities/plaza.entity';\n\n@Injectable()\nexport class ModificarSuperficieM2Repository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>\n  ) {}\n\n  async modificarSuperficieM2Repository(plazaId: number, superficieM2: number) {\n    await this.plazas.update(plazaId, { superficieM2 });\n    return this.plazas.createQueryBuilder('p')\n      .where('p.id = :plazaId', { plazaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.plazas.update(plazaId, { superficieM2 })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :plazaId', { plazaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /plazas/7\n{\"superficieM2\":28}\n\n200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/plazas/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('plazas/:plazaId/urbanizacion')\n  async ejecutar(@Param('plazaId', ParseIntPipe) plazaId: number,\n    @Body() datos: { urbanizacionId: number }) {\n    return this.service.trasladarPlazaService(plazaId, datos.urbanizacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('plazas/:plazaId/urbanizacion')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarPlazaService(plazaId, datos.urbanizacionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/plazas/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarPlazaService(plazaId: number, urbanizacionId: number) {\n    return this.repository.trasladarPlazaRepository(plazaId, urbanizacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarPlazaRepository(plazaId, urbanizacionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/plazas/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../entities/plaza.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>\n  ) {}\n\n  async trasladarPlazaRepository(plazaId: number, urbanizacionId: number) {\n    await this.plazas.update(plazaId, { urbanizacion: { id: urbanizacionId } });\n    return this.plazas.createQueryBuilder('p')\n      .where('p.id = :plazaId', { plazaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.plazas.update(plazaId, { urbanizacion: { id: urbanizacionId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :plazaId', { plazaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /plazas/7/urbanizacion\n{\"urbanizacionId\":2}\n\n200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/urbanizaciones/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarUrbanizacionService } from './service';\n\n@Controller()\nexport class ConsultarUrbanizacionController {\n  constructor(private readonly service: ConsultarUrbanizacionService) {}\n\n  @Get('urbanizaciones/:urbanizacionId/plazas')\n  async ejecutar(@Param('urbanizacionId', ParseIntPipe) urbanizacionId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarUrbanizacionService(urbanizacionId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('urbanizaciones/:urbanizacionId/plazas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarUrbanizacionService(urbanizacionId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/urbanizaciones/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarUrbanizacionRepository } from './repository';\n\n@Injectable()\nexport class ConsultarUrbanizacionService {\n  constructor(private readonly repository: ConsultarUrbanizacionRepository) {}\n\n  consultarUrbanizacionService(urbanizacionId: number, minimo: number) {\n    return this.repository.consultarUrbanizacionRepository(urbanizacionId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarUrbanizacionRepository(urbanizacionId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/urbanizaciones/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../../plazas/entities/plaza.entity';\nimport { Urbanizacion } from '../entities/urbanizacion.entity';\n\n@Injectable()\nexport class ConsultarUrbanizacionRepository {\n  constructor(\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Urbanizacion) private readonly urbanizaciones: Repository<Urbanizacion>\n  ) {}\n\n  async consultarUrbanizacionRepository(urbanizacionId: number, minimo: number) {\n    const urbanizacion = await this.urbanizaciones.createQueryBuilder('h')\n      .where('h.id = :urbanizacionId', { urbanizacionId }).getOne();\n    const plazas = await this.plazas.createQueryBuilder('p')\n      .innerJoin('p.urbanizacion', 'h')\n      .where('h.id = :urbanizacionId', { urbanizacionId })\n      .andWhere('p.superficieM2 >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { urbanizacion, plazas };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.urbanizacion', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa PLAZA y h representa URBANIZACION."
+          },
+          {
+            "text": ".where('h.id = :urbanizacionId', { urbanizacionId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :urbanizacionId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.superficieM2 >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.SUPERFICIE_M2 >= 19. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /urbanizaciones/2/plazas?minimo=19\n\n200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "URBANIZACION  1 ───────── 0..N  PLAZA\n\nURBANIZACION                         PLAZA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_URBANIZACION      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por plaza",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias plazas",
+            "note": "Un urbanizacion puede tener cero, una o muchas plazas."
+          },
+          {
+            "text": "ID_URBANIZACION",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_URBANIZACIONES: { Ref: TablaUrbanizaciones }\n    TABLA_PLAZAS: { Ref: TablaPlazas }\n\nresources:\n  Resources:\n    TablaUrbanizaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: URBANIZACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: URBANIZACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlazas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLAZAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLAZA_ID, AttributeType: N }\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLAZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLAZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorUrbanizacion\n            # Clave compuesta = partition key + sort key:\n            # (URBANIZACION_ID, PLAZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: URBANIZACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Urbanizacion.\n              - AttributeName: PLAZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "cues": [
+          {
+            "text": "TableName: URBANIZACIONES",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear URBANIZACIONES."
+          },
+          {
+            "text": "TableName: PLAZAS",
+            "title": "Tabla de plazas",
+            "note": "La tabla usa PLAZA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorUrbanizacion",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por URBANIZACION_ID y ordena por PLAZA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/urbanizacion-plaza.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_URBANIZACIONES = new Table({\n  name: process.env.TABLA_URBANIZACIONES, documentClient: db,\n  partitionKey: { name: 'URBANIZACION_ID', type: 'number' }\n});\n\nexport const TABLA_PLAZAS = new Table({\n  name: process.env.TABLA_PLAZAS, documentClient: db,\n  partitionKey: { name: 'PLAZA_ID', type: 'number' },\n  indexes: {\n    PorUrbanizacion: {\n      type: 'global',\n      partitionKey: { name: 'URBANIZACION_ID', type: 'number' },\n      sortKey: { name: 'PLAZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_URBANIZACION = new Entity({\n  name: 'Urbanizacion', table: TABLA_URBANIZACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    urbanizacionId: number().key().savedAs('URBANIZACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PLAZA = new Entity({\n  name: 'Plaza', table: TABLA_PLAZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    plazaId: number().key().savedAs('PLAZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    urbanizacionId: number().savedAs('URBANIZACION_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_PLAZAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_PLAZAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'PLAZA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "PLAZA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorUrbanizacion: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorUrbanizacion que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es URBANIZACION_ID y su sort key PLAZA_ID: agrupa plazas de toda la tabla por urbanizacion."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/urbanizacion-plaza.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_URBANIZACIONES = new Table({\n  name: process.env.TABLA_URBANIZACIONES, documentClient: db,\n  partitionKey: { name: 'URBANIZACION_ID', type: 'number' }\n});\n\nexport const TABLA_PLAZAS = new Table({\n  name: process.env.TABLA_PLAZAS, documentClient: db,\n  partitionKey: { name: 'PLAZA_ID', type: 'number' },\n  indexes: {\n    PorUrbanizacion: {\n      type: 'global',\n      partitionKey: { name: 'URBANIZACION_ID', type: 'number' },\n      sortKey: { name: 'PLAZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_URBANIZACION = new Entity({\n  name: 'Urbanizacion', table: TABLA_URBANIZACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    urbanizacionId: number().key().savedAs('URBANIZACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PLAZA = new Entity({\n  name: 'Plaza', table: TABLA_PLAZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    plazaId: number().key().savedAs('PLAZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    urbanizacionId: number().savedAs('URBANIZACION_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_PLAZA = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PLAZA en el repository."
+          },
+          {
+            "text": "name: 'Plaza', table: TABLA_PLAZAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_PLAZAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "plazaId: number().key().savedAs('PLAZA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce plazaId a PLAZA_ID."
+          },
+          {
+            "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+          },
+          {
+            "text": "urbanizacionId: number().savedAs('URBANIZACION_ID')",
+            "title": "Guardar la referencia",
+            "note": "URBANIZACION_ID es un atributo de PLAZAS y la clave del índice PorUrbanizacion. Aquí no lleva .key(): la clave de la tabla sigue siendo PLAZA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/plazas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function crearPlazaRepository(plaza) {\n  await MODELO_PLAZA.build(PutItemCommand)\n    .item(plaza)\n    .options({ condition: { attr: 'plazaId', exists: false } })\n    .send();\n}\n\nexport async function listarPlazasRepository() {\n  const { Items = [] } = await TABLA_PLAZAS.build(ScanCommand)\n    .entities(MODELO_PLAZA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/urbanizacion-plaza.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_PLAZA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_PLAZA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(plaza)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa plazaId, nombre, superficieM2 y urbanizacionId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_PLAZAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_PLAZA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_PLAZA para interpretar los ítems: PLAZA_ID vuelve a ser plazaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearPlaza:\n    handler: src/plazas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /plazas }\n  listarPlazas:\n    handler: src/plazas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /plazas }\n  eliminarPlaza:\n    handler: src/plazas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /plazas/{plazaId} }\n  modificarSuperficieM2:\n    handler: src/plazas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plazas/{plazaId} }\n  trasladarPlaza:\n    handler: src/plazas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plazas/{plazaId}/urbanizacion }\n  consultarUrbanizacion:\n    handler: src/urbanizaciones/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /urbanizaciones/{urbanizacionId}/plazas }",
+        "cues": [
+          {
+            "text": "src/plazas/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/plazas/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /plazas",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, superficieM2 y urbanizacionId."
+          },
+          {
+            "text": "path: /plazas/{plazaId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.plazaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/plazas/crear-listar/handler.mjs",
+        "code": "import { crearPlazaService, listarPlazasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, superficieM2, urbanizacionId } = JSON.parse(event.body);\n  const plaza = await crearPlazaService(nombre, superficieM2, urbanizacionId);\n  return { statusCode: 201, body: JSON.stringify(plaza) };\n}\n\nexport async function listarHandler() {\n  const plazas = await listarPlazasService();\n  return { statusCode: 200, body: JSON.stringify(plazas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearPlazaService(nombre, superficieM2, urbanizacionId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/plazas/crear-listar/service.mjs",
+        "code": "import { crearPlazaRepository, listarPlazasRepository } from './repository.mjs';\n\nexport async function crearPlazaService(nombre, superficieM2, urbanizacionId) {\n  const plazaId = Date.now();\n  const plaza = { plazaId, nombre, superficieM2, urbanizacionId };\n  await crearPlazaRepository(plaza);\n  return plaza;\n}\n\nexport function listarPlazasService() {\n  return listarPlazasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearPlazaRepository(plaza)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/plazas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function crearPlazaRepository(plaza) {\n  await MODELO_PLAZA.build(PutItemCommand)\n    .item(plaza)\n    .options({ condition: { attr: 'plazaId', exists: false } })\n    .send();\n}\n\nexport async function listarPlazasRepository() {\n  const { Items = [] } = await TABLA_PLAZAS.build(ScanCommand)\n    .entities(MODELO_PLAZA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(plaza)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva plazaId, nombre, superficieM2 y urbanizacionId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /plazas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":11,\"urbanizacionId\":2}\n\n201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/plazas/eliminar/handler.mjs",
+        "code": "import { eliminarPlazaService } from './service.mjs';\n\nexport async function handler(event) {\n  const plazaId = Number(event.pathParameters.plazaId);\n  await eliminarPlazaService(plazaId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.plazaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarPlazaService(plazaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/plazas/eliminar/service.mjs",
+        "code": "import { eliminarPlazaRepository } from './repository.mjs';\n\nexport async function eliminarPlazaService(plazaId) {\n  await eliminarPlazaRepository(plazaId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarPlazaRepository(plazaId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/plazas/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function eliminarPlazaRepository(plazaId) {\n  await MODELO_PLAZA.build(DeleteItemCommand)\n    .key({ plazaId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ plazaId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /plazas/10\n\n204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/plazas/modificar-superficie-m2/handler.mjs",
+        "code": "import { modificarSuperficieM2Service } from './service.mjs';\n\nexport async function handler(event) {\n  const plazaId = Number(event.pathParameters.plazaId);\n  const { superficieM2 } = JSON.parse(event.body);\n  const resultado = await modificarSuperficieM2Service(plazaId, superficieM2);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.plazaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarSuperficieM2Service(plazaId, superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/plazas/modificar-superficie-m2/service.mjs",
+        "code": "import { modificarSuperficieM2Repository } from './repository.mjs';\n\nexport function modificarSuperficieM2Service(plazaId, superficieM2) {\n  return modificarSuperficieM2Repository(plazaId, superficieM2);\n}",
+        "cues": [
+          {
+            "text": "modificarSuperficieM2Repository(plazaId, superficieM2)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. superficieM2 es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/plazas/modificar-superficie-m2/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function modificarSuperficieM2Repository(plazaId, superficieM2) {\n  const { Attributes } = await MODELO_PLAZA.build(UpdateItemCommand)\n    .item({ plazaId, superficieM2 })\n    .options({\n      condition: { attr: 'plazaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ plazaId, superficieM2 })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo superficieM2. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /plazas/7\n{\"superficieM2\":28}\n\n200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/plazas/trasladar/handler.mjs",
+        "code": "import { trasladarPlazaService } from './service.mjs';\n\nexport async function handler(event) {\n  const plazaId = Number(event.pathParameters.plazaId);\n  const { urbanizacionId } = JSON.parse(event.body);\n  const resultado = await trasladarPlazaService(plazaId, urbanizacionId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.plazaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarPlazaService(plazaId, urbanizacionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/plazas/trasladar/service.mjs",
+        "code": "import { trasladarPlazaRepository } from './repository.mjs';\nimport { buscarUrbanizacionRepository } from '../../urbanizaciones/consultar/repository.mjs';\n\nexport async function trasladarPlazaService(plazaId, urbanizacionId) {\n  const urbanizacion = await buscarUrbanizacionRepository(urbanizacionId);\n  if (!urbanizacion) throw new Error('Urbanizacion no encontrado');\n  return trasladarPlazaRepository(plazaId, urbanizacionId);\n}",
+        "cues": [
+          {
+            "text": "await buscarUrbanizacionRepository(urbanizacionId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarPlazaRepository(plazaId, urbanizacionId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza URBANIZACION_ID. PLAZA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/plazas/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function trasladarPlazaRepository(plazaId, urbanizacionId) {\n  const { Attributes } = await MODELO_PLAZA.build(UpdateItemCommand)\n    .item({ plazaId, urbanizacionId })\n    .options({\n      condition: { attr: 'plazaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ plazaId, urbanizacionId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo urbanizacionId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /plazas/7/urbanizacion\n{\"urbanizacionId\":2}\n\n200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/urbanizaciones/consultar/handler.mjs",
+        "code": "import { consultarUrbanizacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const urbanizacionId = Number(event.pathParameters.urbanizacionId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarUrbanizacionService(urbanizacionId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.urbanizacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarUrbanizacionService(urbanizacionId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/urbanizaciones/consultar/service.mjs",
+        "code": "import { buscarUrbanizacionRepository, consultarUrbanizacionRepository } from './repository.mjs';\n\nexport async function consultarUrbanizacionService(urbanizacionId, minimo) {\n  const urbanizacion = await buscarUrbanizacionRepository(urbanizacionId);\n  if (!urbanizacion) throw new Error('Urbanizacion no encontrado');\n  const plazas = await consultarUrbanizacionRepository(urbanizacionId, minimo);\n  return { urbanizacion, plazas };\n}",
+        "cues": [
+          {
+            "text": "await buscarUrbanizacionRepository(urbanizacionId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarUrbanizacionRepository(urbanizacionId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { urbanizacion, plazas }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/urbanizaciones/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PLAZA, MODELO_URBANIZACION, TABLA_PLAZAS } from '../../models/urbanizacion-plaza.model.mjs';\n\nexport async function buscarUrbanizacionRepository(urbanizacionId) {\n  const { Item } = await MODELO_URBANIZACION.build(GetItemCommand)\n    .key({ urbanizacionId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarUrbanizacionRepository(urbanizacionId, minimo) {\n  const { Items = [] } = await TABLA_PLAZAS.build(QueryCommand)\n    .entities(MODELO_PLAZA)\n    .query({ index: 'PorUrbanizacion', partition: urbanizacionId })\n    .options({ filters: { Plaza: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con URBANIZACION_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorUrbanizacion', partition: urbanizacionId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por URBANIZACION_ID. No busca por PLAZA_ID."
+          },
+          {
+            "text": "attr: 'superficieM2', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /urbanizaciones/2/plazas?minimo=19\n\n200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Plaza P-01",
+      "value": 10,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Plaza P-02",
+      "value": 18,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Plaza P-01 · nuevo",
+      "value": 38,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/plazas",
+      "request": "POST /plazas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":11,\"urbanizacionId\":2}",
+      "fields": "nombre, superficieM2, urbanizacionId",
+      "args": "nombre, superficieM2, urbanizacionId",
+      "result": "201 · Registro 10 creado → GET /plazas → 200 · aparecen 4 registros",
+      "service": "crearPlazaService",
+      "repo": "crearPlazaRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/plazas/:plazaId",
+      "request": "DELETE /plazas/10",
+      "fields": "plazaId",
+      "args": "plazaId",
+      "result": "204 · Registro 10 eliminado → GET /plazas → 200 · quedan 7, 8 y 9",
+      "service": "eliminarPlazaService",
+      "repo": "eliminarPlazaRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-superficie-m2",
+      "title": "Cambiar superficie",
+      "verb": "PATCH",
+      "route": "/plazas/:plazaId",
+      "request": "PATCH /plazas/7\n{\"superficieM2\":28}",
+      "fields": "plazaId, superficieM2",
+      "args": "plazaId, superficieM2",
+      "result": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId = 1",
+      "service": "modificarSuperficieM2Service",
+      "repo": "modificarSuperficieM2Repository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de urbanizacion",
+      "verb": "PATCH",
+      "route": "/plazas/:plazaId/urbanizacion",
+      "request": "PATCH /plazas/7/urbanizacion\n{\"urbanizacionId\":2}",
+      "fields": "plazaId, urbanizacionId",
+      "args": "plazaId, urbanizacionId",
+      "result": "200 · Registro 7 · superficieM2 = 28 m² · urbanizacionId pasa de 1 a 2",
+      "service": "trasladarPlazaService",
+      "repo": "trasladarPlazaRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un urbanizacion",
+      "verb": "GET",
+      "route": "/urbanizaciones/:urbanizacionId/plazas",
+      "request": "GET /urbanizaciones/2/plazas?minimo=19",
+      "fields": "urbanizacionId, minimo",
+      "args": "urbanizacionId, minimo",
+      "result": "200 · Urbanización Lago + registro 7 (28 m²). Excluye el 8 (18 m²) y el 9 (pertenece al ID 1).",
+      "service": "consultarUrbanizacionService",
+      "repo": "consultarUrbanizacionRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-27",
+    "title": "Urbanizacion → Plaza",
+    "parent": {
+      "entity": "Urbanizacion",
+      "sql": "URBANIZACION",
+      "table": "URBANIZACIONES",
+      "route": "urbanizaciones",
+      "property": "urbanizacion",
+      "input": "urbanizacionId",
+      "variable": "TABLA_URBANIZACIONES",
+      "model": "MODELO_URBANIZACION",
+      "file": "src/urbanizaciones/entities/urbanizacion.entity.ts",
+      "examples": [
+        "Urbanización Jardín",
+        "Urbanización Lago"
+      ]
+    },
+    "child": {
+      "entity": "Plaza",
+      "sql": "PLAZA",
+      "table": "PLAZAS",
+      "route": "plazas",
+      "property": "plaza",
+      "input": "plazaId",
+      "inverse": "plazas",
+      "variable": "TABLA_PLAZAS",
+      "model": "MODELO_PLAZA",
+      "file": "src/plazas/entities/plaza.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "superficieM2",
+      "column": "SUPERFICIE_M2",
+      "label": "Superficie",
+      "unit": "m²",
+      "initial": 10,
+      "other": 18,
+      "after": 28,
+      "minimum": 19,
+      "create": 11,
+      "unrelated": 38
+    },
+    "foreignKey": "ID_URBANIZACION",
+    "index": "PorUrbanizacion",
+    "modelFile": "src/models/urbanizacion-plaza.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

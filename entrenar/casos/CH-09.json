@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-09",
+    "sha256": "5b6d581c71517cef50d20eacf724b3982b9e0f0963ca0a739fa238cc9a2b49ef",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar coste",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "TALLER  1 ───────── 0..N  REPARACION\n\nTALLER                         REPARACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               COSTE_CENTIMOS\n                               ID_TALLER      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por reparacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias reparaciones",
+            "note": "Un taller puede tener cero, una o muchas reparaciones."
+          },
+          {
+            "text": "ID_TALLER",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Taller",
+        "path": "src/talleres/entities/taller.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Reparacion } from '../../reparaciones/entities/reparacion.entity';\n\n@Entity({ name: 'TALLER' })\nexport class Taller {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Reparacion, reparacion => reparacion.taller)\n  reparaciones!: Reparacion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'TALLER' })",
+            "title": "Clase Taller → tabla TALLER",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Reparacion, reparacion => reparacion.taller)",
+            "title": "Una colección de reparaciones",
+            "note": "Taller.reparaciones representa los registros asociados. reparacion.taller señala la propiedad del otro lado; no crea una segunda FK en TALLER."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Reparacion",
+        "path": "src/reparaciones/entities/reparacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Taller } from '../../talleres/entities/taller.entity';\n\n@Entity({ name: 'REPARACION' })\nexport class Reparacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'COSTE_CENTIMOS', type: 'integer' })\n  costeCentimos!: number;\n\n  @ManyToOne(() => Taller, taller => taller.reparaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TALLER' })\n  taller!: Taller;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'REPARACION' })",
+            "title": "Clase Reparacion → tabla REPARACION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, coste y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de REPARACION. No es el ID del registro principal y no se repite entre reparaciones."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'COSTE_CENTIMOS', type: 'integer' })",
+            "title": "Una coste numérica",
+            "note": "costeCentimos se guarda en COSTE_CENTIMOS, de tipo entero. El siguiente paso detalla la relación con Taller."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/reparaciones/entities/reparacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Taller } from '../../talleres/entities/taller.entity';\n\n@Entity({ name: 'REPARACION' })\nexport class Reparacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'COSTE_CENTIMOS', type: 'integer' })\n  costeCentimos!: number;\n\n  @ManyToOne(() => Taller, taller => taller.reparaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TALLER' })\n  taller!: Taller;\n}",
+        "cues": [
+          {
+            "text": "import { Taller } from '../../talleres/entities/taller.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Reparacion importa la clase Taller para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Taller, taller => taller.reparaciones, {",
+            "title": "Muchas reparaciones → un registro principal",
+            "note": "() => Taller indica la entidad de destino. taller.reparaciones indica la colección inversa, definida con @OneToMany en Taller."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda reparacion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_TALLER no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_TALLER' })",
+            "title": "La FK está en REPARACION",
+            "note": "JoinColumn da el nombre físico de la FK: REPARACION.ID_TALLER referencia TALLER.ID. El mismo taller puede aparecer en varias reparaciones."
+          },
+          {
+            "text": "taller!: Taller;",
+            "title": "Una propiedad de tipo Taller",
+            "note": "En el código usamos reparacion.taller; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_TALLER."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarCosteCentimosController,\n    TrasladarController,\n    ConsultarTallerController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarCosteCentimosService,\n    ModificarCosteCentimosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarTallerService,\n    ConsultarTallerRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Taller } from './talleres/entities/taller.entity';",
+            "title": "Importar Taller",
+            "note": "El módulo utiliza la misma clase Taller que has preparado en entities."
+          },
+          {
+            "text": "import { Reparacion } from './reparaciones/entities/reparacion.entity';",
+            "title": "Importar Reparacion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Taller, Reparacion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Taller> y Repository<Reparacion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/reparaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../entities/reparacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>\n  ) {}\n\n  crearReparacionRepository(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre, costeCentimos, taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparacionesRepository() {\n    return this.reparaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Reparacion } from '../entities/reparacion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Reparacion de su fichero entities/reparacion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Reparacion) pide a Nest el repositorio de esa Entity. reparaciones es el nombre de la dependencia; Repository<Reparacion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.reparaciones.create({",
+            "title": "Preparar un objeto Reparacion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "taller: { id: tallerId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad taller existe en la Entity Reparacion. TypeORM traduce taller.id a la FK ID_TALLER al guardar."
+          },
+          {
+            "text": "this.reparaciones.save(reparacion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Reparacion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia TALLER."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Reparacion>. getMany devuelve objetos Reparacion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/reparaciones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('reparaciones')\n  async ejecutar(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacionService(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparacionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('reparaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearReparacionService(datos.nombre, datos.costeCentimos, datos.tallerId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/reparaciones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearReparacionService(nombre: string, costeCentimos: number, tallerId: number) {\n    return this.repository.crearReparacionRepository(nombre, costeCentimos, tallerId);\n  }\n\n  listarReparacionesService() {\n    return this.repository.listarReparacionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearReparacionRepository(nombre, costeCentimos, tallerId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/reparaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../entities/reparacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>\n  ) {}\n\n  crearReparacionRepository(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre, costeCentimos, taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparacionesRepository() {\n    return this.reparaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "taller: { id: tallerId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_TALLER; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.reparaciones.save(reparacion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /reparaciones\n{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}\n\n201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/reparaciones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('reparaciones/:reparacionId')\n  @HttpCode(204)\n  async ejecutar(@Param('reparacionId', ParseIntPipe) reparacionId: number) {\n    return this.service.eliminarReparacionService(reparacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('reparaciones/:reparacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarReparacionService(reparacionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/reparaciones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarReparacionService(reparacionId: number) {\n    return this.repository.eliminarReparacionRepository(reparacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarReparacionRepository(reparacionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/reparaciones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../entities/reparacion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>\n  ) {}\n\n  async eliminarReparacionRepository(reparacionId: number) {\n    await this.reparaciones.delete(reparacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.reparaciones.delete(reparacionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /reparaciones/10\n\n204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/reparaciones/modificar-coste-centimos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarCosteCentimosService } from './service';\n\n@Controller()\nexport class ModificarCosteCentimosController {\n  constructor(private readonly service: ModificarCosteCentimosService) {}\n\n  @Patch('reparaciones/:reparacionId')\n  async ejecutar(@Param('reparacionId', ParseIntPipe) reparacionId: number,\n    @Body() datos: { costeCentimos: number }) {\n    return this.service.modificarCosteCentimosService(reparacionId, datos.costeCentimos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('reparaciones/:reparacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarCosteCentimosService(reparacionId, datos.costeCentimos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/reparaciones/modificar-coste-centimos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarCosteCentimosRepository } from './repository';\n\n@Injectable()\nexport class ModificarCosteCentimosService {\n  constructor(private readonly repository: ModificarCosteCentimosRepository) {}\n\n  modificarCosteCentimosService(reparacionId: number, costeCentimos: number) {\n    return this.repository.modificarCosteCentimosRepository(reparacionId, costeCentimos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarCosteCentimosRepository(reparacionId, costeCentimos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/reparaciones/modificar-coste-centimos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../entities/reparacion.entity';\n\n@Injectable()\nexport class ModificarCosteCentimosRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>\n  ) {}\n\n  async modificarCosteCentimosRepository(reparacionId: number, costeCentimos: number) {\n    await this.reparaciones.update(reparacionId, { costeCentimos });\n    return this.reparaciones.createQueryBuilder('p')\n      .where('p.id = :reparacionId', { reparacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.reparaciones.update(reparacionId, { costeCentimos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :reparacionId', { reparacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /reparaciones/7\n{\"costeCentimos\":9500}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/reparaciones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('reparaciones/:reparacionId/taller')\n  async ejecutar(@Param('reparacionId', ParseIntPipe) reparacionId: number,\n    @Body() datos: { tallerId: number }) {\n    return this.service.trasladarReparacionService(reparacionId, datos.tallerId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('reparaciones/:reparacionId/taller')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarReparacionService(reparacionId, datos.tallerId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/reparaciones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarReparacionService(reparacionId: number, tallerId: number) {\n    return this.repository.trasladarReparacionRepository(reparacionId, tallerId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarReparacionRepository(reparacionId, tallerId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/reparaciones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../entities/reparacion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>\n  ) {}\n\n  async trasladarReparacionRepository(reparacionId: number, tallerId: number) {\n    await this.reparaciones.update(reparacionId, { taller: { id: tallerId } });\n    return this.reparaciones.createQueryBuilder('p')\n      .where('p.id = :reparacionId', { reparacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.reparaciones.update(reparacionId, { taller: { id: tallerId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :reparacionId', { reparacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /reparaciones/7/taller\n{\"tallerId\":2}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/talleres/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarTallerService } from './service';\n\n@Controller()\nexport class ConsultarTallerController {\n  constructor(private readonly service: ConsultarTallerService) {}\n\n  @Get('talleres/:tallerId/reparaciones')\n  async ejecutar(@Param('tallerId', ParseIntPipe) tallerId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarTallerService(tallerId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('talleres/:tallerId/reparaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarTallerService(tallerId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/talleres/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarTallerRepository } from './repository';\n\n@Injectable()\nexport class ConsultarTallerService {\n  constructor(private readonly repository: ConsultarTallerRepository) {}\n\n  consultarTallerService(tallerId: number, minimo: number) {\n    return this.repository.consultarTallerRepository(tallerId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarTallerRepository(tallerId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/talleres/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../../reparaciones/entities/reparacion.entity';\nimport { Taller } from '../entities/taller.entity';\n\n@Injectable()\nexport class ConsultarTallerRepository {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  async consultarTallerRepository(tallerId: number, minimo: number) {\n    const taller = await this.talleres.createQueryBuilder('h')\n      .where('h.id = :tallerId', { tallerId }).getOne();\n    const reparaciones = await this.reparaciones.createQueryBuilder('p')\n      .innerJoin('p.taller', 'h')\n      .where('h.id = :tallerId', { tallerId })\n      .andWhere('p.costeCentimos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { taller, reparaciones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.taller', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa REPARACION y h representa TALLER."
+          },
+          {
+            "text": ".where('h.id = :tallerId', { tallerId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :tallerId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.costeCentimos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.COSTE_CENTIMOS >= 7001. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /talleres/2/reparaciones?minimo=7001\n\n200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "TALLER  1 ───────── 0..N  REPARACION\n\nTALLER                         REPARACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               COSTE_CENTIMOS\n                               ID_TALLER      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por reparacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias reparaciones",
+            "note": "Un taller puede tener cero, una o muchas reparaciones."
+          },
+          {
+            "text": "ID_TALLER",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+        "cues": [
+          {
+            "text": "TableName: TALLERES",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear TALLERES."
+          },
+          {
+            "text": "TableName: REPARACIONES",
+            "title": "Tabla de reparaciones",
+            "note": "La tabla usa REPARACION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorTaller",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por TALLER_ID y ordena por REPARACION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y COSTE_CENTIMOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/taller-reparacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TALLERES = new Table({\n  name: process.env.TABLA_TALLERES, documentClient: db,\n  partitionKey: { name: 'TALLER_ID', type: 'number' }\n});\n\nexport const TABLA_REPARACIONES = new Table({\n  name: process.env.TABLA_REPARACIONES, documentClient: db,\n  partitionKey: { name: 'REPARACION_ID', type: 'number' },\n  indexes: {\n    PorTaller: {\n      type: 'global',\n      partitionKey: { name: 'TALLER_ID', type: 'number' },\n      sortKey: { name: 'REPARACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TALLER = new Entity({\n  name: 'Taller', table: TABLA_TALLERES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tallerId: number().key().savedAs('TALLER_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_REPARACION = new Entity({\n  name: 'Reparacion', table: TABLA_REPARACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reparacionId: number().key().savedAs('REPARACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    costeCentimos: number().savedAs('COSTE_CENTIMOS'),\n    tallerId: number().savedAs('TALLER_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_REPARACIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_REPARACIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'REPARACION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "REPARACION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorTaller: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorTaller que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es TALLER_ID y su sort key REPARACION_ID: agrupa reparaciones de toda la tabla por taller."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/taller-reparacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TALLERES = new Table({\n  name: process.env.TABLA_TALLERES, documentClient: db,\n  partitionKey: { name: 'TALLER_ID', type: 'number' }\n});\n\nexport const TABLA_REPARACIONES = new Table({\n  name: process.env.TABLA_REPARACIONES, documentClient: db,\n  partitionKey: { name: 'REPARACION_ID', type: 'number' },\n  indexes: {\n    PorTaller: {\n      type: 'global',\n      partitionKey: { name: 'TALLER_ID', type: 'number' },\n      sortKey: { name: 'REPARACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TALLER = new Entity({\n  name: 'Taller', table: TABLA_TALLERES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tallerId: number().key().savedAs('TALLER_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_REPARACION = new Entity({\n  name: 'Reparacion', table: TABLA_REPARACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reparacionId: number().key().savedAs('REPARACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    costeCentimos: number().savedAs('COSTE_CENTIMOS'),\n    tallerId: number().savedAs('TALLER_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_REPARACION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_REPARACION en el repository."
+          },
+          {
+            "text": "name: 'Reparacion', table: TABLA_REPARACIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_REPARACIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "reparacionId: number().key().savedAs('REPARACION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce reparacionId a REPARACION_ID."
+          },
+          {
+            "text": "costeCentimos: number().savedAs('COSTE_CENTIMOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. costeCentimos es un número; se guarda como COSTE_CENTIMOS y no forma parte de la clave."
+          },
+          {
+            "text": "tallerId: number().savedAs('TALLER_ID')",
+            "title": "Guardar la referencia",
+            "note": "TALLER_ID es un atributo de REPARACIONES y la clave del índice PorTaller. Aquí no lleva .key(): la clave de la tabla sigue siendo REPARACION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/reparaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function crearReparacionRepository(reparacion) {\n  await MODELO_REPARACION.build(PutItemCommand)\n    .item(reparacion)\n    .options({ condition: { attr: 'reparacionId', exists: false } })\n    .send();\n}\n\nexport async function listarReparacionesRepository() {\n  const { Items = [] } = await TABLA_REPARACIONES.build(ScanCommand)\n    .entities(MODELO_REPARACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/taller-reparacion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_REPARACION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_REPARACION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(reparacion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa reparacionId, nombre, costeCentimos y tallerId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_REPARACIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_REPARACION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_REPARACION para interpretar los ítems: REPARACION_ID vuelve a ser reparacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /reparaciones }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /reparaciones }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /reparaciones/{reparacionId} }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId} }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId}/taller }\n  consultarTaller:\n    handler: src/talleres/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /talleres/{tallerId}/reparaciones }",
+        "cues": [
+          {
+            "text": "src/reparaciones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/reparaciones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /reparaciones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, costeCentimos y tallerId."
+          },
+          {
+            "text": "path: /reparaciones/{reparacionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.reparacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/reparaciones/crear-listar/handler.mjs",
+        "code": "import { crearReparacionService, listarReparacionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, costeCentimos, tallerId } = JSON.parse(event.body);\n  const reparacion = await crearReparacionService(nombre, costeCentimos, tallerId);\n  return { statusCode: 201, body: JSON.stringify(reparacion) };\n}\n\nexport async function listarHandler() {\n  const reparaciones = await listarReparacionesService();\n  return { statusCode: 200, body: JSON.stringify(reparaciones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearReparacionService(nombre, costeCentimos, tallerId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/reparaciones/crear-listar/service.mjs",
+        "code": "import { crearReparacionRepository, listarReparacionesRepository } from './repository.mjs';\n\nexport async function crearReparacionService(nombre, costeCentimos, tallerId) {\n  const reparacionId = Date.now();\n  const reparacion = { reparacionId, nombre, costeCentimos, tallerId };\n  await crearReparacionRepository(reparacion);\n  return reparacion;\n}\n\nexport function listarReparacionesService() {\n  return listarReparacionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearReparacionRepository(reparacion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/reparaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function crearReparacionRepository(reparacion) {\n  await MODELO_REPARACION.build(PutItemCommand)\n    .item(reparacion)\n    .options({ condition: { attr: 'reparacionId', exists: false } })\n    .send();\n}\n\nexport async function listarReparacionesRepository() {\n  const { Items = [] } = await TABLA_REPARACIONES.build(ScanCommand)\n    .entities(MODELO_REPARACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(reparacion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva reparacionId, nombre, costeCentimos y tallerId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /reparaciones\n{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}\n\n201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/reparaciones/eliminar/handler.mjs",
+        "code": "import { eliminarReparacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const reparacionId = Number(event.pathParameters.reparacionId);\n  await eliminarReparacionService(reparacionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.reparacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarReparacionService(reparacionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/reparaciones/eliminar/service.mjs",
+        "code": "import { eliminarReparacionRepository } from './repository.mjs';\n\nexport async function eliminarReparacionService(reparacionId) {\n  await eliminarReparacionRepository(reparacionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarReparacionRepository(reparacionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/reparaciones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function eliminarReparacionRepository(reparacionId) {\n  await MODELO_REPARACION.build(DeleteItemCommand)\n    .key({ reparacionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ reparacionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /reparaciones/10\n\n204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/reparaciones/modificar-coste-centimos/handler.mjs",
+        "code": "import { modificarCosteCentimosService } from './service.mjs';\n\nexport async function handler(event) {\n  const reparacionId = Number(event.pathParameters.reparacionId);\n  const { costeCentimos } = JSON.parse(event.body);\n  const resultado = await modificarCosteCentimosService(reparacionId, costeCentimos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.reparacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarCosteCentimosService(reparacionId, costeCentimos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/reparaciones/modificar-coste-centimos/service.mjs",
+        "code": "import { modificarCosteCentimosRepository } from './repository.mjs';\n\nexport function modificarCosteCentimosService(reparacionId, costeCentimos) {\n  return modificarCosteCentimosRepository(reparacionId, costeCentimos);\n}",
+        "cues": [
+          {
+            "text": "modificarCosteCentimosRepository(reparacionId, costeCentimos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. costeCentimos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/reparaciones/modificar-coste-centimos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function modificarCosteCentimosRepository(reparacionId, costeCentimos) {\n  const { Attributes } = await MODELO_REPARACION.build(UpdateItemCommand)\n    .item({ reparacionId, costeCentimos })\n    .options({\n      condition: { attr: 'reparacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ reparacionId, costeCentimos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo costeCentimos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /reparaciones/7\n{\"costeCentimos\":9500}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/reparaciones/trasladar/handler.mjs",
+        "code": "import { trasladarReparacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const reparacionId = Number(event.pathParameters.reparacionId);\n  const { tallerId } = JSON.parse(event.body);\n  const resultado = await trasladarReparacionService(reparacionId, tallerId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.reparacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarReparacionService(reparacionId, tallerId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/reparaciones/trasladar/service.mjs",
+        "code": "import { trasladarReparacionRepository } from './repository.mjs';\nimport { buscarTallerRepository } from '../../talleres/consultar/repository.mjs';\n\nexport async function trasladarReparacionService(reparacionId, tallerId) {\n  const taller = await buscarTallerRepository(tallerId);\n  if (!taller) throw new Error('Taller no encontrado');\n  return trasladarReparacionRepository(reparacionId, tallerId);\n}",
+        "cues": [
+          {
+            "text": "await buscarTallerRepository(tallerId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarReparacionRepository(reparacionId, tallerId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza TALLER_ID. REPARACION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/reparaciones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function trasladarReparacionRepository(reparacionId, tallerId) {\n  const { Attributes } = await MODELO_REPARACION.build(UpdateItemCommand)\n    .item({ reparacionId, tallerId })\n    .options({\n      condition: { attr: 'reparacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ reparacionId, tallerId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo tallerId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /reparaciones/7/taller\n{\"tallerId\":2}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/talleres/consultar/handler.mjs",
+        "code": "import { consultarTallerService } from './service.mjs';\n\nexport async function handler(event) {\n  const tallerId = Number(event.pathParameters.tallerId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarTallerService(tallerId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.tallerId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarTallerService(tallerId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/talleres/consultar/service.mjs",
+        "code": "import { buscarTallerRepository, consultarTallerRepository } from './repository.mjs';\n\nexport async function consultarTallerService(tallerId, minimo) {\n  const taller = await buscarTallerRepository(tallerId);\n  if (!taller) throw new Error('Taller no encontrado');\n  const reparaciones = await consultarTallerRepository(tallerId, minimo);\n  return { taller, reparaciones };\n}",
+        "cues": [
+          {
+            "text": "await buscarTallerRepository(tallerId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarTallerRepository(tallerId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { taller, reparaciones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/talleres/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_REPARACION, MODELO_TALLER, TABLA_REPARACIONES } from '../../models/taller-reparacion.model.mjs';\n\nexport async function buscarTallerRepository(tallerId) {\n  const { Item } = await MODELO_TALLER.build(GetItemCommand)\n    .key({ tallerId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTallerRepository(tallerId, minimo) {\n  const { Items = [] } = await TABLA_REPARACIONES.build(QueryCommand)\n    .entities(MODELO_REPARACION)\n    .query({ index: 'PorTaller', partition: tallerId })\n    .options({ filters: { Reparacion: { attr: 'costeCentimos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con TALLER_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorTaller', partition: tallerId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por TALLER_ID. No busca por REPARACION_ID."
+          },
+          {
+            "text": "attr: 'costeCentimos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /talleres/2/reparaciones?minimo=7001\n\n200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Ajuste de frenos",
+      "value": 2500,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Cambio de cadena",
+      "value": 7000,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Ajuste de frenos · nuevo",
+      "value": 12000,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/reparaciones",
+      "request": "POST /reparaciones\n{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}",
+      "fields": "nombre, costeCentimos, tallerId",
+      "args": "nombre, costeCentimos, tallerId",
+      "result": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros",
+      "service": "crearReparacionService",
+      "repo": "crearReparacionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/reparaciones/:reparacionId",
+      "request": "DELETE /reparaciones/10",
+      "fields": "reparacionId",
+      "args": "reparacionId",
+      "result": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarReparacionService",
+      "repo": "eliminarReparacionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-coste-centimos",
+      "title": "Cambiar coste",
+      "verb": "PATCH",
+      "route": "/reparaciones/:reparacionId",
+      "request": "PATCH /reparaciones/7\n{\"costeCentimos\":9500}",
+      "fields": "reparacionId, costeCentimos",
+      "args": "reparacionId, costeCentimos",
+      "result": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+      "service": "modificarCosteCentimosService",
+      "repo": "modificarCosteCentimosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de taller",
+      "verb": "PATCH",
+      "route": "/reparaciones/:reparacionId/taller",
+      "request": "PATCH /reparaciones/7/taller\n{\"tallerId\":2}",
+      "fields": "reparacionId, tallerId",
+      "args": "reparacionId, tallerId",
+      "result": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+      "service": "trasladarReparacionService",
+      "repo": "trasladarReparacionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un taller",
+      "verb": "GET",
+      "route": "/talleres/:tallerId/reparaciones",
+      "request": "GET /talleres/2/reparaciones?minimo=7001",
+      "fields": "tallerId, minimo",
+      "args": "tallerId, minimo",
+      "result": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+      "service": "consultarTallerService",
+      "repo": "consultarTallerRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-09",
+    "title": "Taller → Reparacion",
+    "parent": {
+      "entity": "Taller",
+      "sql": "TALLER",
+      "table": "TALLERES",
+      "route": "talleres",
+      "property": "taller",
+      "input": "tallerId",
+      "variable": "TABLA_TALLERES",
+      "model": "MODELO_TALLER",
+      "file": "src/talleres/entities/taller.entity.ts",
+      "examples": [
+        "Taller Norte",
+        "Taller del Barrio"
+      ]
+    },
+    "child": {
+      "entity": "Reparacion",
+      "sql": "REPARACION",
+      "table": "REPARACIONES",
+      "route": "reparaciones",
+      "property": "reparacion",
+      "input": "reparacionId",
+      "inverse": "reparaciones",
+      "variable": "TABLA_REPARACIONES",
+      "model": "MODELO_REPARACION",
+      "file": "src/reparaciones/entities/reparacion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "costeCentimos",
+      "column": "COSTE_CENTIMOS",
+      "label": "Coste",
+      "unit": "céntimos",
+      "initial": 2500,
+      "other": 7000,
+      "after": 9500,
+      "minimum": 7001,
+      "create": 2501,
+      "unrelated": 12000
+    },
+    "foreignKey": "ID_TALLER",
+    "index": "PorTaller",
+    "modelFile": "src/models/taller-reparacion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

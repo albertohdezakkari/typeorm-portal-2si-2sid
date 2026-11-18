@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-15",
+    "sha256": "e4360d8bcdd5e9e5af8ff48bd00613919f5f09569057aceb2839168f0bfa0f7c",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar dedicación",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "EMPRESA  1 ───────── 0..N  PROYECTO\n\nEMPRESA                         PROYECTO\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               HORAS_ESTIMADAS\n                               ID_EMPRESA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por proyecto",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias proyectos",
+            "note": "Un empresa puede tener cero, una o muchas proyectos."
+          },
+          {
+            "text": "ID_EMPRESA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Empresa",
+        "path": "src/empresas/entities/empresa.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Proyecto } from '../../proyectos/entities/proyecto.entity';\n\n@Entity({ name: 'EMPRESA' })\nexport class Empresa {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Proyecto, proyecto => proyecto.empresa)\n  proyectos!: Proyecto[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'EMPRESA' })",
+            "title": "Clase Empresa → tabla EMPRESA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Proyecto, proyecto => proyecto.empresa)",
+            "title": "Una colección de proyectos",
+            "note": "Empresa.proyectos representa los registros asociados. proyecto.empresa señala la propiedad del otro lado; no crea una segunda FK en EMPRESA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Proyecto",
+        "path": "src/proyectos/entities/proyecto.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Empresa } from '../../empresas/entities/empresa.entity';\n\n@Entity({ name: 'PROYECTO' })\nexport class Proyecto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'HORAS_ESTIMADAS', type: 'integer' })\n  horasEstimadas!: number;\n\n  @ManyToOne(() => Empresa, empresa => empresa.proyectos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_EMPRESA' })\n  empresa!: Empresa;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PROYECTO' })",
+            "title": "Clase Proyecto → tabla PROYECTO",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, dedicación y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de PROYECTO. No es el ID del registro principal y no se repite entre proyectos."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'HORAS_ESTIMADAS', type: 'integer' })",
+            "title": "Una dedicación numérica",
+            "note": "horasEstimadas se guarda en HORAS_ESTIMADAS, de tipo entero. El siguiente paso detalla la relación con Empresa."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/proyectos/entities/proyecto.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Empresa } from '../../empresas/entities/empresa.entity';\n\n@Entity({ name: 'PROYECTO' })\nexport class Proyecto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'HORAS_ESTIMADAS', type: 'integer' })\n  horasEstimadas!: number;\n\n  @ManyToOne(() => Empresa, empresa => empresa.proyectos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_EMPRESA' })\n  empresa!: Empresa;\n}",
+        "cues": [
+          {
+            "text": "import { Empresa } from '../../empresas/entities/empresa.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Proyecto importa la clase Empresa para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Empresa, empresa => empresa.proyectos, {",
+            "title": "Muchas proyectos → un registro principal",
+            "note": "() => Empresa indica la entidad de destino. empresa.proyectos indica la colección inversa, definida con @OneToMany en Empresa."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda proyecto tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_EMPRESA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_EMPRESA' })",
+            "title": "La FK está en PROYECTO",
+            "note": "JoinColumn da el nombre físico de la FK: PROYECTO.ID_EMPRESA referencia EMPRESA.ID. El mismo empresa puede aparecer en varias proyectos."
+          },
+          {
+            "text": "empresa!: Empresa;",
+            "title": "Una propiedad de tipo Empresa",
+            "note": "En el código usamos proyecto.empresa; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_EMPRESA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Empresa } from './empresas/entities/empresa.entity';\nimport { Proyecto } from './proyectos/entities/proyecto.entity';\nimport { CrearListarController } from './proyectos/crear-listar/controller';\nimport { CrearListarService } from './proyectos/crear-listar/service';\nimport { CrearListarRepository } from './proyectos/crear-listar/repository';\nimport { EliminarController } from './proyectos/eliminar/controller';\nimport { EliminarService } from './proyectos/eliminar/service';\nimport { EliminarRepository } from './proyectos/eliminar/repository';\nimport { ModificarHorasEstimadasController } from './proyectos/modificar-horas-estimadas/controller';\nimport { ModificarHorasEstimadasService } from './proyectos/modificar-horas-estimadas/service';\nimport { ModificarHorasEstimadasRepository } from './proyectos/modificar-horas-estimadas/repository';\nimport { TrasladarController } from './proyectos/trasladar/controller';\nimport { TrasladarService } from './proyectos/trasladar/service';\nimport { TrasladarRepository } from './proyectos/trasladar/repository';\nimport { ConsultarEmpresaController } from './empresas/consultar/controller';\nimport { ConsultarEmpresaService } from './empresas/consultar/service';\nimport { ConsultarEmpresaRepository } from './empresas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Empresa, Proyecto])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarHorasEstimadasController,\n    TrasladarController,\n    ConsultarEmpresaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarHorasEstimadasService,\n    ModificarHorasEstimadasRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarEmpresaService,\n    ConsultarEmpresaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Empresa } from './empresas/entities/empresa.entity';",
+            "title": "Importar Empresa",
+            "note": "El módulo utiliza la misma clase Empresa que has preparado en entities."
+          },
+          {
+            "text": "import { Proyecto } from './proyectos/entities/proyecto.entity';",
+            "title": "Importar Proyecto",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Empresa, Proyecto])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Empresa> y Repository<Proyecto>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/proyectos/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  crearProyectoRepository(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre, horasEstimadas, empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectosRepository() {\n    return this.proyectos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Proyecto } from '../entities/proyecto.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Proyecto de su fichero entities/proyecto.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Proyecto) pide a Nest el repositorio de esa Entity. proyectos es el nombre de la dependencia; Repository<Proyecto> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.proyectos.create({",
+            "title": "Preparar un objeto Proyecto",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "empresa: { id: empresaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad empresa existe en la Entity Proyecto. TypeORM traduce empresa.id a la FK ID_EMPRESA al guardar."
+          },
+          {
+            "text": "this.proyectos.save(proyecto)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Proyecto y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia EMPRESA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Proyecto>. getMany devuelve objetos Proyecto, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/proyectos/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('proyectos')\n  async ejecutar(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyectoService(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectosService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('proyectos')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearProyectoService(datos.nombre, datos.horasEstimadas, datos.empresaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/proyectos/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearProyectoService(nombre: string, horasEstimadas: number, empresaId: number) {\n    return this.repository.crearProyectoRepository(nombre, horasEstimadas, empresaId);\n  }\n\n  listarProyectosService() {\n    return this.repository.listarProyectosRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearProyectoRepository(nombre, horasEstimadas, empresaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/proyectos/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  crearProyectoRepository(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre, horasEstimadas, empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectosRepository() {\n    return this.proyectos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "empresa: { id: empresaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_EMPRESA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.proyectos.save(proyecto)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /proyectos\n{\"nombre\":\"Registro de prueba\",\"horasEstimadas\":41,\"empresaId\":2}\n\n201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/proyectos/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number) {\n    return this.service.eliminarProyectoService(proyectoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('proyectos/:proyectoId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarProyectoService(proyectoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/proyectos/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarProyectoService(proyectoId: number) {\n    return this.repository.eliminarProyectoRepository(proyectoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarProyectoRepository(proyectoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/proyectos/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async eliminarProyectoRepository(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyectos.delete(proyectoId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /proyectos/10\n\n204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/proyectos/modificar-horas-estimadas/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarHorasEstimadasService } from './service';\n\n@Controller()\nexport class ModificarHorasEstimadasController {\n  constructor(private readonly service: ModificarHorasEstimadasService) {}\n\n  @Patch('proyectos/:proyectoId')\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number,\n    @Body() datos: { horasEstimadas: number }) {\n    return this.service.modificarHorasEstimadasService(proyectoId, datos.horasEstimadas);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('proyectos/:proyectoId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarHorasEstimadasService(proyectoId, datos.horasEstimadas)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/proyectos/modificar-horas-estimadas/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarHorasEstimadasRepository } from './repository';\n\n@Injectable()\nexport class ModificarHorasEstimadasService {\n  constructor(private readonly repository: ModificarHorasEstimadasRepository) {}\n\n  modificarHorasEstimadasService(proyectoId: number, horasEstimadas: number) {\n    return this.repository.modificarHorasEstimadasRepository(proyectoId, horasEstimadas);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarHorasEstimadasRepository(proyectoId, horasEstimadas)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/proyectos/modificar-horas-estimadas/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class ModificarHorasEstimadasRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async modificarHorasEstimadasRepository(proyectoId: number, horasEstimadas: number) {\n    await this.proyectos.update(proyectoId, { horasEstimadas });\n    return this.proyectos.createQueryBuilder('p')\n      .where('p.id = :proyectoId', { proyectoId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyectos.update(proyectoId, { horasEstimadas })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :proyectoId', { proyectoId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyectos/7\n{\"horasEstimadas\":160}\n\n200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/proyectos/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('proyectos/:proyectoId/empresa')\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number,\n    @Body() datos: { empresaId: number }) {\n    return this.service.trasladarProyectoService(proyectoId, datos.empresaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('proyectos/:proyectoId/empresa')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarProyectoService(proyectoId, datos.empresaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/proyectos/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarProyectoService(proyectoId: number, empresaId: number) {\n    return this.repository.trasladarProyectoRepository(proyectoId, empresaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarProyectoRepository(proyectoId, empresaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/proyectos/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async trasladarProyectoRepository(proyectoId: number, empresaId: number) {\n    await this.proyectos.update(proyectoId, { empresa: { id: empresaId } });\n    return this.proyectos.createQueryBuilder('p')\n      .where('p.id = :proyectoId', { proyectoId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyectos.update(proyectoId, { empresa: { id: empresaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :proyectoId', { proyectoId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyectos/7/empresa\n{\"empresaId\":2}\n\n200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/empresas/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarEmpresaService } from './service';\n\n@Controller()\nexport class ConsultarEmpresaController {\n  constructor(private readonly service: ConsultarEmpresaService) {}\n\n  @Get('empresas/:empresaId/proyectos')\n  async ejecutar(@Param('empresaId', ParseIntPipe) empresaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarEmpresaService(empresaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('empresas/:empresaId/proyectos')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarEmpresaService(empresaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/empresas/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarEmpresaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarEmpresaService {\n  constructor(private readonly repository: ConsultarEmpresaRepository) {}\n\n  consultarEmpresaService(empresaId: number, minimo: number) {\n    return this.repository.consultarEmpresaRepository(empresaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarEmpresaRepository(empresaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/empresas/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../../proyectos/entities/proyecto.entity';\nimport { Empresa } from '../entities/empresa.entity';\n\n@Injectable()\nexport class ConsultarEmpresaRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  async consultarEmpresaRepository(empresaId: number, minimo: number) {\n    const empresa = await this.empresas.createQueryBuilder('h')\n      .where('h.id = :empresaId', { empresaId }).getOne();\n    const proyectos = await this.proyectos.createQueryBuilder('p')\n      .innerJoin('p.empresa', 'h')\n      .where('h.id = :empresaId', { empresaId })\n      .andWhere('p.horasEstimadas >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { empresa, proyectos };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.empresa', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa PROYECTO y h representa EMPRESA."
+          },
+          {
+            "text": ".where('h.id = :empresaId', { empresaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :empresaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.horasEstimadas >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.HORAS_ESTIMADAS >= 121. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /empresas/2/proyectos?minimo=121\n\n200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "EMPRESA  1 ───────── 0..N  PROYECTO\n\nEMPRESA                         PROYECTO\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               HORAS_ESTIMADAS\n                               ID_EMPRESA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por proyecto",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias proyectos",
+            "note": "Un empresa puede tener cero, una o muchas proyectos."
+          },
+          {
+            "text": "ID_EMPRESA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_EMPRESAS: { Ref: TablaEmpresas }\n    TABLA_PROYECTOS: { Ref: TablaProyectos }\n\nresources:\n  Resources:\n    TablaEmpresas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMPRESAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: EMPRESA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMPRESA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaProyectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECTO_ID, AttributeType: N }\n          - { AttributeName: EMPRESA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PROYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEmpresa\n            # Clave compuesta = partition key + sort key:\n            # (EMPRESA_ID, PROYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: EMPRESA_ID\n                KeyType: HASH   # Partition key. Agrupa por Empresa.\n              - AttributeName: PROYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - HORAS_ESTIMADAS",
+        "cues": [
+          {
+            "text": "TableName: EMPRESAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear EMPRESAS."
+          },
+          {
+            "text": "TableName: PROYECTOS",
+            "title": "Tabla de proyectos",
+            "note": "La tabla usa PROYECTO_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorEmpresa",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por EMPRESA_ID y ordena por PROYECTO_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y HORAS_ESTIMADAS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/empresa-proyecto.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EMPRESAS = new Table({\n  name: process.env.TABLA_EMPRESAS, documentClient: db,\n  partitionKey: { name: 'EMPRESA_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECTOS = new Table({\n  name: process.env.TABLA_PROYECTOS, documentClient: db,\n  partitionKey: { name: 'PROYECTO_ID', type: 'number' },\n  indexes: {\n    PorEmpresa: {\n      type: 'global',\n      partitionKey: { name: 'EMPRESA_ID', type: 'number' },\n      sortKey: { name: 'PROYECTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EMPRESA = new Entity({\n  name: 'Empresa', table: TABLA_EMPRESAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    empresaId: number().key().savedAs('EMPRESA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECTO = new Entity({\n  name: 'Proyecto', table: TABLA_PROYECTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyectoId: number().key().savedAs('PROYECTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    horasEstimadas: number().savedAs('HORAS_ESTIMADAS'),\n    empresaId: number().savedAs('EMPRESA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_PROYECTOS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_PROYECTOS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'PROYECTO_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "PROYECTO_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorEmpresa: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorEmpresa que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es EMPRESA_ID y su sort key PROYECTO_ID: agrupa proyectos de toda la tabla por empresa."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/empresa-proyecto.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EMPRESAS = new Table({\n  name: process.env.TABLA_EMPRESAS, documentClient: db,\n  partitionKey: { name: 'EMPRESA_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECTOS = new Table({\n  name: process.env.TABLA_PROYECTOS, documentClient: db,\n  partitionKey: { name: 'PROYECTO_ID', type: 'number' },\n  indexes: {\n    PorEmpresa: {\n      type: 'global',\n      partitionKey: { name: 'EMPRESA_ID', type: 'number' },\n      sortKey: { name: 'PROYECTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EMPRESA = new Entity({\n  name: 'Empresa', table: TABLA_EMPRESAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    empresaId: number().key().savedAs('EMPRESA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECTO = new Entity({\n  name: 'Proyecto', table: TABLA_PROYECTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyectoId: number().key().savedAs('PROYECTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    horasEstimadas: number().savedAs('HORAS_ESTIMADAS'),\n    empresaId: number().savedAs('EMPRESA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_PROYECTO = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROYECTO en el repository."
+          },
+          {
+            "text": "name: 'Proyecto', table: TABLA_PROYECTOS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_PROYECTOS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "proyectoId: number().key().savedAs('PROYECTO_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce proyectoId a PROYECTO_ID."
+          },
+          {
+            "text": "horasEstimadas: number().savedAs('HORAS_ESTIMADAS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. horasEstimadas es un número; se guarda como HORAS_ESTIMADAS y no forma parte de la clave."
+          },
+          {
+            "text": "empresaId: number().savedAs('EMPRESA_ID')",
+            "title": "Guardar la referencia",
+            "note": "EMPRESA_ID es un atributo de PROYECTOS y la clave del índice PorEmpresa. Aquí no lleva .key(): la clave de la tabla sigue siendo PROYECTO_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/proyectos/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function crearProyectoRepository(proyecto) {\n  await MODELO_PROYECTO.build(PutItemCommand)\n    .item(proyecto)\n    .options({ condition: { attr: 'proyectoId', exists: false } })\n    .send();\n}\n\nexport async function listarProyectosRepository() {\n  const { Items = [] } = await TABLA_PROYECTOS.build(ScanCommand)\n    .entities(MODELO_PROYECTO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/empresa-proyecto.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_PROYECTO.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_PROYECTO. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(proyecto)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa proyectoId, nombre, horasEstimadas y empresaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_PROYECTOS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_PROYECTO)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_PROYECTO para interpretar los ítems: PROYECTO_ID vuelve a ser proyectoId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearProyecto:\n    handler: src/proyectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /proyectos }\n  listarProyectos:\n    handler: src/proyectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /proyectos }\n  eliminarProyecto:\n    handler: src/proyectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /proyectos/{proyectoId} }\n  modificarHorasEstimadas:\n    handler: src/proyectos/modificar-horas-estimadas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /proyectos/{proyectoId} }\n  trasladarProyecto:\n    handler: src/proyectos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /proyectos/{proyectoId}/empresa }\n  consultarEmpresa:\n    handler: src/empresas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /empresas/{empresaId}/proyectos }",
+        "cues": [
+          {
+            "text": "src/proyectos/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/proyectos/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /proyectos",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, horasEstimadas y empresaId."
+          },
+          {
+            "text": "path: /proyectos/{proyectoId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.proyectoId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/proyectos/crear-listar/handler.mjs",
+        "code": "import { crearProyectoService, listarProyectosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, horasEstimadas, empresaId } = JSON.parse(event.body);\n  const proyecto = await crearProyectoService(nombre, horasEstimadas, empresaId);\n  return { statusCode: 201, body: JSON.stringify(proyecto) };\n}\n\nexport async function listarHandler() {\n  const proyectos = await listarProyectosService();\n  return { statusCode: 200, body: JSON.stringify(proyectos) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearProyectoService(nombre, horasEstimadas, empresaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/proyectos/crear-listar/service.mjs",
+        "code": "import { crearProyectoRepository, listarProyectosRepository } from './repository.mjs';\n\nexport async function crearProyectoService(nombre, horasEstimadas, empresaId) {\n  const proyectoId = Date.now();\n  const proyecto = { proyectoId, nombre, horasEstimadas, empresaId };\n  await crearProyectoRepository(proyecto);\n  return proyecto;\n}\n\nexport function listarProyectosService() {\n  return listarProyectosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearProyectoRepository(proyecto)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/proyectos/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function crearProyectoRepository(proyecto) {\n  await MODELO_PROYECTO.build(PutItemCommand)\n    .item(proyecto)\n    .options({ condition: { attr: 'proyectoId', exists: false } })\n    .send();\n}\n\nexport async function listarProyectosRepository() {\n  const { Items = [] } = await TABLA_PROYECTOS.build(ScanCommand)\n    .entities(MODELO_PROYECTO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(proyecto)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva proyectoId, nombre, horasEstimadas y empresaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /proyectos\n{\"nombre\":\"Registro de prueba\",\"horasEstimadas\":41,\"empresaId\":2}\n\n201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/proyectos/eliminar/handler.mjs",
+        "code": "import { eliminarProyectoService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyectoId = Number(event.pathParameters.proyectoId);\n  await eliminarProyectoService(proyectoId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyectoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarProyectoService(proyectoId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/proyectos/eliminar/service.mjs",
+        "code": "import { eliminarProyectoRepository } from './repository.mjs';\n\nexport async function eliminarProyectoService(proyectoId) {\n  await eliminarProyectoRepository(proyectoId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarProyectoRepository(proyectoId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/proyectos/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function eliminarProyectoRepository(proyectoId) {\n  await MODELO_PROYECTO.build(DeleteItemCommand)\n    .key({ proyectoId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ proyectoId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /proyectos/10\n\n204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/proyectos/modificar-horas-estimadas/handler.mjs",
+        "code": "import { modificarHorasEstimadasService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyectoId = Number(event.pathParameters.proyectoId);\n  const { horasEstimadas } = JSON.parse(event.body);\n  const resultado = await modificarHorasEstimadasService(proyectoId, horasEstimadas);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyectoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarHorasEstimadasService(proyectoId, horasEstimadas)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/proyectos/modificar-horas-estimadas/service.mjs",
+        "code": "import { modificarHorasEstimadasRepository } from './repository.mjs';\n\nexport function modificarHorasEstimadasService(proyectoId, horasEstimadas) {\n  return modificarHorasEstimadasRepository(proyectoId, horasEstimadas);\n}",
+        "cues": [
+          {
+            "text": "modificarHorasEstimadasRepository(proyectoId, horasEstimadas)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. horasEstimadas es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/proyectos/modificar-horas-estimadas/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function modificarHorasEstimadasRepository(proyectoId, horasEstimadas) {\n  const { Attributes } = await MODELO_PROYECTO.build(UpdateItemCommand)\n    .item({ proyectoId, horasEstimadas })\n    .options({\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ proyectoId, horasEstimadas })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo horasEstimadas. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyectos/7\n{\"horasEstimadas\":160}\n\n200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/proyectos/trasladar/handler.mjs",
+        "code": "import { trasladarProyectoService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyectoId = Number(event.pathParameters.proyectoId);\n  const { empresaId } = JSON.parse(event.body);\n  const resultado = await trasladarProyectoService(proyectoId, empresaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyectoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarProyectoService(proyectoId, empresaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/proyectos/trasladar/service.mjs",
+        "code": "import { trasladarProyectoRepository } from './repository.mjs';\nimport { buscarEmpresaRepository } from '../../empresas/consultar/repository.mjs';\n\nexport async function trasladarProyectoService(proyectoId, empresaId) {\n  const empresa = await buscarEmpresaRepository(empresaId);\n  if (!empresa) throw new Error('Empresa no encontrado');\n  return trasladarProyectoRepository(proyectoId, empresaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarEmpresaRepository(empresaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarProyectoRepository(proyectoId, empresaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza EMPRESA_ID. PROYECTO_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/proyectos/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function trasladarProyectoRepository(proyectoId, empresaId) {\n  const { Attributes } = await MODELO_PROYECTO.build(UpdateItemCommand)\n    .item({ proyectoId, empresaId })\n    .options({\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ proyectoId, empresaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo empresaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyectos/7/empresa\n{\"empresaId\":2}\n\n200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/empresas/consultar/handler.mjs",
+        "code": "import { consultarEmpresaService } from './service.mjs';\n\nexport async function handler(event) {\n  const empresaId = Number(event.pathParameters.empresaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarEmpresaService(empresaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.empresaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarEmpresaService(empresaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/empresas/consultar/service.mjs",
+        "code": "import { buscarEmpresaRepository, consultarEmpresaRepository } from './repository.mjs';\n\nexport async function consultarEmpresaService(empresaId, minimo) {\n  const empresa = await buscarEmpresaRepository(empresaId);\n  if (!empresa) throw new Error('Empresa no encontrado');\n  const proyectos = await consultarEmpresaRepository(empresaId, minimo);\n  return { empresa, proyectos };\n}",
+        "cues": [
+          {
+            "text": "await buscarEmpresaRepository(empresaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarEmpresaRepository(empresaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { empresa, proyectos }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/empresas/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function buscarEmpresaRepository(empresaId) {\n  const { Item } = await MODELO_EMPRESA.build(GetItemCommand)\n    .key({ empresaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEmpresaRepository(empresaId, minimo) {\n  const { Items = [] } = await TABLA_PROYECTOS.build(QueryCommand)\n    .entities(MODELO_PROYECTO)\n    .query({ index: 'PorEmpresa', partition: empresaId })\n    .options({ filters: { Proyecto: { attr: 'horasEstimadas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con EMPRESA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorEmpresa', partition: empresaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por EMPRESA_ID. No busca por PROYECTO_ID."
+          },
+          {
+            "text": "attr: 'horasEstimadas', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /empresas/2/proyectos?minimo=121\n\n200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Portal de reservas",
+      "value": 40,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Catálogo interno",
+      "value": 120,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Portal de reservas · nuevo",
+      "value": 200,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/proyectos",
+      "request": "POST /proyectos\n{\"nombre\":\"Registro de prueba\",\"horasEstimadas\":41,\"empresaId\":2}",
+      "fields": "nombre, horasEstimadas, empresaId",
+      "args": "nombre, horasEstimadas, empresaId",
+      "result": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros",
+      "service": "crearProyectoService",
+      "repo": "crearProyectoRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/proyectos/:proyectoId",
+      "request": "DELETE /proyectos/10",
+      "fields": "proyectoId",
+      "args": "proyectoId",
+      "result": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
+      "service": "eliminarProyectoService",
+      "repo": "eliminarProyectoRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-horas-estimadas",
+      "title": "Cambiar dedicación",
+      "verb": "PATCH",
+      "route": "/proyectos/:proyectoId",
+      "request": "PATCH /proyectos/7\n{\"horasEstimadas\":160}",
+      "fields": "proyectoId, horasEstimadas",
+      "args": "proyectoId, horasEstimadas",
+      "result": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
+      "service": "modificarHorasEstimadasService",
+      "repo": "modificarHorasEstimadasRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de empresa",
+      "verb": "PATCH",
+      "route": "/proyectos/:proyectoId/empresa",
+      "request": "PATCH /proyectos/7/empresa\n{\"empresaId\":2}",
+      "fields": "proyectoId, empresaId",
+      "args": "proyectoId, empresaId",
+      "result": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
+      "service": "trasladarProyectoService",
+      "repo": "trasladarProyectoRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un empresa",
+      "verb": "GET",
+      "route": "/empresas/:empresaId/proyectos",
+      "request": "GET /empresas/2/proyectos?minimo=121",
+      "fields": "empresaId, minimo",
+      "args": "empresaId, minimo",
+      "result": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
+      "service": "consultarEmpresaService",
+      "repo": "consultarEmpresaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-15",
+    "title": "Empresa → Proyecto",
+    "parent": {
+      "entity": "Empresa",
+      "sql": "EMPRESA",
+      "table": "EMPRESAS",
+      "route": "empresas",
+      "property": "empresa",
+      "input": "empresaId",
+      "variable": "TABLA_EMPRESAS",
+      "model": "MODELO_EMPRESA",
+      "file": "src/empresas/entities/empresa.entity.ts",
+      "examples": [
+        "Empresa Brújula",
+        "Empresa Delta"
+      ]
+    },
+    "child": {
+      "entity": "Proyecto",
+      "sql": "PROYECTO",
+      "table": "PROYECTOS",
+      "route": "proyectos",
+      "property": "proyecto",
+      "input": "proyectoId",
+      "inverse": "proyectos",
+      "variable": "TABLA_PROYECTOS",
+      "model": "MODELO_PROYECTO",
+      "file": "src/proyectos/entities/proyecto.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "horasEstimadas",
+      "column": "HORAS_ESTIMADAS",
+      "label": "Dedicación",
+      "unit": "h",
+      "initial": 40,
+      "other": 120,
+      "after": 160,
+      "minimum": 121,
+      "create": 41,
+      "unrelated": 200
+    },
+    "foreignKey": "ID_EMPRESA",
+    "index": "PorEmpresa",
+    "modelFile": "src/models/empresa-proyecto.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

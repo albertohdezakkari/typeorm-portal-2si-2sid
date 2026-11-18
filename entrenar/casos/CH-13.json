@@ -1,0 +1,1346 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "teacher",
+    "label": "Ejemplo docente · Cine → Proyeccion"
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar duración",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "CINE  1 ───────── 0..N  PROYECCION\n\nCINE                         PROYECCION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_MINUTOS\n                               ID_CINE      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por proyeccion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias proyecciones",
+            "note": "Un cine puede tener cero, una o muchas proyecciones."
+          },
+          {
+            "text": "ID_CINE",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": false,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Cine",
+        "path": "src/cines/entities/cine.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Proyeccion } from '../../proyecciones/entities/proyeccion.entity';\n\n@Entity({ name: 'CINE' })\nexport class Cine {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Proyeccion, proyeccion => proyeccion.cine)\n  proyecciones!: Proyeccion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'CINE' })",
+            "title": "Clase Cine → tabla CINE",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Proyeccion, proyeccion => proyeccion.cine)",
+            "title": "Una colección de proyecciones",
+            "note": "Cine.proyecciones representa los registros asociados. proyeccion.cine señala la propiedad del otro lado; no crea una segunda FK en CINE."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Proyeccion",
+        "path": "src/proyecciones/entities/proyeccion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cine } from '../../cines/entities/cine.entity';\n\n@Entity({ name: 'PROYECCION' })\nexport class Proyeccion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'PELICULA', type: 'varchar', length: 120 })\n  pelicula!: string;\n\n  @Column({ name: 'DURACION_MINUTOS', type: 'integer' })\n  duracionMinutos!: number;\n\n  @ManyToOne(() => Cine, cine => cine.proyecciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_CINE' })\n  cine!: Cine;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PROYECCION' })",
+            "title": "Clase Proyeccion → tabla PROYECCION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, duración y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de PROYECCION. No es el ID del registro principal y no se repite entre proyecciones."
+          },
+          {
+            "text": "@Column({ name: 'PELICULA', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'DURACION_MINUTOS', type: 'integer' })",
+            "title": "Una duración numérica",
+            "note": "duracionMinutos se guarda en DURACION_MINUTOS, de tipo entero. El siguiente paso detalla la relación con Cine."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/proyecciones/entities/proyeccion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cine } from '../../cines/entities/cine.entity';\n\n@Entity({ name: 'PROYECCION' })\nexport class Proyeccion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'PELICULA', type: 'varchar', length: 120 })\n  pelicula!: string;\n\n  @Column({ name: 'DURACION_MINUTOS', type: 'integer' })\n  duracionMinutos!: number;\n\n  @ManyToOne(() => Cine, cine => cine.proyecciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_CINE' })\n  cine!: Cine;\n}",
+        "cues": [
+          {
+            "text": "import { Cine } from '../../cines/entities/cine.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Proyeccion importa la clase Cine para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Cine, cine => cine.proyecciones, {",
+            "title": "Muchas proyecciones → un registro principal",
+            "note": "() => Cine indica la entidad de destino. cine.proyecciones indica la colección inversa, definida con @OneToMany en Cine."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda proyeccion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_CINE no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_CINE' })",
+            "title": "La FK está en PROYECCION",
+            "note": "JoinColumn da el nombre físico de la FK: PROYECCION.ID_CINE referencia CINE.ID. El mismo cine puede aparecer en varias proyecciones."
+          },
+          {
+            "text": "cine!: Cine;",
+            "title": "Una propiedad de tipo Cine",
+            "note": "En el código usamos proyeccion.cine; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_CINE."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\nimport { CrearListarController } from './proyecciones/crear-listar/controller';\nimport { CrearListarService } from './proyecciones/crear-listar/service';\nimport { CrearListarRepository } from './proyecciones/crear-listar/repository';\nimport { EliminarController } from './proyecciones/eliminar/controller';\nimport { EliminarService } from './proyecciones/eliminar/service';\nimport { EliminarRepository } from './proyecciones/eliminar/repository';\nimport { ModificarDuracionMinutosController } from './proyecciones/modificar-duracion-minutos/controller';\nimport { ModificarDuracionMinutosService } from './proyecciones/modificar-duracion-minutos/service';\nimport { ModificarDuracionMinutosRepository } from './proyecciones/modificar-duracion-minutos/repository';\nimport { TrasladarController } from './proyecciones/trasladar/controller';\nimport { TrasladarService } from './proyecciones/trasladar/service';\nimport { TrasladarRepository } from './proyecciones/trasladar/repository';\nimport { ConsultarCineController } from './cines/consultar/controller';\nimport { ConsultarCineService } from './cines/consultar/service';\nimport { ConsultarCineRepository } from './cines/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarDuracionMinutosController,\n    TrasladarController,\n    ConsultarCineController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarDuracionMinutosService,\n    ModificarDuracionMinutosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarCineService,\n    ConsultarCineRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Cine } from './cines/entities/cine.entity';",
+            "title": "Importar Cine",
+            "note": "El módulo utiliza la misma clase Cine que has preparado en entities."
+          },
+          {
+            "text": "import { Proyeccion } from './proyecciones/entities/proyeccion.entity';",
+            "title": "Importar Proyeccion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Cine, Proyeccion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Cine> y Repository<Proyeccion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/proyecciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  crearProyeccionRepository(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula, duracionMinutos, cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyeccionesRepository() {\n    return this.proyecciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Proyeccion } from '../entities/proyeccion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Proyeccion de su fichero entities/proyeccion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Proyeccion) pide a Nest el repositorio de esa Entity. proyecciones es el nombre de la dependencia; Repository<Proyeccion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.proyecciones.create({",
+            "title": "Preparar un objeto Proyeccion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "cine: { id: cineId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad cine existe en la Entity Proyeccion. TypeORM traduce cine.id a la FK ID_CINE al guardar."
+          },
+          {
+            "text": "this.proyecciones.save(proyeccion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Proyeccion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia CINE."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Proyeccion>. getMany devuelve objetos Proyeccion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/proyecciones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('proyecciones')\n  async ejecutar(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccionService(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyeccionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('proyecciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearProyeccionService(datos.pelicula, datos.duracionMinutos, datos.cineId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/proyecciones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearProyeccionService(pelicula: string, duracionMinutos: number, cineId: number) {\n    return this.repository.crearProyeccionRepository(pelicula, duracionMinutos, cineId);\n  }\n\n  listarProyeccionesService() {\n    return this.repository.listarProyeccionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearProyeccionRepository(pelicula, duracionMinutos, cineId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/proyecciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  crearProyeccionRepository(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula, duracionMinutos, cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyeccionesRepository() {\n    return this.proyecciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "cine: { id: cineId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_CINE; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.proyecciones.save(proyeccion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /proyecciones\n{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}\n\n201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/proyecciones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number) {\n    return this.service.eliminarProyeccionService(proyeccionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('proyecciones/:proyeccionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarProyeccionService(proyeccionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/proyecciones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarProyeccionService(proyeccionId: number) {\n    return this.repository.eliminarProyeccionRepository(proyeccionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarProyeccionRepository(proyeccionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/proyecciones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async eliminarProyeccionRepository(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyecciones.delete(proyeccionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /proyecciones/10\n\n204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/proyecciones/modificar-duracion-minutos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarDuracionMinutosService } from './service';\n\n@Controller()\nexport class ModificarDuracionMinutosController {\n  constructor(private readonly service: ModificarDuracionMinutosService) {}\n\n  @Patch('proyecciones/:proyeccionId')\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number,\n    @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutosService(proyeccionId, datos.duracionMinutos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('proyecciones/:proyeccionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarDuracionMinutosService(proyeccionId, datos.duracionMinutos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/proyecciones/modificar-duracion-minutos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarDuracionMinutosRepository } from './repository';\n\n@Injectable()\nexport class ModificarDuracionMinutosService {\n  constructor(private readonly repository: ModificarDuracionMinutosRepository) {}\n\n  modificarDuracionMinutosService(proyeccionId: number, duracionMinutos: number) {\n    return this.repository.modificarDuracionMinutosRepository(proyeccionId, duracionMinutos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarDuracionMinutosRepository(proyeccionId, duracionMinutos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/proyecciones/modificar-duracion-minutos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class ModificarDuracionMinutosRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async modificarDuracionMinutosRepository(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.createQueryBuilder('p')\n      .where('p.id = :proyeccionId', { proyeccionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyecciones.update(proyeccionId, { duracionMinutos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :proyeccionId', { proyeccionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyecciones/7\n{\"duracionMinutos\":215}\n\n200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/proyecciones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number,\n    @Body() datos: { cineId: number }) {\n    return this.service.trasladarProyeccionService(proyeccionId, datos.cineId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('proyecciones/:proyeccionId/cine')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarProyeccionService(proyeccionId, datos.cineId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/proyecciones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarProyeccionService(proyeccionId: number, cineId: number) {\n    return this.repository.trasladarProyeccionRepository(proyeccionId, cineId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarProyeccionRepository(proyeccionId, cineId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/proyecciones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async trasladarProyeccionRepository(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.createQueryBuilder('p')\n      .where('p.id = :proyeccionId', { proyeccionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.proyecciones.update(proyeccionId, { cine: { id: cineId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :proyeccionId', { proyeccionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyecciones/7/cine\n{\"cineId\":2}\n\n200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/cines/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarCineService } from './service';\n\n@Controller()\nexport class ConsultarCineController {\n  constructor(private readonly service: ConsultarCineService) {}\n\n  @Get('cines/:cineId/proyecciones')\n  async ejecutar(@Param('cineId', ParseIntPipe) cineId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarCineService(cineId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('cines/:cineId/proyecciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarCineService(cineId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cines/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarCineRepository } from './repository';\n\n@Injectable()\nexport class ConsultarCineService {\n  constructor(private readonly repository: ConsultarCineRepository) {}\n\n  consultarCineService(cineId: number, minimo: number) {\n    return this.repository.consultarCineRepository(cineId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarCineRepository(cineId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cines/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../../proyecciones/entities/proyeccion.entity';\nimport { Cine } from '../entities/cine.entity';\n\n@Injectable()\nexport class ConsultarCineRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  async consultarCineRepository(cineId: number, minimo: number) {\n    const cine = await this.cines.createQueryBuilder('h')\n      .where('h.id = :cineId', { cineId }).getOne();\n    const proyecciones = await this.proyecciones.createQueryBuilder('p')\n      .innerJoin('p.cine', 'h')\n      .where('h.id = :cineId', { cineId })\n      .andWhere('p.duracionMinutos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { cine, proyecciones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.cine', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa PROYECCION y h representa CINE."
+          },
+          {
+            "text": ".where('h.id = :cineId', { cineId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :cineId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.duracionMinutos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.DURACION_MINUTOS >= 126. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cines/2/proyecciones?minimo=126\n\n200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "CINE  1 ───────── 0..N  PROYECCION\n\nCINE                         PROYECCION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_MINUTOS\n                               ID_CINE      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por proyeccion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias proyecciones",
+            "note": "Un cine puede tener cero, una o muchas proyecciones."
+          },
+          {
+            "text": "ID_CINE",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": false,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_MINUTOS",
+        "cues": [
+          {
+            "text": "TableName: CINES",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear CINES."
+          },
+          {
+            "text": "TableName: PROYECCIONES",
+            "title": "Tabla de proyecciones",
+            "note": "La tabla usa PROYECCION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorCine",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por CINE_ID y ordena por PROYECCION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_MINUTOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/cine-proyeccion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CINES = new Table({\n  name: process.env.TABLA_CINES, documentClient: db,\n  partitionKey: { name: 'CINE_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECCIONES = new Table({\n  name: process.env.TABLA_PROYECCIONES, documentClient: db,\n  partitionKey: { name: 'PROYECCION_ID', type: 'number' },\n  indexes: {\n    PorCine: {\n      type: 'global',\n      partitionKey: { name: 'CINE_ID', type: 'number' },\n      sortKey: { name: 'PROYECCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CINE = new Entity({\n  name: 'Cine', table: TABLA_CINES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cineId: number().key().savedAs('CINE_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECCION = new Entity({\n  name: 'Proyeccion', table: TABLA_PROYECCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyeccionId: number().key().savedAs('PROYECCION_ID'),\n    pelicula: string().savedAs('PELICULA'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    cineId: number().savedAs('CINE_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_PROYECCIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_PROYECCIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'PROYECCION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "PROYECCION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorCine: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorCine que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es CINE_ID y su sort key PROYECCION_ID: agrupa proyecciones de toda la tabla por cine."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/cine-proyeccion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CINES = new Table({\n  name: process.env.TABLA_CINES, documentClient: db,\n  partitionKey: { name: 'CINE_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECCIONES = new Table({\n  name: process.env.TABLA_PROYECCIONES, documentClient: db,\n  partitionKey: { name: 'PROYECCION_ID', type: 'number' },\n  indexes: {\n    PorCine: {\n      type: 'global',\n      partitionKey: { name: 'CINE_ID', type: 'number' },\n      sortKey: { name: 'PROYECCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CINE = new Entity({\n  name: 'Cine', table: TABLA_CINES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cineId: number().key().savedAs('CINE_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECCION = new Entity({\n  name: 'Proyeccion', table: TABLA_PROYECCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyeccionId: number().key().savedAs('PROYECCION_ID'),\n    pelicula: string().savedAs('PELICULA'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    cineId: number().savedAs('CINE_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_PROYECCION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROYECCION en el repository."
+          },
+          {
+            "text": "name: 'Proyeccion', table: TABLA_PROYECCIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_PROYECCIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "proyeccionId: number().key().savedAs('PROYECCION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce proyeccionId a PROYECCION_ID."
+          },
+          {
+            "text": "duracionMinutos: number().savedAs('DURACION_MINUTOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. duracionMinutos es un número; se guarda como DURACION_MINUTOS y no forma parte de la clave."
+          },
+          {
+            "text": "cineId: number().savedAs('CINE_ID')",
+            "title": "Guardar la referencia",
+            "note": "CINE_ID es un atributo de PROYECCIONES y la clave del índice PorCine. Aquí no lleva .key(): la clave de la tabla sigue siendo PROYECCION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/proyecciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function crearProyeccionRepository(proyeccion) {\n  await MODELO_PROYECCION.build(PutItemCommand)\n    .item(proyeccion)\n    .options({ condition: { attr: 'proyeccionId', exists: false } })\n    .send();\n}\n\nexport async function listarProyeccionesRepository() {\n  const { Items = [] } = await TABLA_PROYECCIONES.build(ScanCommand)\n    .entities(MODELO_PROYECCION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/cine-proyeccion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_PROYECCION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_PROYECCION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(proyeccion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa proyeccionId, nombre, duracionMinutos y cineId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_PROYECCIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_PROYECCION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_PROYECCION para interpretar los ítems: PROYECCION_ID vuelve a ser proyeccionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /proyecciones }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /proyecciones }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /proyecciones/{proyeccionId} }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /proyecciones/{proyeccionId} }\n  trasladarProyeccion:\n    handler: src/proyecciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /proyecciones/{proyeccionId}/cine }\n  consultarCine:\n    handler: src/cines/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /cines/{cineId}/proyecciones }",
+        "cues": [
+          {
+            "text": "src/proyecciones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/proyecciones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /proyecciones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, duracionMinutos y cineId."
+          },
+          {
+            "text": "path: /proyecciones/{proyeccionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.proyeccionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/proyecciones/crear-listar/handler.mjs",
+        "code": "import { crearProyeccionService, listarProyeccionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { pelicula, duracionMinutos, cineId } = JSON.parse(event.body);\n  const proyeccion = await crearProyeccionService(pelicula, duracionMinutos, cineId);\n  return { statusCode: 201, body: JSON.stringify(proyeccion) };\n}\n\nexport async function listarHandler() {\n  const proyecciones = await listarProyeccionesService();\n  return { statusCode: 200, body: JSON.stringify(proyecciones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearProyeccionService(pelicula, duracionMinutos, cineId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/proyecciones/crear-listar/service.mjs",
+        "code": "import { crearProyeccionRepository, listarProyeccionesRepository } from './repository.mjs';\n\nexport async function crearProyeccionService(pelicula, duracionMinutos, cineId) {\n  const proyeccionId = Date.now();\n  const proyeccion = { proyeccionId, pelicula, duracionMinutos, cineId };\n  await crearProyeccionRepository(proyeccion);\n  return proyeccion;\n}\n\nexport function listarProyeccionesService() {\n  return listarProyeccionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearProyeccionRepository(proyeccion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/proyecciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function crearProyeccionRepository(proyeccion) {\n  await MODELO_PROYECCION.build(PutItemCommand)\n    .item(proyeccion)\n    .options({ condition: { attr: 'proyeccionId', exists: false } })\n    .send();\n}\n\nexport async function listarProyeccionesRepository() {\n  const { Items = [] } = await TABLA_PROYECCIONES.build(ScanCommand)\n    .entities(MODELO_PROYECCION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(proyeccion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva proyeccionId, nombre, duracionMinutos y cineId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /proyecciones\n{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}\n\n201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/proyecciones/eliminar/handler.mjs",
+        "code": "import { eliminarProyeccionService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyeccionId = Number(event.pathParameters.proyeccionId);\n  await eliminarProyeccionService(proyeccionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyeccionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarProyeccionService(proyeccionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/proyecciones/eliminar/service.mjs",
+        "code": "import { eliminarProyeccionRepository } from './repository.mjs';\n\nexport async function eliminarProyeccionService(proyeccionId) {\n  await eliminarProyeccionRepository(proyeccionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarProyeccionRepository(proyeccionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/proyecciones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function eliminarProyeccionRepository(proyeccionId) {\n  await MODELO_PROYECCION.build(DeleteItemCommand)\n    .key({ proyeccionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ proyeccionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /proyecciones/10\n\n204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/proyecciones/modificar-duracion-minutos/handler.mjs",
+        "code": "import { modificarDuracionMinutosService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyeccionId = Number(event.pathParameters.proyeccionId);\n  const { duracionMinutos } = JSON.parse(event.body);\n  const resultado = await modificarDuracionMinutosService(proyeccionId, duracionMinutos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyeccionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarDuracionMinutosService(proyeccionId, duracionMinutos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/proyecciones/modificar-duracion-minutos/service.mjs",
+        "code": "import { modificarDuracionMinutosRepository } from './repository.mjs';\n\nexport function modificarDuracionMinutosService(proyeccionId, duracionMinutos) {\n  return modificarDuracionMinutosRepository(proyeccionId, duracionMinutos);\n}",
+        "cues": [
+          {
+            "text": "modificarDuracionMinutosRepository(proyeccionId, duracionMinutos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. duracionMinutos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/proyecciones/modificar-duracion-minutos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(proyeccionId, duracionMinutos) {\n  const { Attributes } = await MODELO_PROYECCION.build(UpdateItemCommand)\n    .item({ proyeccionId, duracionMinutos })\n    .options({\n      condition: { attr: 'proyeccionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ proyeccionId, duracionMinutos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo duracionMinutos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyecciones/7\n{\"duracionMinutos\":215}\n\n200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/proyecciones/trasladar/handler.mjs",
+        "code": "import { trasladarProyeccionService } from './service.mjs';\n\nexport async function handler(event) {\n  const proyeccionId = Number(event.pathParameters.proyeccionId);\n  const { cineId } = JSON.parse(event.body);\n  const resultado = await trasladarProyeccionService(proyeccionId, cineId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.proyeccionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarProyeccionService(proyeccionId, cineId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/proyecciones/trasladar/service.mjs",
+        "code": "import { trasladarProyeccionRepository } from './repository.mjs';\nimport { buscarCineRepository } from '../../cines/consultar/repository.mjs';\n\nexport async function trasladarProyeccionService(proyeccionId, cineId) {\n  const cine = await buscarCineRepository(cineId);\n  if (!cine) throw new Error('Cine no encontrado');\n  return trasladarProyeccionRepository(proyeccionId, cineId);\n}",
+        "cues": [
+          {
+            "text": "await buscarCineRepository(cineId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarProyeccionRepository(proyeccionId, cineId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza CINE_ID. PROYECCION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/proyecciones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function trasladarProyeccionRepository(proyeccionId, cineId) {\n  const { Attributes } = await MODELO_PROYECCION.build(UpdateItemCommand)\n    .item({ proyeccionId, cineId })\n    .options({\n      condition: { attr: 'proyeccionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ proyeccionId, cineId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo cineId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /proyecciones/7/cine\n{\"cineId\":2}\n\n200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/cines/consultar/handler.mjs",
+        "code": "import { consultarCineService } from './service.mjs';\n\nexport async function handler(event) {\n  const cineId = Number(event.pathParameters.cineId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarCineService(cineId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cineId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarCineService(cineId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cines/consultar/service.mjs",
+        "code": "import { buscarCineRepository, consultarCineRepository } from './repository.mjs';\n\nexport async function consultarCineService(cineId, minimo) {\n  const cine = await buscarCineRepository(cineId);\n  if (!cine) throw new Error('Cine no encontrado');\n  const proyecciones = await consultarCineRepository(cineId, minimo);\n  return { cine, proyecciones };\n}",
+        "cues": [
+          {
+            "text": "await buscarCineRepository(cineId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarCineRepository(cineId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { cine, proyecciones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cines/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROYECCION, MODELO_CINE, TABLA_PROYECCIONES } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function buscarCineRepository(cineId) {\n  const { Item } = await MODELO_CINE.build(GetItemCommand)\n    .key({ cineId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCineRepository(cineId, minimo) {\n  const { Items = [] } = await TABLA_PROYECCIONES.build(QueryCommand)\n    .entities(MODELO_PROYECCION)\n    .query({ index: 'PorCine', partition: cineId })\n    .options({ filters: { Proyeccion: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con CINE_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorCine', partition: cineId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por CINE_ID. No busca por PROYECCION_ID."
+          },
+          {
+            "text": "attr: 'duracionMinutos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cines/2/proyecciones?minimo=126\n\n200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Viaje al norte",
+      "value": 90,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "La última estación",
+      "value": 125,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Viaje al norte · nuevo",
+      "value": 305,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/proyecciones",
+      "request": "POST /proyecciones\n{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}",
+      "fields": "nombre, duracionMinutos, cineId",
+      "args": "nombre, duracionMinutos, cineId",
+      "result": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros",
+      "service": "crearProyeccionService",
+      "repo": "crearProyeccionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/proyecciones/:proyeccionId",
+      "request": "DELETE /proyecciones/10",
+      "fields": "proyeccionId",
+      "args": "proyeccionId",
+      "result": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarProyeccionService",
+      "repo": "eliminarProyeccionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-duracion-minutos",
+      "title": "Cambiar duración",
+      "verb": "PATCH",
+      "route": "/proyecciones/:proyeccionId",
+      "request": "PATCH /proyecciones/7\n{\"duracionMinutos\":215}",
+      "fields": "proyeccionId, duracionMinutos",
+      "args": "proyeccionId, duracionMinutos",
+      "result": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+      "service": "modificarDuracionMinutosService",
+      "repo": "modificarDuracionMinutosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de cine",
+      "verb": "PATCH",
+      "route": "/proyecciones/:proyeccionId/cine",
+      "request": "PATCH /proyecciones/7/cine\n{\"cineId\":2}",
+      "fields": "proyeccionId, cineId",
+      "args": "proyeccionId, cineId",
+      "result": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+      "service": "trasladarProyeccionService",
+      "repo": "trasladarProyeccionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un cine",
+      "verb": "GET",
+      "route": "/cines/:cineId/proyecciones",
+      "request": "GET /cines/2/proyecciones?minimo=126",
+      "fields": "cineId, minimo",
+      "args": "cineId, minimo",
+      "result": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+      "service": "consultarCineService",
+      "repo": "consultarCineRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-13",
+    "title": "Cine → Proyeccion",
+    "parent": {
+      "entity": "Cine",
+      "sql": "CINE",
+      "table": "CINES",
+      "route": "cines",
+      "property": "cine",
+      "input": "cineId",
+      "variable": "TABLA_CINES",
+      "model": "MODELO_CINE",
+      "file": "src/cines/entities/cine.entity.ts",
+      "examples": [
+        "Cine Alameda",
+        "Cine del Parque"
+      ]
+    },
+    "child": {
+      "entity": "Proyeccion",
+      "sql": "PROYECCION",
+      "table": "PROYECCIONES",
+      "route": "proyecciones",
+      "property": "proyeccion",
+      "input": "proyeccionId",
+      "inverse": "proyecciones",
+      "variable": "TABLA_PROYECCIONES",
+      "model": "MODELO_PROYECCION",
+      "file": "src/proyecciones/entities/proyeccion.entity.ts"
+    },
+    "text": {
+      "property": "pelicula",
+      "column": "PELICULA"
+    },
+    "metric": {
+      "property": "duracionMinutos",
+      "column": "DURACION_MINUTOS",
+      "label": "Duración",
+      "unit": "min",
+      "initial": 90,
+      "other": 125,
+      "after": 215,
+      "minimum": 126,
+      "create": 91,
+      "unrelated": 305
+    },
+    "foreignKey": "ID_CINE",
+    "index": "PorCine",
+    "modelFile": "src/models/cine-proyeccion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

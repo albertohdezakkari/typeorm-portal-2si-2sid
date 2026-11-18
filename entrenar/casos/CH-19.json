@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-19",
+    "sha256": "5ad69ca8a03ce5959bfc03b2e7c767e188f50e315890e3480ad9c3e432ab2fac",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar eslora",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "PUERTO  1 ───────── 0..N  EMBARCACION\n\nPUERTO                         EMBARCACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               ESLORA_METROS\n                               ID_PUERTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por embarcacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias embarcaciones",
+            "note": "Un puerto puede tener cero, una o muchas embarcaciones."
+          },
+          {
+            "text": "ID_PUERTO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Puerto",
+        "path": "src/puertos/entities/puerto.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Embarcacion } from '../../embarcaciones/entities/embarcacion.entity';\n\n@Entity({ name: 'PUERTO' })\nexport class Puerto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Embarcacion, embarcacion => embarcacion.puerto)\n  embarcaciones!: Embarcacion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PUERTO' })",
+            "title": "Clase Puerto → tabla PUERTO",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Embarcacion, embarcacion => embarcacion.puerto)",
+            "title": "Una colección de embarcaciones",
+            "note": "Puerto.embarcaciones representa los registros asociados. embarcacion.puerto señala la propiedad del otro lado; no crea una segunda FK en PUERTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Embarcacion",
+        "path": "src/embarcaciones/entities/embarcacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Puerto } from '../../puertos/entities/puerto.entity';\n\n@Entity({ name: 'EMBARCACION' })\nexport class Embarcacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'ESLORA_METROS', type: 'integer' })\n  esloraMetros!: number;\n\n  @ManyToOne(() => Puerto, puerto => puerto.embarcaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_PUERTO' })\n  puerto!: Puerto;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'EMBARCACION' })",
+            "title": "Clase Embarcacion → tabla EMBARCACION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, eslora y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de EMBARCACION. No es el ID del registro principal y no se repite entre embarcaciones."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'ESLORA_METROS', type: 'integer' })",
+            "title": "Una eslora numérica",
+            "note": "esloraMetros se guarda en ESLORA_METROS, de tipo entero. El siguiente paso detalla la relación con Puerto."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/embarcaciones/entities/embarcacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Puerto } from '../../puertos/entities/puerto.entity';\n\n@Entity({ name: 'EMBARCACION' })\nexport class Embarcacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'ESLORA_METROS', type: 'integer' })\n  esloraMetros!: number;\n\n  @ManyToOne(() => Puerto, puerto => puerto.embarcaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_PUERTO' })\n  puerto!: Puerto;\n}",
+        "cues": [
+          {
+            "text": "import { Puerto } from '../../puertos/entities/puerto.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Embarcacion importa la clase Puerto para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Puerto, puerto => puerto.embarcaciones, {",
+            "title": "Muchas embarcaciones → un registro principal",
+            "note": "() => Puerto indica la entidad de destino. puerto.embarcaciones indica la colección inversa, definida con @OneToMany en Puerto."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda embarcacion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_PUERTO no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_PUERTO' })",
+            "title": "La FK está en EMBARCACION",
+            "note": "JoinColumn da el nombre físico de la FK: EMBARCACION.ID_PUERTO referencia PUERTO.ID. El mismo puerto puede aparecer en varias embarcaciones."
+          },
+          {
+            "text": "puerto!: Puerto;",
+            "title": "Una propiedad de tipo Puerto",
+            "note": "En el código usamos embarcacion.puerto; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_PUERTO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Puerto } from './puertos/entities/puerto.entity';\nimport { Embarcacion } from './embarcaciones/entities/embarcacion.entity';\nimport { CrearListarController } from './embarcaciones/crear-listar/controller';\nimport { CrearListarService } from './embarcaciones/crear-listar/service';\nimport { CrearListarRepository } from './embarcaciones/crear-listar/repository';\nimport { EliminarController } from './embarcaciones/eliminar/controller';\nimport { EliminarService } from './embarcaciones/eliminar/service';\nimport { EliminarRepository } from './embarcaciones/eliminar/repository';\nimport { ModificarEsloraMetrosController } from './embarcaciones/modificar-eslora-metros/controller';\nimport { ModificarEsloraMetrosService } from './embarcaciones/modificar-eslora-metros/service';\nimport { ModificarEsloraMetrosRepository } from './embarcaciones/modificar-eslora-metros/repository';\nimport { TrasladarController } from './embarcaciones/trasladar/controller';\nimport { TrasladarService } from './embarcaciones/trasladar/service';\nimport { TrasladarRepository } from './embarcaciones/trasladar/repository';\nimport { ConsultarPuertoController } from './puertos/consultar/controller';\nimport { ConsultarPuertoService } from './puertos/consultar/service';\nimport { ConsultarPuertoRepository } from './puertos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Puerto, Embarcacion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarEsloraMetrosController,\n    TrasladarController,\n    ConsultarPuertoController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarEsloraMetrosService,\n    ModificarEsloraMetrosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarPuertoService,\n    ConsultarPuertoRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Puerto } from './puertos/entities/puerto.entity';",
+            "title": "Importar Puerto",
+            "note": "El módulo utiliza la misma clase Puerto que has preparado en entities."
+          },
+          {
+            "text": "import { Embarcacion } from './embarcaciones/entities/embarcacion.entity';",
+            "title": "Importar Embarcacion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Puerto, Embarcacion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Puerto> y Repository<Embarcacion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/embarcaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../entities/embarcacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>\n  ) {}\n\n  crearEmbarcacionRepository(nombre: string, esloraMetros: number, puertoId: number) {\n    const embarcacion = this.embarcaciones.create({\n      nombre, esloraMetros, puerto: { id: puertoId }\n    });\n    return this.embarcaciones.save(embarcacion);\n  }\n\n  listarEmbarcacionesRepository() {\n    return this.embarcaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Embarcacion } from '../entities/embarcacion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Embarcacion de su fichero entities/embarcacion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Embarcacion) pide a Nest el repositorio de esa Entity. embarcaciones es el nombre de la dependencia; Repository<Embarcacion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.embarcaciones.create({",
+            "title": "Preparar un objeto Embarcacion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "puerto: { id: puertoId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad puerto existe en la Entity Embarcacion. TypeORM traduce puerto.id a la FK ID_PUERTO al guardar."
+          },
+          {
+            "text": "this.embarcaciones.save(embarcacion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Embarcacion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia PUERTO."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Embarcacion>. getMany devuelve objetos Embarcacion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/embarcaciones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('embarcaciones')\n  async ejecutar(@Body() datos: { nombre: string; esloraMetros: number; puertoId: number }) {\n    return this.service.crearEmbarcacionService(datos.nombre, datos.esloraMetros, datos.puertoId);\n  }\n\n  @Get('embarcaciones')\n  listar() {\n    return this.service.listarEmbarcacionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('embarcaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearEmbarcacionService(datos.nombre, datos.esloraMetros, datos.puertoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/embarcaciones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearEmbarcacionService(nombre: string, esloraMetros: number, puertoId: number) {\n    return this.repository.crearEmbarcacionRepository(nombre, esloraMetros, puertoId);\n  }\n\n  listarEmbarcacionesService() {\n    return this.repository.listarEmbarcacionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearEmbarcacionRepository(nombre, esloraMetros, puertoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/embarcaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../entities/embarcacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>\n  ) {}\n\n  crearEmbarcacionRepository(nombre: string, esloraMetros: number, puertoId: number) {\n    const embarcacion = this.embarcaciones.create({\n      nombre, esloraMetros, puerto: { id: puertoId }\n    });\n    return this.embarcaciones.save(embarcacion);\n  }\n\n  listarEmbarcacionesRepository() {\n    return this.embarcaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "puerto: { id: puertoId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_PUERTO; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.embarcaciones.save(embarcacion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /embarcaciones\n{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}\n\n201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/embarcaciones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('embarcaciones/:embarcacionId')\n  @HttpCode(204)\n  async ejecutar(@Param('embarcacionId', ParseIntPipe) embarcacionId: number) {\n    return this.service.eliminarEmbarcacionService(embarcacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('embarcaciones/:embarcacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarEmbarcacionService(embarcacionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/embarcaciones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarEmbarcacionService(embarcacionId: number) {\n    return this.repository.eliminarEmbarcacionRepository(embarcacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarEmbarcacionRepository(embarcacionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/embarcaciones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../entities/embarcacion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>\n  ) {}\n\n  async eliminarEmbarcacionRepository(embarcacionId: number) {\n    await this.embarcaciones.delete(embarcacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.embarcaciones.delete(embarcacionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /embarcaciones/10\n\n204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/embarcaciones/modificar-eslora-metros/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarEsloraMetrosService } from './service';\n\n@Controller()\nexport class ModificarEsloraMetrosController {\n  constructor(private readonly service: ModificarEsloraMetrosService) {}\n\n  @Patch('embarcaciones/:embarcacionId')\n  async ejecutar(@Param('embarcacionId', ParseIntPipe) embarcacionId: number,\n    @Body() datos: { esloraMetros: number }) {\n    return this.service.modificarEsloraMetrosService(embarcacionId, datos.esloraMetros);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('embarcaciones/:embarcacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarEsloraMetrosService(embarcacionId, datos.esloraMetros)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/embarcaciones/modificar-eslora-metros/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarEsloraMetrosRepository } from './repository';\n\n@Injectable()\nexport class ModificarEsloraMetrosService {\n  constructor(private readonly repository: ModificarEsloraMetrosRepository) {}\n\n  modificarEsloraMetrosService(embarcacionId: number, esloraMetros: number) {\n    return this.repository.modificarEsloraMetrosRepository(embarcacionId, esloraMetros);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarEsloraMetrosRepository(embarcacionId, esloraMetros)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/embarcaciones/modificar-eslora-metros/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../entities/embarcacion.entity';\n\n@Injectable()\nexport class ModificarEsloraMetrosRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>\n  ) {}\n\n  async modificarEsloraMetrosRepository(embarcacionId: number, esloraMetros: number) {\n    await this.embarcaciones.update(embarcacionId, { esloraMetros });\n    return this.embarcaciones.createQueryBuilder('p')\n      .where('p.id = :embarcacionId', { embarcacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.embarcaciones.update(embarcacionId, { esloraMetros })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :embarcacionId', { embarcacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /embarcaciones/7\n{\"esloraMetros\":20}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/embarcaciones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('embarcaciones/:embarcacionId/puerto')\n  async ejecutar(@Param('embarcacionId', ParseIntPipe) embarcacionId: number,\n    @Body() datos: { puertoId: number }) {\n    return this.service.trasladarEmbarcacionService(embarcacionId, datos.puertoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('embarcaciones/:embarcacionId/puerto')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarEmbarcacionService(embarcacionId, datos.puertoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/embarcaciones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarEmbarcacionService(embarcacionId: number, puertoId: number) {\n    return this.repository.trasladarEmbarcacionRepository(embarcacionId, puertoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarEmbarcacionRepository(embarcacionId, puertoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/embarcaciones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../entities/embarcacion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>\n  ) {}\n\n  async trasladarEmbarcacionRepository(embarcacionId: number, puertoId: number) {\n    await this.embarcaciones.update(embarcacionId, { puerto: { id: puertoId } });\n    return this.embarcaciones.createQueryBuilder('p')\n      .where('p.id = :embarcacionId', { embarcacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.embarcaciones.update(embarcacionId, { puerto: { id: puertoId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :embarcacionId', { embarcacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /embarcaciones/7/puerto\n{\"puertoId\":2}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/puertos/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarPuertoService } from './service';\n\n@Controller()\nexport class ConsultarPuertoController {\n  constructor(private readonly service: ConsultarPuertoService) {}\n\n  @Get('puertos/:puertoId/embarcaciones')\n  async ejecutar(@Param('puertoId', ParseIntPipe) puertoId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarPuertoService(puertoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('puertos/:puertoId/embarcaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarPuertoService(puertoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/puertos/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarPuertoRepository } from './repository';\n\n@Injectable()\nexport class ConsultarPuertoService {\n  constructor(private readonly repository: ConsultarPuertoRepository) {}\n\n  consultarPuertoService(puertoId: number, minimo: number) {\n    return this.repository.consultarPuertoRepository(puertoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarPuertoRepository(puertoId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/puertos/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Embarcacion } from '../../embarcaciones/entities/embarcacion.entity';\nimport { Puerto } from '../entities/puerto.entity';\n\n@Injectable()\nexport class ConsultarPuertoRepository {\n  constructor(\n    @InjectRepository(Embarcacion) private readonly embarcaciones: Repository<Embarcacion>,\n    @InjectRepository(Puerto) private readonly puertos: Repository<Puerto>\n  ) {}\n\n  async consultarPuertoRepository(puertoId: number, minimo: number) {\n    const puerto = await this.puertos.createQueryBuilder('h')\n      .where('h.id = :puertoId', { puertoId }).getOne();\n    const embarcaciones = await this.embarcaciones.createQueryBuilder('p')\n      .innerJoin('p.puerto', 'h')\n      .where('h.id = :puertoId', { puertoId })\n      .andWhere('p.esloraMetros >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { puerto, embarcaciones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.puerto', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa EMBARCACION y h representa PUERTO."
+          },
+          {
+            "text": ".where('h.id = :puertoId', { puertoId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :puertoId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.esloraMetros >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.ESLORA_METROS >= 15. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /puertos/2/embarcaciones?minimo=15\n\n200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "PUERTO  1 ───────── 0..N  EMBARCACION\n\nPUERTO                         EMBARCACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               ESLORA_METROS\n                               ID_PUERTO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por embarcacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias embarcaciones",
+            "note": "Un puerto puede tener cero, una o muchas embarcaciones."
+          },
+          {
+            "text": "ID_PUERTO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - ESLORA_METROS",
+        "cues": [
+          {
+            "text": "TableName: PUERTOS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear PUERTOS."
+          },
+          {
+            "text": "TableName: EMBARCACIONES",
+            "title": "Tabla de embarcaciones",
+            "note": "La tabla usa EMBARCACION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorPuerto",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por PUERTO_ID y ordena por EMBARCACION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y ESLORA_METROS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/puerto-embarcacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_PUERTOS = new Table({\n  name: process.env.TABLA_PUERTOS, documentClient: db,\n  partitionKey: { name: 'PUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_EMBARCACIONES = new Table({\n  name: process.env.TABLA_EMBARCACIONES, documentClient: db,\n  partitionKey: { name: 'EMBARCACION_ID', type: 'number' },\n  indexes: {\n    PorPuerto: {\n      type: 'global',\n      partitionKey: { name: 'PUERTO_ID', type: 'number' },\n      sortKey: { name: 'EMBARCACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_PUERTO = new Entity({\n  name: 'Puerto', table: TABLA_PUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    puertoId: number().key().savedAs('PUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EMBARCACION = new Entity({\n  name: 'Embarcacion', table: TABLA_EMBARCACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    embarcacionId: number().key().savedAs('EMBARCACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    esloraMetros: number().savedAs('ESLORA_METROS'),\n    puertoId: number().savedAs('PUERTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_EMBARCACIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_EMBARCACIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'EMBARCACION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "EMBARCACION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorPuerto: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorPuerto que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es PUERTO_ID y su sort key EMBARCACION_ID: agrupa embarcaciones de toda la tabla por puerto."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/puerto-embarcacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_PUERTOS = new Table({\n  name: process.env.TABLA_PUERTOS, documentClient: db,\n  partitionKey: { name: 'PUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_EMBARCACIONES = new Table({\n  name: process.env.TABLA_EMBARCACIONES, documentClient: db,\n  partitionKey: { name: 'EMBARCACION_ID', type: 'number' },\n  indexes: {\n    PorPuerto: {\n      type: 'global',\n      partitionKey: { name: 'PUERTO_ID', type: 'number' },\n      sortKey: { name: 'EMBARCACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_PUERTO = new Entity({\n  name: 'Puerto', table: TABLA_PUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    puertoId: number().key().savedAs('PUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EMBARCACION = new Entity({\n  name: 'Embarcacion', table: TABLA_EMBARCACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    embarcacionId: number().key().savedAs('EMBARCACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    esloraMetros: number().savedAs('ESLORA_METROS'),\n    puertoId: number().savedAs('PUERTO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_EMBARCACION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_EMBARCACION en el repository."
+          },
+          {
+            "text": "name: 'Embarcacion', table: TABLA_EMBARCACIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_EMBARCACIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "embarcacionId: number().key().savedAs('EMBARCACION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce embarcacionId a EMBARCACION_ID."
+          },
+          {
+            "text": "esloraMetros: number().savedAs('ESLORA_METROS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. esloraMetros es un número; se guarda como ESLORA_METROS y no forma parte de la clave."
+          },
+          {
+            "text": "puertoId: number().savedAs('PUERTO_ID')",
+            "title": "Guardar la referencia",
+            "note": "PUERTO_ID es un atributo de EMBARCACIONES y la clave del índice PorPuerto. Aquí no lleva .key(): la clave de la tabla sigue siendo EMBARCACION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/embarcaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function crearEmbarcacionRepository(embarcacion) {\n  await MODELO_EMBARCACION.build(PutItemCommand)\n    .item(embarcacion)\n    .options({ condition: { attr: 'embarcacionId', exists: false } })\n    .send();\n}\n\nexport async function listarEmbarcacionesRepository() {\n  const { Items = [] } = await TABLA_EMBARCACIONES.build(ScanCommand)\n    .entities(MODELO_EMBARCACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/puerto-embarcacion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_EMBARCACION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_EMBARCACION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(embarcacion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa embarcacionId, nombre, esloraMetros y puertoId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_EMBARCACIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_EMBARCACION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_EMBARCACION para interpretar los ítems: EMBARCACION_ID vuelve a ser embarcacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /embarcaciones }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /embarcaciones }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /embarcaciones/{embarcacionId} }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId} }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId}/puerto }\n  consultarPuerto:\n    handler: src/puertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /puertos/{puertoId}/embarcaciones }",
+        "cues": [
+          {
+            "text": "src/embarcaciones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/embarcaciones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /embarcaciones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, esloraMetros y puertoId."
+          },
+          {
+            "text": "path: /embarcaciones/{embarcacionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.embarcacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/embarcaciones/crear-listar/handler.mjs",
+        "code": "import { crearEmbarcacionService, listarEmbarcacionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, esloraMetros, puertoId } = JSON.parse(event.body);\n  const embarcacion = await crearEmbarcacionService(nombre, esloraMetros, puertoId);\n  return { statusCode: 201, body: JSON.stringify(embarcacion) };\n}\n\nexport async function listarHandler() {\n  const embarcaciones = await listarEmbarcacionesService();\n  return { statusCode: 200, body: JSON.stringify(embarcaciones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearEmbarcacionService(nombre, esloraMetros, puertoId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/embarcaciones/crear-listar/service.mjs",
+        "code": "import { crearEmbarcacionRepository, listarEmbarcacionesRepository } from './repository.mjs';\n\nexport async function crearEmbarcacionService(nombre, esloraMetros, puertoId) {\n  const embarcacionId = Date.now();\n  const embarcacion = { embarcacionId, nombre, esloraMetros, puertoId };\n  await crearEmbarcacionRepository(embarcacion);\n  return embarcacion;\n}\n\nexport function listarEmbarcacionesService() {\n  return listarEmbarcacionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearEmbarcacionRepository(embarcacion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/embarcaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function crearEmbarcacionRepository(embarcacion) {\n  await MODELO_EMBARCACION.build(PutItemCommand)\n    .item(embarcacion)\n    .options({ condition: { attr: 'embarcacionId', exists: false } })\n    .send();\n}\n\nexport async function listarEmbarcacionesRepository() {\n  const { Items = [] } = await TABLA_EMBARCACIONES.build(ScanCommand)\n    .entities(MODELO_EMBARCACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(embarcacion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva embarcacionId, nombre, esloraMetros y puertoId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /embarcaciones\n{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}\n\n201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/embarcaciones/eliminar/handler.mjs",
+        "code": "import { eliminarEmbarcacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const embarcacionId = Number(event.pathParameters.embarcacionId);\n  await eliminarEmbarcacionService(embarcacionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.embarcacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarEmbarcacionService(embarcacionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/embarcaciones/eliminar/service.mjs",
+        "code": "import { eliminarEmbarcacionRepository } from './repository.mjs';\n\nexport async function eliminarEmbarcacionService(embarcacionId) {\n  await eliminarEmbarcacionRepository(embarcacionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarEmbarcacionRepository(embarcacionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/embarcaciones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function eliminarEmbarcacionRepository(embarcacionId) {\n  await MODELO_EMBARCACION.build(DeleteItemCommand)\n    .key({ embarcacionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ embarcacionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /embarcaciones/10\n\n204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/embarcaciones/modificar-eslora-metros/handler.mjs",
+        "code": "import { modificarEsloraMetrosService } from './service.mjs';\n\nexport async function handler(event) {\n  const embarcacionId = Number(event.pathParameters.embarcacionId);\n  const { esloraMetros } = JSON.parse(event.body);\n  const resultado = await modificarEsloraMetrosService(embarcacionId, esloraMetros);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.embarcacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarEsloraMetrosService(embarcacionId, esloraMetros)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/embarcaciones/modificar-eslora-metros/service.mjs",
+        "code": "import { modificarEsloraMetrosRepository } from './repository.mjs';\n\nexport function modificarEsloraMetrosService(embarcacionId, esloraMetros) {\n  return modificarEsloraMetrosRepository(embarcacionId, esloraMetros);\n}",
+        "cues": [
+          {
+            "text": "modificarEsloraMetrosRepository(embarcacionId, esloraMetros)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. esloraMetros es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/embarcaciones/modificar-eslora-metros/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function modificarEsloraMetrosRepository(embarcacionId, esloraMetros) {\n  const { Attributes } = await MODELO_EMBARCACION.build(UpdateItemCommand)\n    .item({ embarcacionId, esloraMetros })\n    .options({\n      condition: { attr: 'embarcacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ embarcacionId, esloraMetros })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo esloraMetros. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /embarcaciones/7\n{\"esloraMetros\":20}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/embarcaciones/trasladar/handler.mjs",
+        "code": "import { trasladarEmbarcacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const embarcacionId = Number(event.pathParameters.embarcacionId);\n  const { puertoId } = JSON.parse(event.body);\n  const resultado = await trasladarEmbarcacionService(embarcacionId, puertoId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.embarcacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarEmbarcacionService(embarcacionId, puertoId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/embarcaciones/trasladar/service.mjs",
+        "code": "import { trasladarEmbarcacionRepository } from './repository.mjs';\nimport { buscarPuertoRepository } from '../../puertos/consultar/repository.mjs';\n\nexport async function trasladarEmbarcacionService(embarcacionId, puertoId) {\n  const puerto = await buscarPuertoRepository(puertoId);\n  if (!puerto) throw new Error('Puerto no encontrado');\n  return trasladarEmbarcacionRepository(embarcacionId, puertoId);\n}",
+        "cues": [
+          {
+            "text": "await buscarPuertoRepository(puertoId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarEmbarcacionRepository(embarcacionId, puertoId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza PUERTO_ID. EMBARCACION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/embarcaciones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function trasladarEmbarcacionRepository(embarcacionId, puertoId) {\n  const { Attributes } = await MODELO_EMBARCACION.build(UpdateItemCommand)\n    .item({ embarcacionId, puertoId })\n    .options({\n      condition: { attr: 'embarcacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ embarcacionId, puertoId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo puertoId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /embarcaciones/7/puerto\n{\"puertoId\":2}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/puertos/consultar/handler.mjs",
+        "code": "import { consultarPuertoService } from './service.mjs';\n\nexport async function handler(event) {\n  const puertoId = Number(event.pathParameters.puertoId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarPuertoService(puertoId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.puertoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarPuertoService(puertoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/puertos/consultar/service.mjs",
+        "code": "import { buscarPuertoRepository, consultarPuertoRepository } from './repository.mjs';\n\nexport async function consultarPuertoService(puertoId, minimo) {\n  const puerto = await buscarPuertoRepository(puertoId);\n  if (!puerto) throw new Error('Puerto no encontrado');\n  const embarcaciones = await consultarPuertoRepository(puertoId, minimo);\n  return { puerto, embarcaciones };\n}",
+        "cues": [
+          {
+            "text": "await buscarPuertoRepository(puertoId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarPuertoRepository(puertoId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { puerto, embarcaciones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/puertos/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_EMBARCACION, MODELO_PUERTO, TABLA_EMBARCACIONES } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function buscarPuertoRepository(puertoId) {\n  const { Item } = await MODELO_PUERTO.build(GetItemCommand)\n    .key({ puertoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarPuertoRepository(puertoId, minimo) {\n  const { Items = [] } = await TABLA_EMBARCACIONES.build(QueryCommand)\n    .entities(MODELO_EMBARCACION)\n    .query({ index: 'PorPuerto', partition: puertoId })\n    .options({ filters: { Embarcacion: { attr: 'esloraMetros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con PUERTO_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorPuerto', partition: puertoId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por PUERTO_ID. No busca por EMBARCACION_ID."
+          },
+          {
+            "text": "attr: 'esloraMetros', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /puertos/2/embarcaciones?minimo=15\n\n200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Brisa",
+      "value": 6,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Albatros",
+      "value": 14,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Brisa · nuevo",
+      "value": 26,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/embarcaciones",
+      "request": "POST /embarcaciones\n{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}",
+      "fields": "nombre, esloraMetros, puertoId",
+      "args": "nombre, esloraMetros, puertoId",
+      "result": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros",
+      "service": "crearEmbarcacionService",
+      "repo": "crearEmbarcacionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/embarcaciones/:embarcacionId",
+      "request": "DELETE /embarcaciones/10",
+      "fields": "embarcacionId",
+      "args": "embarcacionId",
+      "result": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarEmbarcacionService",
+      "repo": "eliminarEmbarcacionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-eslora-metros",
+      "title": "Cambiar eslora",
+      "verb": "PATCH",
+      "route": "/embarcaciones/:embarcacionId",
+      "request": "PATCH /embarcaciones/7\n{\"esloraMetros\":20}",
+      "fields": "embarcacionId, esloraMetros",
+      "args": "embarcacionId, esloraMetros",
+      "result": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+      "service": "modificarEsloraMetrosService",
+      "repo": "modificarEsloraMetrosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de puerto",
+      "verb": "PATCH",
+      "route": "/embarcaciones/:embarcacionId/puerto",
+      "request": "PATCH /embarcaciones/7/puerto\n{\"puertoId\":2}",
+      "fields": "embarcacionId, puertoId",
+      "args": "embarcacionId, puertoId",
+      "result": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+      "service": "trasladarEmbarcacionService",
+      "repo": "trasladarEmbarcacionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un puerto",
+      "verb": "GET",
+      "route": "/puertos/:puertoId/embarcaciones",
+      "request": "GET /puertos/2/embarcaciones?minimo=15",
+      "fields": "puertoId, minimo",
+      "args": "puertoId, minimo",
+      "result": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+      "service": "consultarPuertoService",
+      "repo": "consultarPuertoRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-19",
+    "title": "Puerto → Embarcacion",
+    "parent": {
+      "entity": "Puerto",
+      "sql": "PUERTO",
+      "table": "PUERTOS",
+      "route": "puertos",
+      "property": "puerto",
+      "input": "puertoId",
+      "variable": "TABLA_PUERTOS",
+      "model": "MODELO_PUERTO",
+      "file": "src/puertos/entities/puerto.entity.ts",
+      "examples": [
+        "Puerto del Mar",
+        "Puerto del Faro"
+      ]
+    },
+    "child": {
+      "entity": "Embarcacion",
+      "sql": "EMBARCACION",
+      "table": "EMBARCACIONES",
+      "route": "embarcaciones",
+      "property": "embarcacion",
+      "input": "embarcacionId",
+      "inverse": "embarcaciones",
+      "variable": "TABLA_EMBARCACIONES",
+      "model": "MODELO_EMBARCACION",
+      "file": "src/embarcaciones/entities/embarcacion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "esloraMetros",
+      "column": "ESLORA_METROS",
+      "label": "Eslora",
+      "unit": "m",
+      "initial": 6,
+      "other": 14,
+      "after": 20,
+      "minimum": 15,
+      "create": 7,
+      "unrelated": 26
+    },
+    "foreignKey": "ID_PUERTO",
+    "index": "PorPuerto",
+    "modelFile": "src/models/puerto-embarcacion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

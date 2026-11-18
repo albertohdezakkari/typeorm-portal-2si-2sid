@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-05",
+    "sha256": "ec2f58b15caf31be665513d44bb71ffc53f2ed2102bf64cba73f4071a01efd82",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar duración",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "FESTIVAL  1 ───────── 0..N  ACTUACION\n\nFESTIVAL                         ACTUACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_MINUTOS\n                               ID_FESTIVAL      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por actuacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias actuaciones",
+            "note": "Un festival puede tener cero, una o muchas actuaciones."
+          },
+          {
+            "text": "ID_FESTIVAL",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Festival",
+        "path": "src/festivales/entities/festival.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Actuacion } from '../../actuaciones/entities/actuacion.entity';\n\n@Entity({ name: 'FESTIVAL' })\nexport class Festival {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Actuacion, actuacion => actuacion.festival)\n  actuaciones!: Actuacion[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'FESTIVAL' })",
+            "title": "Clase Festival → tabla FESTIVAL",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Actuacion, actuacion => actuacion.festival)",
+            "title": "Una colección de actuaciones",
+            "note": "Festival.actuaciones representa los registros asociados. actuacion.festival señala la propiedad del otro lado; no crea una segunda FK en FESTIVAL."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Actuacion",
+        "path": "src/actuaciones/entities/actuacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Festival } from '../../festivales/entities/festival.entity';\n\n@Entity({ name: 'ACTUACION' })\nexport class Actuacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'DURACION_MINUTOS', type: 'integer' })\n  duracionMinutos!: number;\n\n  @ManyToOne(() => Festival, festival => festival.actuaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_FESTIVAL' })\n  festival!: Festival;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'ACTUACION' })",
+            "title": "Clase Actuacion → tabla ACTUACION",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, duración y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de ACTUACION. No es el ID del registro principal y no se repite entre actuaciones."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'DURACION_MINUTOS', type: 'integer' })",
+            "title": "Una duración numérica",
+            "note": "duracionMinutos se guarda en DURACION_MINUTOS, de tipo entero. El siguiente paso detalla la relación con Festival."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/actuaciones/entities/actuacion.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Festival } from '../../festivales/entities/festival.entity';\n\n@Entity({ name: 'ACTUACION' })\nexport class Actuacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'DURACION_MINUTOS', type: 'integer' })\n  duracionMinutos!: number;\n\n  @ManyToOne(() => Festival, festival => festival.actuaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_FESTIVAL' })\n  festival!: Festival;\n}",
+        "cues": [
+          {
+            "text": "import { Festival } from '../../festivales/entities/festival.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Actuacion importa la clase Festival para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Festival, festival => festival.actuaciones, {",
+            "title": "Muchas actuaciones → un registro principal",
+            "note": "() => Festival indica la entidad de destino. festival.actuaciones indica la colección inversa, definida con @OneToMany en Festival."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda actuacion tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_FESTIVAL no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_FESTIVAL' })",
+            "title": "La FK está en ACTUACION",
+            "note": "JoinColumn da el nombre físico de la FK: ACTUACION.ID_FESTIVAL referencia FESTIVAL.ID. El mismo festival puede aparecer en varias actuaciones."
+          },
+          {
+            "text": "festival!: Festival;",
+            "title": "Una propiedad de tipo Festival",
+            "note": "En el código usamos actuacion.festival; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_FESTIVAL."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Festival } from './festivales/entities/festival.entity';\nimport { Actuacion } from './actuaciones/entities/actuacion.entity';\nimport { CrearListarController } from './actuaciones/crear-listar/controller';\nimport { CrearListarService } from './actuaciones/crear-listar/service';\nimport { CrearListarRepository } from './actuaciones/crear-listar/repository';\nimport { EliminarController } from './actuaciones/eliminar/controller';\nimport { EliminarService } from './actuaciones/eliminar/service';\nimport { EliminarRepository } from './actuaciones/eliminar/repository';\nimport { ModificarDuracionMinutosController } from './actuaciones/modificar-duracion-minutos/controller';\nimport { ModificarDuracionMinutosService } from './actuaciones/modificar-duracion-minutos/service';\nimport { ModificarDuracionMinutosRepository } from './actuaciones/modificar-duracion-minutos/repository';\nimport { TrasladarController } from './actuaciones/trasladar/controller';\nimport { TrasladarService } from './actuaciones/trasladar/service';\nimport { TrasladarRepository } from './actuaciones/trasladar/repository';\nimport { ConsultarFestivalController } from './festivales/consultar/controller';\nimport { ConsultarFestivalService } from './festivales/consultar/service';\nimport { ConsultarFestivalRepository } from './festivales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Festival, Actuacion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarDuracionMinutosController,\n    TrasladarController,\n    ConsultarFestivalController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarDuracionMinutosService,\n    ModificarDuracionMinutosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarFestivalService,\n    ConsultarFestivalRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Festival } from './festivales/entities/festival.entity';",
+            "title": "Importar Festival",
+            "note": "El módulo utiliza la misma clase Festival que has preparado en entities."
+          },
+          {
+            "text": "import { Actuacion } from './actuaciones/entities/actuacion.entity';",
+            "title": "Importar Actuacion",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Festival, Actuacion])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Festival> y Repository<Actuacion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/actuaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../entities/actuacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>\n  ) {}\n\n  crearActuacionRepository(nombre: string, duracionMinutos: number, festivalId: number) {\n    const actuacion = this.actuaciones.create({\n      nombre, duracionMinutos, festival: { id: festivalId }\n    });\n    return this.actuaciones.save(actuacion);\n  }\n\n  listarActuacionesRepository() {\n    return this.actuaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Actuacion } from '../entities/actuacion.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Actuacion de su fichero entities/actuacion.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Actuacion) pide a Nest el repositorio de esa Entity. actuaciones es el nombre de la dependencia; Repository<Actuacion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.actuaciones.create({",
+            "title": "Preparar un objeto Actuacion",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "festival: { id: festivalId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad festival existe en la Entity Actuacion. TypeORM traduce festival.id a la FK ID_FESTIVAL al guardar."
+          },
+          {
+            "text": "this.actuaciones.save(actuacion)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Actuacion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia FESTIVAL."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Actuacion>. getMany devuelve objetos Actuacion, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/actuaciones/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('actuaciones')\n  async ejecutar(@Body() datos: { nombre: string; duracionMinutos: number; festivalId: number }) {\n    return this.service.crearActuacionService(datos.nombre, datos.duracionMinutos, datos.festivalId);\n  }\n\n  @Get('actuaciones')\n  listar() {\n    return this.service.listarActuacionesService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('actuaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearActuacionService(datos.nombre, datos.duracionMinutos, datos.festivalId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/actuaciones/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearActuacionService(nombre: string, duracionMinutos: number, festivalId: number) {\n    return this.repository.crearActuacionRepository(nombre, duracionMinutos, festivalId);\n  }\n\n  listarActuacionesService() {\n    return this.repository.listarActuacionesRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearActuacionRepository(nombre, duracionMinutos, festivalId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/actuaciones/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../entities/actuacion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>\n  ) {}\n\n  crearActuacionRepository(nombre: string, duracionMinutos: number, festivalId: number) {\n    const actuacion = this.actuaciones.create({\n      nombre, duracionMinutos, festival: { id: festivalId }\n    });\n    return this.actuaciones.save(actuacion);\n  }\n\n  listarActuacionesRepository() {\n    return this.actuaciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "festival: { id: festivalId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_FESTIVAL; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.actuaciones.save(actuacion)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /actuaciones\n{\"nombre\":\"Registro de prueba\",\"duracionMinutos\":26,\"festivalId\":2}\n\n201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/actuaciones/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('actuaciones/:actuacionId')\n  @HttpCode(204)\n  async ejecutar(@Param('actuacionId', ParseIntPipe) actuacionId: number) {\n    return this.service.eliminarActuacionService(actuacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('actuaciones/:actuacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarActuacionService(actuacionId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/actuaciones/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarActuacionService(actuacionId: number) {\n    return this.repository.eliminarActuacionRepository(actuacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarActuacionRepository(actuacionId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/actuaciones/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../entities/actuacion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>\n  ) {}\n\n  async eliminarActuacionRepository(actuacionId: number) {\n    await this.actuaciones.delete(actuacionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.actuaciones.delete(actuacionId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /actuaciones/10\n\n204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/actuaciones/modificar-duracion-minutos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarDuracionMinutosService } from './service';\n\n@Controller()\nexport class ModificarDuracionMinutosController {\n  constructor(private readonly service: ModificarDuracionMinutosService) {}\n\n  @Patch('actuaciones/:actuacionId')\n  async ejecutar(@Param('actuacionId', ParseIntPipe) actuacionId: number,\n    @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutosService(actuacionId, datos.duracionMinutos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('actuaciones/:actuacionId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarDuracionMinutosService(actuacionId, datos.duracionMinutos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/actuaciones/modificar-duracion-minutos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarDuracionMinutosRepository } from './repository';\n\n@Injectable()\nexport class ModificarDuracionMinutosService {\n  constructor(private readonly repository: ModificarDuracionMinutosRepository) {}\n\n  modificarDuracionMinutosService(actuacionId: number, duracionMinutos: number) {\n    return this.repository.modificarDuracionMinutosRepository(actuacionId, duracionMinutos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarDuracionMinutosRepository(actuacionId, duracionMinutos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/actuaciones/modificar-duracion-minutos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../entities/actuacion.entity';\n\n@Injectable()\nexport class ModificarDuracionMinutosRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>\n  ) {}\n\n  async modificarDuracionMinutosRepository(actuacionId: number, duracionMinutos: number) {\n    await this.actuaciones.update(actuacionId, { duracionMinutos });\n    return this.actuaciones.createQueryBuilder('p')\n      .where('p.id = :actuacionId', { actuacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.actuaciones.update(actuacionId, { duracionMinutos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :actuacionId', { actuacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /actuaciones/7\n{\"duracionMinutos\":85}\n\n200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/actuaciones/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('actuaciones/:actuacionId/festival')\n  async ejecutar(@Param('actuacionId', ParseIntPipe) actuacionId: number,\n    @Body() datos: { festivalId: number }) {\n    return this.service.trasladarActuacionService(actuacionId, datos.festivalId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('actuaciones/:actuacionId/festival')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarActuacionService(actuacionId, datos.festivalId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/actuaciones/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarActuacionService(actuacionId: number, festivalId: number) {\n    return this.repository.trasladarActuacionRepository(actuacionId, festivalId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarActuacionRepository(actuacionId, festivalId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/actuaciones/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../entities/actuacion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>\n  ) {}\n\n  async trasladarActuacionRepository(actuacionId: number, festivalId: number) {\n    await this.actuaciones.update(actuacionId, { festival: { id: festivalId } });\n    return this.actuaciones.createQueryBuilder('p')\n      .where('p.id = :actuacionId', { actuacionId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.actuaciones.update(actuacionId, { festival: { id: festivalId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :actuacionId', { actuacionId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /actuaciones/7/festival\n{\"festivalId\":2}\n\n200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/festivales/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarFestivalService } from './service';\n\n@Controller()\nexport class ConsultarFestivalController {\n  constructor(private readonly service: ConsultarFestivalService) {}\n\n  @Get('festivales/:festivalId/actuaciones')\n  async ejecutar(@Param('festivalId', ParseIntPipe) festivalId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarFestivalService(festivalId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('festivales/:festivalId/actuaciones')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarFestivalService(festivalId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/festivales/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarFestivalRepository } from './repository';\n\n@Injectable()\nexport class ConsultarFestivalService {\n  constructor(private readonly repository: ConsultarFestivalRepository) {}\n\n  consultarFestivalService(festivalId: number, minimo: number) {\n    return this.repository.consultarFestivalRepository(festivalId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarFestivalRepository(festivalId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/festivales/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../../actuaciones/entities/actuacion.entity';\nimport { Festival } from '../entities/festival.entity';\n\n@Injectable()\nexport class ConsultarFestivalRepository {\n  constructor(\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Festival) private readonly festivales: Repository<Festival>\n  ) {}\n\n  async consultarFestivalRepository(festivalId: number, minimo: number) {\n    const festival = await this.festivales.createQueryBuilder('h')\n      .where('h.id = :festivalId', { festivalId }).getOne();\n    const actuaciones = await this.actuaciones.createQueryBuilder('p')\n      .innerJoin('p.festival', 'h')\n      .where('h.id = :festivalId', { festivalId })\n      .andWhere('p.duracionMinutos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { festival, actuaciones };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.festival', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa ACTUACION y h representa FESTIVAL."
+          },
+          {
+            "text": ".where('h.id = :festivalId', { festivalId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :festivalId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.duracionMinutos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.DURACION_MINUTOS >= 61. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /festivales/2/actuaciones?minimo=61\n\n200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "FESTIVAL  1 ───────── 0..N  ACTUACION\n\nFESTIVAL                         ACTUACION\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               DURACION_MINUTOS\n                               ID_FESTIVAL      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por actuacion",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias actuaciones",
+            "note": "Un festival puede tener cero, una o muchas actuaciones."
+          },
+          {
+            "text": "ID_FESTIVAL",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_FESTIVALES: { Ref: TablaFestivales }\n    TABLA_ACTUACIONES: { Ref: TablaActuaciones }\n\nresources:\n  Resources:\n    TablaFestivales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: FESTIVALES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: FESTIVAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaActuaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ACTUACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ACTUACION_ID, AttributeType: N }\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ACTUACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ACTUACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorFestival\n            # Clave compuesta = partition key + sort key:\n            # (FESTIVAL_ID, ACTUACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: FESTIVAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Festival.\n              - AttributeName: ACTUACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_MINUTOS",
+        "cues": [
+          {
+            "text": "TableName: FESTIVALES",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear FESTIVALES."
+          },
+          {
+            "text": "TableName: ACTUACIONES",
+            "title": "Tabla de actuaciones",
+            "note": "La tabla usa ACTUACION_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorFestival",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por FESTIVAL_ID y ordena por ACTUACION_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_MINUTOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/festival-actuacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_FESTIVALES = new Table({\n  name: process.env.TABLA_FESTIVALES, documentClient: db,\n  partitionKey: { name: 'FESTIVAL_ID', type: 'number' }\n});\n\nexport const TABLA_ACTUACIONES = new Table({\n  name: process.env.TABLA_ACTUACIONES, documentClient: db,\n  partitionKey: { name: 'ACTUACION_ID', type: 'number' },\n  indexes: {\n    PorFestival: {\n      type: 'global',\n      partitionKey: { name: 'FESTIVAL_ID', type: 'number' },\n      sortKey: { name: 'ACTUACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_FESTIVAL = new Entity({\n  name: 'Festival', table: TABLA_FESTIVALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    festivalId: number().key().savedAs('FESTIVAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ACTUACION = new Entity({\n  name: 'Actuacion', table: TABLA_ACTUACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    actuacionId: number().key().savedAs('ACTUACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    festivalId: number().savedAs('FESTIVAL_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_ACTUACIONES = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_ACTUACIONES, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'ACTUACION_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "ACTUACION_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorFestival: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorFestival que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es FESTIVAL_ID y su sort key ACTUACION_ID: agrupa actuaciones de toda la tabla por festival."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/festival-actuacion.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_FESTIVALES = new Table({\n  name: process.env.TABLA_FESTIVALES, documentClient: db,\n  partitionKey: { name: 'FESTIVAL_ID', type: 'number' }\n});\n\nexport const TABLA_ACTUACIONES = new Table({\n  name: process.env.TABLA_ACTUACIONES, documentClient: db,\n  partitionKey: { name: 'ACTUACION_ID', type: 'number' },\n  indexes: {\n    PorFestival: {\n      type: 'global',\n      partitionKey: { name: 'FESTIVAL_ID', type: 'number' },\n      sortKey: { name: 'ACTUACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_FESTIVAL = new Entity({\n  name: 'Festival', table: TABLA_FESTIVALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    festivalId: number().key().savedAs('FESTIVAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ACTUACION = new Entity({\n  name: 'Actuacion', table: TABLA_ACTUACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    actuacionId: number().key().savedAs('ACTUACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    festivalId: number().savedAs('FESTIVAL_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_ACTUACION = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ACTUACION en el repository."
+          },
+          {
+            "text": "name: 'Actuacion', table: TABLA_ACTUACIONES,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_ACTUACIONES declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "actuacionId: number().key().savedAs('ACTUACION_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce actuacionId a ACTUACION_ID."
+          },
+          {
+            "text": "duracionMinutos: number().savedAs('DURACION_MINUTOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. duracionMinutos es un número; se guarda como DURACION_MINUTOS y no forma parte de la clave."
+          },
+          {
+            "text": "festivalId: number().savedAs('FESTIVAL_ID')",
+            "title": "Guardar la referencia",
+            "note": "FESTIVAL_ID es un atributo de ACTUACIONES y la clave del índice PorFestival. Aquí no lleva .key(): la clave de la tabla sigue siendo ACTUACION_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/actuaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function crearActuacionRepository(actuacion) {\n  await MODELO_ACTUACION.build(PutItemCommand)\n    .item(actuacion)\n    .options({ condition: { attr: 'actuacionId', exists: false } })\n    .send();\n}\n\nexport async function listarActuacionesRepository() {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(ScanCommand)\n    .entities(MODELO_ACTUACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/festival-actuacion.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_ACTUACION.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_ACTUACION. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(actuacion)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa actuacionId, nombre, duracionMinutos y festivalId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_ACTUACIONES.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_ACTUACION)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_ACTUACION para interpretar los ítems: ACTUACION_ID vuelve a ser actuacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearActuacion:\n    handler: src/actuaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /actuaciones }\n  listarActuaciones:\n    handler: src/actuaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /actuaciones }\n  eliminarActuacion:\n    handler: src/actuaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /actuaciones/{actuacionId} }\n  modificarDuracionMinutos:\n    handler: src/actuaciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /actuaciones/{actuacionId} }\n  trasladarActuacion:\n    handler: src/actuaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /actuaciones/{actuacionId}/festival }\n  consultarFestival:\n    handler: src/festivales/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /festivales/{festivalId}/actuaciones }",
+        "cues": [
+          {
+            "text": "src/actuaciones/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/actuaciones/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /actuaciones",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, duracionMinutos y festivalId."
+          },
+          {
+            "text": "path: /actuaciones/{actuacionId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.actuacionId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/actuaciones/crear-listar/handler.mjs",
+        "code": "import { crearActuacionService, listarActuacionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, duracionMinutos, festivalId } = JSON.parse(event.body);\n  const actuacion = await crearActuacionService(nombre, duracionMinutos, festivalId);\n  return { statusCode: 201, body: JSON.stringify(actuacion) };\n}\n\nexport async function listarHandler() {\n  const actuaciones = await listarActuacionesService();\n  return { statusCode: 200, body: JSON.stringify(actuaciones) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearActuacionService(nombre, duracionMinutos, festivalId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/actuaciones/crear-listar/service.mjs",
+        "code": "import { crearActuacionRepository, listarActuacionesRepository } from './repository.mjs';\n\nexport async function crearActuacionService(nombre, duracionMinutos, festivalId) {\n  const actuacionId = Date.now();\n  const actuacion = { actuacionId, nombre, duracionMinutos, festivalId };\n  await crearActuacionRepository(actuacion);\n  return actuacion;\n}\n\nexport function listarActuacionesService() {\n  return listarActuacionesRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearActuacionRepository(actuacion)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/actuaciones/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function crearActuacionRepository(actuacion) {\n  await MODELO_ACTUACION.build(PutItemCommand)\n    .item(actuacion)\n    .options({ condition: { attr: 'actuacionId', exists: false } })\n    .send();\n}\n\nexport async function listarActuacionesRepository() {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(ScanCommand)\n    .entities(MODELO_ACTUACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(actuacion)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva actuacionId, nombre, duracionMinutos y festivalId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /actuaciones\n{\"nombre\":\"Registro de prueba\",\"duracionMinutos\":26,\"festivalId\":2}\n\n201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/actuaciones/eliminar/handler.mjs",
+        "code": "import { eliminarActuacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const actuacionId = Number(event.pathParameters.actuacionId);\n  await eliminarActuacionService(actuacionId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.actuacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarActuacionService(actuacionId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/actuaciones/eliminar/service.mjs",
+        "code": "import { eliminarActuacionRepository } from './repository.mjs';\n\nexport async function eliminarActuacionService(actuacionId) {\n  await eliminarActuacionRepository(actuacionId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarActuacionRepository(actuacionId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/actuaciones/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function eliminarActuacionRepository(actuacionId) {\n  await MODELO_ACTUACION.build(DeleteItemCommand)\n    .key({ actuacionId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ actuacionId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /actuaciones/10\n\n204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/actuaciones/modificar-duracion-minutos/handler.mjs",
+        "code": "import { modificarDuracionMinutosService } from './service.mjs';\n\nexport async function handler(event) {\n  const actuacionId = Number(event.pathParameters.actuacionId);\n  const { duracionMinutos } = JSON.parse(event.body);\n  const resultado = await modificarDuracionMinutosService(actuacionId, duracionMinutos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.actuacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarDuracionMinutosService(actuacionId, duracionMinutos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/actuaciones/modificar-duracion-minutos/service.mjs",
+        "code": "import { modificarDuracionMinutosRepository } from './repository.mjs';\n\nexport function modificarDuracionMinutosService(actuacionId, duracionMinutos) {\n  return modificarDuracionMinutosRepository(actuacionId, duracionMinutos);\n}",
+        "cues": [
+          {
+            "text": "modificarDuracionMinutosRepository(actuacionId, duracionMinutos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. duracionMinutos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/actuaciones/modificar-duracion-minutos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(actuacionId, duracionMinutos) {\n  const { Attributes } = await MODELO_ACTUACION.build(UpdateItemCommand)\n    .item({ actuacionId, duracionMinutos })\n    .options({\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ actuacionId, duracionMinutos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo duracionMinutos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /actuaciones/7\n{\"duracionMinutos\":85}\n\n200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/actuaciones/trasladar/handler.mjs",
+        "code": "import { trasladarActuacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const actuacionId = Number(event.pathParameters.actuacionId);\n  const { festivalId } = JSON.parse(event.body);\n  const resultado = await trasladarActuacionService(actuacionId, festivalId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.actuacionId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarActuacionService(actuacionId, festivalId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/actuaciones/trasladar/service.mjs",
+        "code": "import { trasladarActuacionRepository } from './repository.mjs';\nimport { buscarFestivalRepository } from '../../festivales/consultar/repository.mjs';\n\nexport async function trasladarActuacionService(actuacionId, festivalId) {\n  const festival = await buscarFestivalRepository(festivalId);\n  if (!festival) throw new Error('Festival no encontrado');\n  return trasladarActuacionRepository(actuacionId, festivalId);\n}",
+        "cues": [
+          {
+            "text": "await buscarFestivalRepository(festivalId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarActuacionRepository(actuacionId, festivalId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza FESTIVAL_ID. ACTUACION_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/actuaciones/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function trasladarActuacionRepository(actuacionId, festivalId) {\n  const { Attributes } = await MODELO_ACTUACION.build(UpdateItemCommand)\n    .item({ actuacionId, festivalId })\n    .options({\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ actuacionId, festivalId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo festivalId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /actuaciones/7/festival\n{\"festivalId\":2}\n\n200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/festivales/consultar/handler.mjs",
+        "code": "import { consultarFestivalService } from './service.mjs';\n\nexport async function handler(event) {\n  const festivalId = Number(event.pathParameters.festivalId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarFestivalService(festivalId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.festivalId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarFestivalService(festivalId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/festivales/consultar/service.mjs",
+        "code": "import { buscarFestivalRepository, consultarFestivalRepository } from './repository.mjs';\n\nexport async function consultarFestivalService(festivalId, minimo) {\n  const festival = await buscarFestivalRepository(festivalId);\n  if (!festival) throw new Error('Festival no encontrado');\n  const actuaciones = await consultarFestivalRepository(festivalId, minimo);\n  return { festival, actuaciones };\n}",
+        "cues": [
+          {
+            "text": "await buscarFestivalRepository(festivalId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarFestivalRepository(festivalId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { festival, actuaciones }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/festivales/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function buscarFestivalRepository(festivalId) {\n  const { Item } = await MODELO_FESTIVAL.build(GetItemCommand)\n    .key({ festivalId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarFestivalRepository(festivalId, minimo) {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(QueryCommand)\n    .entities(MODELO_ACTUACION)\n    .query({ index: 'PorFestival', partition: festivalId })\n    .options({ filters: { Actuacion: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con FESTIVAL_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorFestival', partition: festivalId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por FESTIVAL_ID. No busca por ACTUACION_ID."
+          },
+          {
+            "text": "attr: 'duracionMinutos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /festivales/2/actuaciones?minimo=61\n\n200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Concierto acústico",
+      "value": 25,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Danza urbana",
+      "value": 60,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Concierto acústico · nuevo",
+      "value": 110,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/actuaciones",
+      "request": "POST /actuaciones\n{\"nombre\":\"Registro de prueba\",\"duracionMinutos\":26,\"festivalId\":2}",
+      "fields": "nombre, duracionMinutos, festivalId",
+      "args": "nombre, duracionMinutos, festivalId",
+      "result": "201 · Registro 10 creado → GET /actuaciones → 200 · aparecen 4 registros",
+      "service": "crearActuacionService",
+      "repo": "crearActuacionRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/actuaciones/:actuacionId",
+      "request": "DELETE /actuaciones/10",
+      "fields": "actuacionId",
+      "args": "actuacionId",
+      "result": "204 · Registro 10 eliminado → GET /actuaciones → 200 · quedan 7, 8 y 9",
+      "service": "eliminarActuacionService",
+      "repo": "eliminarActuacionRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-duracion-minutos",
+      "title": "Cambiar duración",
+      "verb": "PATCH",
+      "route": "/actuaciones/:actuacionId",
+      "request": "PATCH /actuaciones/7\n{\"duracionMinutos\":85}",
+      "fields": "actuacionId, duracionMinutos",
+      "args": "actuacionId, duracionMinutos",
+      "result": "200 · Registro 7 · duracionMinutos = 85 min · festivalId = 1",
+      "service": "modificarDuracionMinutosService",
+      "repo": "modificarDuracionMinutosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de festival",
+      "verb": "PATCH",
+      "route": "/actuaciones/:actuacionId/festival",
+      "request": "PATCH /actuaciones/7/festival\n{\"festivalId\":2}",
+      "fields": "actuacionId, festivalId",
+      "args": "actuacionId, festivalId",
+      "result": "200 · Registro 7 · duracionMinutos = 85 min · festivalId pasa de 1 a 2",
+      "service": "trasladarActuacionService",
+      "repo": "trasladarActuacionRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un festival",
+      "verb": "GET",
+      "route": "/festivales/:festivalId/actuaciones",
+      "request": "GET /festivales/2/actuaciones?minimo=61",
+      "fields": "festivalId, minimo",
+      "args": "festivalId, minimo",
+      "result": "200 · Festival del Río + registro 7 (85 min). Excluye el 8 (60 min) y el 9 (pertenece al ID 1).",
+      "service": "consultarFestivalService",
+      "repo": "consultarFestivalRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-05",
+    "title": "Festival → Actuacion",
+    "parent": {
+      "entity": "Festival",
+      "sql": "FESTIVAL",
+      "table": "FESTIVALES",
+      "route": "festivales",
+      "property": "festival",
+      "input": "festivalId",
+      "variable": "TABLA_FESTIVALES",
+      "model": "MODELO_FESTIVAL",
+      "file": "src/festivales/entities/festival.entity.ts",
+      "examples": [
+        "Festival del Sol",
+        "Festival del Río"
+      ]
+    },
+    "child": {
+      "entity": "Actuacion",
+      "sql": "ACTUACION",
+      "table": "ACTUACIONES",
+      "route": "actuaciones",
+      "property": "actuacion",
+      "input": "actuacionId",
+      "inverse": "actuaciones",
+      "variable": "TABLA_ACTUACIONES",
+      "model": "MODELO_ACTUACION",
+      "file": "src/actuaciones/entities/actuacion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "duracionMinutos",
+      "column": "DURACION_MINUTOS",
+      "label": "Duración",
+      "unit": "min",
+      "initial": 25,
+      "other": 60,
+      "after": 85,
+      "minimum": 61,
+      "create": 26,
+      "unrelated": 110
+    },
+    "foreignKey": "ID_FESTIVAL",
+    "index": "PorFestival",
+    "modelFile": "src/models/festival-actuacion.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

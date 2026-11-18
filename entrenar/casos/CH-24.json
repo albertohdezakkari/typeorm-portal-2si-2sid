@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-24",
+    "sha256": "31a29aa281449e18bf9af07ecb7604b1e1d9397d920dea740674cbc79b450296",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar superficie",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "COMPLEJO  1 ───────── 0..N  PISTA\n\nCOMPLEJO                         PISTA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_COMPLEJO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por pista",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias pistas",
+            "note": "Un complejo puede tener cero, una o muchas pistas."
+          },
+          {
+            "text": "ID_COMPLEJO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Complejo",
+        "path": "src/complejos/entities/complejo.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Pista } from '../../pistas/entities/pista.entity';\n\n@Entity({ name: 'COMPLEJO' })\nexport class Complejo {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Pista, pista => pista.complejo)\n  pistas!: Pista[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'COMPLEJO' })",
+            "title": "Clase Complejo → tabla COMPLEJO",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Pista, pista => pista.complejo)",
+            "title": "Una colección de pistas",
+            "note": "Complejo.pistas representa los registros asociados. pista.complejo señala la propiedad del otro lado; no crea una segunda FK en COMPLEJO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Pista",
+        "path": "src/pistas/entities/pista.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Complejo } from '../../complejos/entities/complejo.entity';\n\n@Entity({ name: 'PISTA' })\nexport class Pista {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Complejo, complejo => complejo.pistas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COMPLEJO' })\n  complejo!: Complejo;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'PISTA' })",
+            "title": "Clase Pista → tabla PISTA",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, superficie y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de PISTA. No es el ID del registro principal y no se repite entre pistas."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
+            "title": "Una superficie numérica",
+            "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Complejo."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/pistas/entities/pista.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Complejo } from '../../complejos/entities/complejo.entity';\n\n@Entity({ name: 'PISTA' })\nexport class Pista {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Complejo, complejo => complejo.pistas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COMPLEJO' })\n  complejo!: Complejo;\n}",
+        "cues": [
+          {
+            "text": "import { Complejo } from '../../complejos/entities/complejo.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Pista importa la clase Complejo para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Complejo, complejo => complejo.pistas, {",
+            "title": "Muchas pistas → un registro principal",
+            "note": "() => Complejo indica la entidad de destino. complejo.pistas indica la colección inversa, definida con @OneToMany en Complejo."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda pista tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_COMPLEJO no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_COMPLEJO' })",
+            "title": "La FK está en PISTA",
+            "note": "JoinColumn da el nombre físico de la FK: PISTA.ID_COMPLEJO referencia COMPLEJO.ID. El mismo complejo puede aparecer en varias pistas."
+          },
+          {
+            "text": "complejo!: Complejo;",
+            "title": "Una propiedad de tipo Complejo",
+            "note": "En el código usamos pista.complejo; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_COMPLEJO."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Complejo } from './complejos/entities/complejo.entity';\nimport { Pista } from './pistas/entities/pista.entity';\nimport { CrearListarController } from './pistas/crear-listar/controller';\nimport { CrearListarService } from './pistas/crear-listar/service';\nimport { CrearListarRepository } from './pistas/crear-listar/repository';\nimport { EliminarController } from './pistas/eliminar/controller';\nimport { EliminarService } from './pistas/eliminar/service';\nimport { EliminarRepository } from './pistas/eliminar/repository';\nimport { ModificarSuperficieM2Controller } from './pistas/modificar-superficie-m2/controller';\nimport { ModificarSuperficieM2Service } from './pistas/modificar-superficie-m2/service';\nimport { ModificarSuperficieM2Repository } from './pistas/modificar-superficie-m2/repository';\nimport { TrasladarController } from './pistas/trasladar/controller';\nimport { TrasladarService } from './pistas/trasladar/service';\nimport { TrasladarRepository } from './pistas/trasladar/repository';\nimport { ConsultarComplejoController } from './complejos/consultar/controller';\nimport { ConsultarComplejoService } from './complejos/consultar/service';\nimport { ConsultarComplejoRepository } from './complejos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Complejo, Pista])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarSuperficieM2Controller,\n    TrasladarController,\n    ConsultarComplejoController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarSuperficieM2Service,\n    ModificarSuperficieM2Repository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarComplejoService,\n    ConsultarComplejoRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Complejo } from './complejos/entities/complejo.entity';",
+            "title": "Importar Complejo",
+            "note": "El módulo utiliza la misma clase Complejo que has preparado en entities."
+          },
+          {
+            "text": "import { Pista } from './pistas/entities/pista.entity';",
+            "title": "Importar Pista",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Complejo, Pista])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Complejo> y Repository<Pista>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/pistas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../entities/pista.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>\n  ) {}\n\n  crearPistaRepository(nombre: string, superficieM2: number, complejoId: number) {\n    const pista = this.pistas.create({\n      nombre, superficieM2, complejo: { id: complejoId }\n    });\n    return this.pistas.save(pista);\n  }\n\n  listarPistasRepository() {\n    return this.pistas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Pista } from '../entities/pista.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Pista de su fichero entities/pista.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Pista) private readonly pistas: Repository<Pista>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Pista) pide a Nest el repositorio de esa Entity. pistas es el nombre de la dependencia; Repository<Pista> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.pistas.create({",
+            "title": "Preparar un objeto Pista",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "complejo: { id: complejoId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad complejo existe en la Entity Pista. TypeORM traduce complejo.id a la FK ID_COMPLEJO al guardar."
+          },
+          {
+            "text": "this.pistas.save(pista)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Pista y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia COMPLEJO."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Pista>. getMany devuelve objetos Pista, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/pistas/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('pistas')\n  async ejecutar(@Body() datos: { nombre: string; superficieM2: number; complejoId: number }) {\n    return this.service.crearPistaService(datos.nombre, datos.superficieM2, datos.complejoId);\n  }\n\n  @Get('pistas')\n  listar() {\n    return this.service.listarPistasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('pistas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearPistaService(datos.nombre, datos.superficieM2, datos.complejoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/pistas/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearPistaService(nombre: string, superficieM2: number, complejoId: number) {\n    return this.repository.crearPistaRepository(nombre, superficieM2, complejoId);\n  }\n\n  listarPistasService() {\n    return this.repository.listarPistasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearPistaRepository(nombre, superficieM2, complejoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/pistas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../entities/pista.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>\n  ) {}\n\n  crearPistaRepository(nombre: string, superficieM2: number, complejoId: number) {\n    const pista = this.pistas.create({\n      nombre, superficieM2, complejo: { id: complejoId }\n    });\n    return this.pistas.save(pista);\n  }\n\n  listarPistasRepository() {\n    return this.pistas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "complejo: { id: complejoId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_COMPLEJO; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.pistas.save(pista)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /pistas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}\n\n201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/pistas/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('pistas/:pistaId')\n  @HttpCode(204)\n  async ejecutar(@Param('pistaId', ParseIntPipe) pistaId: number) {\n    return this.service.eliminarPistaService(pistaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('pistas/:pistaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarPistaService(pistaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/pistas/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarPistaService(pistaId: number) {\n    return this.repository.eliminarPistaRepository(pistaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarPistaRepository(pistaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/pistas/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../entities/pista.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>\n  ) {}\n\n  async eliminarPistaRepository(pistaId: number) {\n    await this.pistas.delete(pistaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.pistas.delete(pistaId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /pistas/10\n\n204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/pistas/modificar-superficie-m2/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarSuperficieM2Service } from './service';\n\n@Controller()\nexport class ModificarSuperficieM2Controller {\n  constructor(private readonly service: ModificarSuperficieM2Service) {}\n\n  @Patch('pistas/:pistaId')\n  async ejecutar(@Param('pistaId', ParseIntPipe) pistaId: number,\n    @Body() datos: { superficieM2: number }) {\n    return this.service.modificarSuperficieM2Service(pistaId, datos.superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('pistas/:pistaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarSuperficieM2Service(pistaId, datos.superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/pistas/modificar-superficie-m2/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarSuperficieM2Repository } from './repository';\n\n@Injectable()\nexport class ModificarSuperficieM2Service {\n  constructor(private readonly repository: ModificarSuperficieM2Repository) {}\n\n  modificarSuperficieM2Service(pistaId: number, superficieM2: number) {\n    return this.repository.modificarSuperficieM2Repository(pistaId, superficieM2);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarSuperficieM2Repository(pistaId, superficieM2)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/pistas/modificar-superficie-m2/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../entities/pista.entity';\n\n@Injectable()\nexport class ModificarSuperficieM2Repository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>\n  ) {}\n\n  async modificarSuperficieM2Repository(pistaId: number, superficieM2: number) {\n    await this.pistas.update(pistaId, { superficieM2 });\n    return this.pistas.createQueryBuilder('p')\n      .where('p.id = :pistaId', { pistaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.pistas.update(pistaId, { superficieM2 })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :pistaId', { pistaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /pistas/7\n{\"superficieM2\":420}\n\n200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/pistas/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('pistas/:pistaId/complejo')\n  async ejecutar(@Param('pistaId', ParseIntPipe) pistaId: number,\n    @Body() datos: { complejoId: number }) {\n    return this.service.trasladarPistaService(pistaId, datos.complejoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('pistas/:pistaId/complejo')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarPistaService(pistaId, datos.complejoId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/pistas/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarPistaService(pistaId: number, complejoId: number) {\n    return this.repository.trasladarPistaRepository(pistaId, complejoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarPistaRepository(pistaId, complejoId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/pistas/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../entities/pista.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>\n  ) {}\n\n  async trasladarPistaRepository(pistaId: number, complejoId: number) {\n    await this.pistas.update(pistaId, { complejo: { id: complejoId } });\n    return this.pistas.createQueryBuilder('p')\n      .where('p.id = :pistaId', { pistaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.pistas.update(pistaId, { complejo: { id: complejoId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :pistaId', { pistaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /pistas/7/complejo\n{\"complejoId\":2}\n\n200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/complejos/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarComplejoService } from './service';\n\n@Controller()\nexport class ConsultarComplejoController {\n  constructor(private readonly service: ConsultarComplejoService) {}\n\n  @Get('complejos/:complejoId/pistas')\n  async ejecutar(@Param('complejoId', ParseIntPipe) complejoId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarComplejoService(complejoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('complejos/:complejoId/pistas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarComplejoService(complejoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/complejos/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarComplejoRepository } from './repository';\n\n@Injectable()\nexport class ConsultarComplejoService {\n  constructor(private readonly repository: ConsultarComplejoRepository) {}\n\n  consultarComplejoService(complejoId: number, minimo: number) {\n    return this.repository.consultarComplejoRepository(complejoId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarComplejoRepository(complejoId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/complejos/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../../pistas/entities/pista.entity';\nimport { Complejo } from '../entities/complejo.entity';\n\n@Injectable()\nexport class ConsultarComplejoRepository {\n  constructor(\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Complejo) private readonly complejos: Repository<Complejo>\n  ) {}\n\n  async consultarComplejoRepository(complejoId: number, minimo: number) {\n    const complejo = await this.complejos.createQueryBuilder('h')\n      .where('h.id = :complejoId', { complejoId }).getOne();\n    const pistas = await this.pistas.createQueryBuilder('p')\n      .innerJoin('p.complejo', 'h')\n      .where('h.id = :complejoId', { complejoId })\n      .andWhere('p.superficieM2 >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { complejo, pistas };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.complejo', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa PISTA y h representa COMPLEJO."
+          },
+          {
+            "text": ".where('h.id = :complejoId', { complejoId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :complejoId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.superficieM2 >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.SUPERFICIE_M2 >= 301. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /complejos/2/pistas?minimo=301\n\n200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "COMPLEJO  1 ───────── 0..N  PISTA\n\nCOMPLEJO                         PISTA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               SUPERFICIE_M2\n                               ID_COMPLEJO      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por pista",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias pistas",
+            "note": "Un complejo puede tener cero, una o muchas pistas."
+          },
+          {
+            "text": "ID_COMPLEJO",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "cues": [
+          {
+            "text": "TableName: COMPLEJOS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear COMPLEJOS."
+          },
+          {
+            "text": "TableName: PISTAS",
+            "title": "Tabla de pistas",
+            "note": "La tabla usa PISTA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorComplejo",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por COMPLEJO_ID y ordena por PISTA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/complejo-pista.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COMPLEJOS = new Table({\n  name: process.env.TABLA_COMPLEJOS, documentClient: db,\n  partitionKey: { name: 'COMPLEJO_ID', type: 'number' }\n});\n\nexport const TABLA_PISTAS = new Table({\n  name: process.env.TABLA_PISTAS, documentClient: db,\n  partitionKey: { name: 'PISTA_ID', type: 'number' },\n  indexes: {\n    PorComplejo: {\n      type: 'global',\n      partitionKey: { name: 'COMPLEJO_ID', type: 'number' },\n      sortKey: { name: 'PISTA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COMPLEJO = new Entity({\n  name: 'Complejo', table: TABLA_COMPLEJOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    complejoId: number().key().savedAs('COMPLEJO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PISTA = new Entity({\n  name: 'Pista', table: TABLA_PISTAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    pistaId: number().key().savedAs('PISTA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    complejoId: number().savedAs('COMPLEJO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_PISTAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_PISTAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'PISTA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "PISTA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorComplejo: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorComplejo que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es COMPLEJO_ID y su sort key PISTA_ID: agrupa pistas de toda la tabla por complejo."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/complejo-pista.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COMPLEJOS = new Table({\n  name: process.env.TABLA_COMPLEJOS, documentClient: db,\n  partitionKey: { name: 'COMPLEJO_ID', type: 'number' }\n});\n\nexport const TABLA_PISTAS = new Table({\n  name: process.env.TABLA_PISTAS, documentClient: db,\n  partitionKey: { name: 'PISTA_ID', type: 'number' },\n  indexes: {\n    PorComplejo: {\n      type: 'global',\n      partitionKey: { name: 'COMPLEJO_ID', type: 'number' },\n      sortKey: { name: 'PISTA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COMPLEJO = new Entity({\n  name: 'Complejo', table: TABLA_COMPLEJOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    complejoId: number().key().savedAs('COMPLEJO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PISTA = new Entity({\n  name: 'Pista', table: TABLA_PISTAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    pistaId: number().key().savedAs('PISTA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    complejoId: number().savedAs('COMPLEJO_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_PISTA = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PISTA en el repository."
+          },
+          {
+            "text": "name: 'Pista', table: TABLA_PISTAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_PISTAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "pistaId: number().key().savedAs('PISTA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce pistaId a PISTA_ID."
+          },
+          {
+            "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+          },
+          {
+            "text": "complejoId: number().savedAs('COMPLEJO_ID')",
+            "title": "Guardar la referencia",
+            "note": "COMPLEJO_ID es un atributo de PISTAS y la clave del índice PorComplejo. Aquí no lleva .key(): la clave de la tabla sigue siendo PISTA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/pistas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function crearPistaRepository(pista) {\n  await MODELO_PISTA.build(PutItemCommand)\n    .item(pista)\n    .options({ condition: { attr: 'pistaId', exists: false } })\n    .send();\n}\n\nexport async function listarPistasRepository() {\n  const { Items = [] } = await TABLA_PISTAS.build(ScanCommand)\n    .entities(MODELO_PISTA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/complejo-pista.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_PISTA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_PISTA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(pista)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa pistaId, nombre, superficieM2 y complejoId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_PISTAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_PISTA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_PISTA para interpretar los ítems: PISTA_ID vuelve a ser pistaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /pistas }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /pistas }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /pistas/{pistaId} }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /pistas/{pistaId} }\n  trasladarPista:\n    handler: src/pistas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /pistas/{pistaId}/complejo }\n  consultarComplejo:\n    handler: src/complejos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /complejos/{complejoId}/pistas }",
+        "cues": [
+          {
+            "text": "src/pistas/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/pistas/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /pistas",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, superficieM2 y complejoId."
+          },
+          {
+            "text": "path: /pistas/{pistaId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.pistaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/pistas/crear-listar/handler.mjs",
+        "code": "import { crearPistaService, listarPistasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, superficieM2, complejoId } = JSON.parse(event.body);\n  const pista = await crearPistaService(nombre, superficieM2, complejoId);\n  return { statusCode: 201, body: JSON.stringify(pista) };\n}\n\nexport async function listarHandler() {\n  const pistas = await listarPistasService();\n  return { statusCode: 200, body: JSON.stringify(pistas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearPistaService(nombre, superficieM2, complejoId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/pistas/crear-listar/service.mjs",
+        "code": "import { crearPistaRepository, listarPistasRepository } from './repository.mjs';\n\nexport async function crearPistaService(nombre, superficieM2, complejoId) {\n  const pistaId = Date.now();\n  const pista = { pistaId, nombre, superficieM2, complejoId };\n  await crearPistaRepository(pista);\n  return pista;\n}\n\nexport function listarPistasService() {\n  return listarPistasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearPistaRepository(pista)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/pistas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function crearPistaRepository(pista) {\n  await MODELO_PISTA.build(PutItemCommand)\n    .item(pista)\n    .options({ condition: { attr: 'pistaId', exists: false } })\n    .send();\n}\n\nexport async function listarPistasRepository() {\n  const { Items = [] } = await TABLA_PISTAS.build(ScanCommand)\n    .entities(MODELO_PISTA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(pista)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva pistaId, nombre, superficieM2 y complejoId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /pistas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}\n\n201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/pistas/eliminar/handler.mjs",
+        "code": "import { eliminarPistaService } from './service.mjs';\n\nexport async function handler(event) {\n  const pistaId = Number(event.pathParameters.pistaId);\n  await eliminarPistaService(pistaId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.pistaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarPistaService(pistaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/pistas/eliminar/service.mjs",
+        "code": "import { eliminarPistaRepository } from './repository.mjs';\n\nexport async function eliminarPistaService(pistaId) {\n  await eliminarPistaRepository(pistaId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarPistaRepository(pistaId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/pistas/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function eliminarPistaRepository(pistaId) {\n  await MODELO_PISTA.build(DeleteItemCommand)\n    .key({ pistaId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ pistaId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /pistas/10\n\n204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/pistas/modificar-superficie-m2/handler.mjs",
+        "code": "import { modificarSuperficieM2Service } from './service.mjs';\n\nexport async function handler(event) {\n  const pistaId = Number(event.pathParameters.pistaId);\n  const { superficieM2 } = JSON.parse(event.body);\n  const resultado = await modificarSuperficieM2Service(pistaId, superficieM2);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.pistaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarSuperficieM2Service(pistaId, superficieM2)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/pistas/modificar-superficie-m2/service.mjs",
+        "code": "import { modificarSuperficieM2Repository } from './repository.mjs';\n\nexport function modificarSuperficieM2Service(pistaId, superficieM2) {\n  return modificarSuperficieM2Repository(pistaId, superficieM2);\n}",
+        "cues": [
+          {
+            "text": "modificarSuperficieM2Repository(pistaId, superficieM2)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. superficieM2 es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/pistas/modificar-superficie-m2/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function modificarSuperficieM2Repository(pistaId, superficieM2) {\n  const { Attributes } = await MODELO_PISTA.build(UpdateItemCommand)\n    .item({ pistaId, superficieM2 })\n    .options({\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ pistaId, superficieM2 })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo superficieM2. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /pistas/7\n{\"superficieM2\":420}\n\n200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/pistas/trasladar/handler.mjs",
+        "code": "import { trasladarPistaService } from './service.mjs';\n\nexport async function handler(event) {\n  const pistaId = Number(event.pathParameters.pistaId);\n  const { complejoId } = JSON.parse(event.body);\n  const resultado = await trasladarPistaService(pistaId, complejoId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.pistaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarPistaService(pistaId, complejoId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/pistas/trasladar/service.mjs",
+        "code": "import { trasladarPistaRepository } from './repository.mjs';\nimport { buscarComplejoRepository } from '../../complejos/consultar/repository.mjs';\n\nexport async function trasladarPistaService(pistaId, complejoId) {\n  const complejo = await buscarComplejoRepository(complejoId);\n  if (!complejo) throw new Error('Complejo no encontrado');\n  return trasladarPistaRepository(pistaId, complejoId);\n}",
+        "cues": [
+          {
+            "text": "await buscarComplejoRepository(complejoId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarPistaRepository(pistaId, complejoId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza COMPLEJO_ID. PISTA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/pistas/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function trasladarPistaRepository(pistaId, complejoId) {\n  const { Attributes } = await MODELO_PISTA.build(UpdateItemCommand)\n    .item({ pistaId, complejoId })\n    .options({\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ pistaId, complejoId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo complejoId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /pistas/7/complejo\n{\"complejoId\":2}\n\n200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/complejos/consultar/handler.mjs",
+        "code": "import { consultarComplejoService } from './service.mjs';\n\nexport async function handler(event) {\n  const complejoId = Number(event.pathParameters.complejoId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarComplejoService(complejoId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.complejoId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarComplejoService(complejoId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/complejos/consultar/service.mjs",
+        "code": "import { buscarComplejoRepository, consultarComplejoRepository } from './repository.mjs';\n\nexport async function consultarComplejoService(complejoId, minimo) {\n  const complejo = await buscarComplejoRepository(complejoId);\n  if (!complejo) throw new Error('Complejo no encontrado');\n  const pistas = await consultarComplejoRepository(complejoId, minimo);\n  return { complejo, pistas };\n}",
+        "cues": [
+          {
+            "text": "await buscarComplejoRepository(complejoId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarComplejoRepository(complejoId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { complejo, pistas }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/complejos/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function buscarComplejoRepository(complejoId) {\n  const { Item } = await MODELO_COMPLEJO.build(GetItemCommand)\n    .key({ complejoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarComplejoRepository(complejoId, minimo) {\n  const { Items = [] } = await TABLA_PISTAS.build(QueryCommand)\n    .entities(MODELO_PISTA)\n    .query({ index: 'PorComplejo', partition: complejoId })\n    .options({ filters: { Pista: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con COMPLEJO_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorComplejo', partition: complejoId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por COMPLEJO_ID. No busca por PISTA_ID."
+          },
+          {
+            "text": "attr: 'superficieM2', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /complejos/2/pistas?minimo=301\n\n200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Pista cubierta",
+      "value": 120,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Pista exterior",
+      "value": 300,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Pista cubierta · nuevo",
+      "value": 540,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/pistas",
+      "request": "POST /pistas\n{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}",
+      "fields": "nombre, superficieM2, complejoId",
+      "args": "nombre, superficieM2, complejoId",
+      "result": "201 · Registro 10 creado → GET /pistas → 200 · aparecen 4 registros",
+      "service": "crearPistaService",
+      "repo": "crearPistaRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/pistas/:pistaId",
+      "request": "DELETE /pistas/10",
+      "fields": "pistaId",
+      "args": "pistaId",
+      "result": "204 · Registro 10 eliminado → GET /pistas → 200 · quedan 7, 8 y 9",
+      "service": "eliminarPistaService",
+      "repo": "eliminarPistaRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-superficie-m2",
+      "title": "Cambiar superficie",
+      "verb": "PATCH",
+      "route": "/pistas/:pistaId",
+      "request": "PATCH /pistas/7\n{\"superficieM2\":420}",
+      "fields": "pistaId, superficieM2",
+      "args": "pistaId, superficieM2",
+      "result": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+      "service": "modificarSuperficieM2Service",
+      "repo": "modificarSuperficieM2Repository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de complejo",
+      "verb": "PATCH",
+      "route": "/pistas/:pistaId/complejo",
+      "request": "PATCH /pistas/7/complejo\n{\"complejoId\":2}",
+      "fields": "pistaId, complejoId",
+      "args": "pistaId, complejoId",
+      "result": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+      "service": "trasladarPistaService",
+      "repo": "trasladarPistaRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un complejo",
+      "verb": "GET",
+      "route": "/complejos/:complejoId/pistas",
+      "request": "GET /complejos/2/pistas?minimo=301",
+      "fields": "complejoId, minimo",
+      "args": "complejoId, minimo",
+      "result": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+      "service": "consultarComplejoService",
+      "repo": "consultarComplejoRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-24",
+    "title": "Complejo → Pista",
+    "parent": {
+      "entity": "Complejo",
+      "sql": "COMPLEJO",
+      "table": "COMPLEJOS",
+      "route": "complejos",
+      "property": "complejo",
+      "input": "complejoId",
+      "variable": "TABLA_COMPLEJOS",
+      "model": "MODELO_COMPLEJO",
+      "file": "src/complejos/entities/complejo.entity.ts",
+      "examples": [
+        "Complejo Municipal",
+        "Complejo del Barrio"
+      ]
+    },
+    "child": {
+      "entity": "Pista",
+      "sql": "PISTA",
+      "table": "PISTAS",
+      "route": "pistas",
+      "property": "pista",
+      "input": "pistaId",
+      "inverse": "pistas",
+      "variable": "TABLA_PISTAS",
+      "model": "MODELO_PISTA",
+      "file": "src/pistas/entities/pista.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "superficieM2",
+      "column": "SUPERFICIE_M2",
+      "label": "Superficie",
+      "unit": "m²",
+      "initial": 120,
+      "other": 300,
+      "after": 420,
+      "minimum": 301,
+      "create": 121,
+      "unrelated": 540
+    },
+    "foreignKey": "ID_COMPLEJO",
+    "index": "PorComplejo",
+    "modelFile": "src/models/complejo-pista.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}

@@ -1,0 +1,1348 @@
+{
+  "version": 5,
+  "source": {
+    "kind": "pdf",
+    "label": "Ficha CH-23",
+    "sha256": "fbdea04106ec262bb28d70ea1e6e7342089a854369d632e889edba8e8219e461",
+    "pages": 4
+  },
+  "chapters": [
+    "Preparar el modelo",
+    "Añadir y listar",
+    "Eliminar el registro de prueba",
+    "Modificar importe",
+    "Cambiar la asociación",
+    "Consultar la relación"
+  ],
+  "steps": {
+    "nest": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "CAFETERIA  1 ───────── 0..N  COMANDA\n\nCAFETERIA                         COMANDA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               IMPORTE_CENTIMOS\n                               ID_CAFETERIA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por comanda",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias comandas",
+            "note": "Un cafeteria puede tener cero, una o muchas comandas."
+          },
+          {
+            "text": "ID_CAFETERIA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Cafeteria",
+        "path": "src/cafeterias/entities/cafeteria.entity.ts",
+        "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Comanda } from '../../comandas/entities/comanda.entity';\n\n@Entity({ name: 'CAFETERIA' })\nexport class Cafeteria {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Comanda, comanda => comanda.cafeteria)\n  comandas!: Comanda[];\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'CAFETERIA' })",
+            "title": "Clase Cafeteria → tabla CAFETERIA",
+            "note": "Este decorador indica qué tabla representa la clase. Las entidades describen el esquema; aquí no estamos ejecutando un CREATE TABLE."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Una clave generada por PostgreSQL",
+            "note": "id se guarda en ID y es la clave primaria. Al guardar una fila nueva, PostgreSQL genera su valor."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "Una propiedad → una columna",
+            "note": "nombre es una propiedad de JavaScript/TypeScript. @Column la relaciona con NOMBRE, texto de hasta 120 caracteres."
+          },
+          {
+            "text": "@OneToMany(() => Comanda, comanda => comanda.cafeteria)",
+            "title": "Una colección de comandas",
+            "note": "Cafeteria.comandas representa los registros asociados. comanda.cafeteria señala la propiedad del otro lado; no crea una segunda FK en CAFETERIA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-parent"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear Entity Comanda",
+        "path": "src/comandas/entities/comanda.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cafeteria } from '../../cafeterias/entities/cafeteria.entity';\n\n@Entity({ name: 'COMANDA' })\nexport class Comanda {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'IMPORTE_CENTIMOS', type: 'integer' })\n  importeCentimos!: number;\n\n  @ManyToOne(() => Cafeteria, cafeteria => cafeteria.comandas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_CAFETERIA' })\n  cafeteria!: Cafeteria;\n}",
+        "cues": [
+          {
+            "text": "@Entity({ name: 'COMANDA' })",
+            "title": "Clase Comanda → tabla COMANDA",
+            "note": "Esta entidad describe un registro asociado: su ID, nombre, importe y relación con un registro principal."
+          },
+          {
+            "text": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "title": "Cada registro asociado tiene su propio ID",
+            "note": "Es la clave primaria de COMANDA. No es el ID del registro principal y no se repite entre comandas."
+          },
+          {
+            "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "title": "El nombre de el registro asociado",
+            "note": "La propiedad nombre se corresponde con la columna NOMBRE."
+          },
+          {
+            "text": "@Column({ name: 'IMPORTE_CENTIMOS', type: 'integer' })",
+            "title": "Una importe numérica",
+            "note": "importeCentimos se guarda en IMPORTE_CENTIMOS, de tipo entero. El siguiente paso detalla la relación con Cafeteria."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-child"
+      },
+      {
+        "chapter": 0,
+        "name": "Relacionar las Entities",
+        "path": "src/comandas/entities/comanda.entity.ts",
+        "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Cafeteria } from '../../cafeterias/entities/cafeteria.entity';\n\n@Entity({ name: 'COMANDA' })\nexport class Comanda {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'IMPORTE_CENTIMOS', type: 'integer' })\n  importeCentimos!: number;\n\n  @ManyToOne(() => Cafeteria, cafeteria => cafeteria.comandas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_CAFETERIA' })\n  cafeteria!: Cafeteria;\n}",
+        "cues": [
+          {
+            "text": "import { Cafeteria } from '../../cafeterias/entities/cafeteria.entity';",
+            "title": "Conocer la otra Entity",
+            "note": "Comanda importa la clase Cafeteria para poder describir su relación."
+          },
+          {
+            "text": "@ManyToOne(() => Cafeteria, cafeteria => cafeteria.comandas, {",
+            "title": "Muchas comandas → un registro principal",
+            "note": "() => Cafeteria indica la entidad de destino. cafeteria.comandas indica la colección inversa, definida con @OneToMany en Cafeteria."
+          },
+          {
+            "text": "nullable: false",
+            "title": "Toda comanda tiene un registro principal",
+            "note": "La relación es obligatoria. La FK ID_CAFETERIA no puede quedar a NULL."
+          },
+          {
+            "text": "@JoinColumn({ name: 'ID_CAFETERIA' })",
+            "title": "La FK está en COMANDA",
+            "note": "JoinColumn da el nombre físico de la FK: COMANDA.ID_CAFETERIA referencia CAFETERIA.ID. El mismo cafeteria puede aparecer en varias comandas."
+          },
+          {
+            "text": "cafeteria!: Cafeteria;",
+            "title": "Una propiedad de tipo Cafeteria",
+            "note": "En el código usamos comanda.cafeteria; TypeORM conoce mediante los decoradores cómo guardar esa referencia en ID_CAFETERIA."
+          }
+        ],
+        "page": 2,
+        "exact": true,
+        "scene": "nest-relation"
+      },
+      {
+        "chapter": 0,
+        "name": "Registrar las Entities",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cafeteria } from './cafeterias/entities/cafeteria.entity';\nimport { Comanda } from './comandas/entities/comanda.entity';\nimport { CrearListarController } from './comandas/crear-listar/controller';\nimport { CrearListarService } from './comandas/crear-listar/service';\nimport { CrearListarRepository } from './comandas/crear-listar/repository';\nimport { EliminarController } from './comandas/eliminar/controller';\nimport { EliminarService } from './comandas/eliminar/service';\nimport { EliminarRepository } from './comandas/eliminar/repository';\nimport { ModificarImporteCentimosController } from './comandas/modificar-importe-centimos/controller';\nimport { ModificarImporteCentimosService } from './comandas/modificar-importe-centimos/service';\nimport { ModificarImporteCentimosRepository } from './comandas/modificar-importe-centimos/repository';\nimport { TrasladarController } from './comandas/trasladar/controller';\nimport { TrasladarService } from './comandas/trasladar/service';\nimport { TrasladarRepository } from './comandas/trasladar/repository';\nimport { ConsultarCafeteriaController } from './cafeterias/consultar/controller';\nimport { ConsultarCafeteriaService } from './cafeterias/consultar/service';\nimport { ConsultarCafeteriaRepository } from './cafeterias/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cafeteria, Comanda])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarImporteCentimosController,\n    TrasladarController,\n    ConsultarCafeteriaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarImporteCentimosService,\n    ModificarImporteCentimosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarCafeteriaService,\n    ConsultarCafeteriaRepository\n  ]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "import { Cafeteria } from './cafeterias/entities/cafeteria.entity';",
+            "title": "Importar Cafeteria",
+            "note": "El módulo utiliza la misma clase Cafeteria que has preparado en entities."
+          },
+          {
+            "text": "import { Comanda } from './comandas/entities/comanda.entity';",
+            "title": "Importar Comanda",
+            "note": "El módulo reúne las dos entidades relacionadas."
+          },
+          {
+            "text": "TypeOrmModule.forFeature([Cafeteria, Comanda])",
+            "title": "Preparar Repository para cada Entity",
+            "note": "Nest registra los providers que permiten inyectar Repository<Cafeteria> y Repository<Comanda>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
+          },
+          {
+            "text": "providers: [",
+            "title": "Registrar nuestros casos de uso",
+            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "nest-module"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlas en Repository",
+        "path": "src/comandas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../entities/comanda.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>\n  ) {}\n\n  crearComandaRepository(nombre: string, importeCentimos: number, cafeteriaId: number) {\n    const comanda = this.comandas.create({\n      nombre, importeCentimos, cafeteria: { id: cafeteriaId }\n    });\n    return this.comandas.save(comanda);\n  }\n\n  listarComandasRepository() {\n    return this.comandas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "import { Comanda } from '../entities/comanda.entity';",
+            "title": "Importar la Entity preparada",
+            "note": "El repository importa la clase Comanda de su fichero entities/comanda.entity.ts. No vuelve a definir sus columnas."
+          },
+          {
+            "text": "@InjectRepository(Comanda) private readonly comandas: Repository<Comanda>",
+            "title": "Recibir el Repository de TypeORM",
+            "note": "InjectRepository(Comanda) pide a Nest el repositorio de esa Entity. comandas es el nombre de la dependencia; Repository<Comanda> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+          },
+          {
+            "text": "this.comandas.create({",
+            "title": "Preparar un objeto Comanda",
+            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
+          },
+          {
+            "text": "cafeteria: { id: cafeteriaId }",
+            "title": "Usar la relación declarada",
+            "note": "La propiedad cafeteria existe en la Entity Comanda. TypeORM traduce cafeteria.id a la FK ID_CAFETERIA al guardar."
+          },
+          {
+            "text": "this.comandas.save(comanda)",
+            "title": "Guardar usando la Entity",
+            "note": "save utiliza el mapeo de Comanda y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia CAFETERIA."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "Leer con el mismo mapeo",
+            "note": "El QueryBuilder parte de Repository<Comanda>. getMany devuelve objetos Comanda, ordenados por id."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "nest-binding"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/comandas/crear-listar/controller.ts",
+        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('comandas')\n  async ejecutar(@Body() datos: { nombre: string; importeCentimos: number; cafeteriaId: number }) {\n    return this.service.crearComandaService(datos.nombre, datos.importeCentimos, datos.cafeteriaId);\n  }\n\n  @Get('comandas')\n  listar() {\n    return this.service.listarComandasService();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('comandas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.crearComandaService(datos.nombre, datos.importeCentimos, datos.cafeteriaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/comandas/crear-listar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearComandaService(nombre: string, importeCentimos: number, cafeteriaId: number) {\n    return this.repository.crearComandaRepository(nombre, importeCentimos, cafeteriaId);\n  }\n\n  listarComandasService() {\n    return this.repository.listarComandasRepository();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.crearComandaRepository(nombre, importeCentimos, cafeteriaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/comandas/crear-listar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../entities/comanda.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>\n  ) {}\n\n  crearComandaRepository(nombre: string, importeCentimos: number, cafeteriaId: number) {\n    const comanda = this.comandas.create({\n      nombre, importeCentimos, cafeteria: { id: cafeteriaId }\n    });\n    return this.comandas.save(comanda);\n  }\n\n  listarComandasRepository() {\n    return this.comandas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "cues": [
+          {
+            "text": "cafeteria: { id: cafeteriaId }",
+            "title": "Guardar la referencia",
+            "note": "TypeORM escribe ese ID en ID_CAFETERIA; la FK de PostgreSQL exige un registro principal existente."
+          },
+          {
+            "text": "this.comandas.save(comanda)",
+            "title": "INSERT en la base",
+            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+          },
+          {
+            "text": ".orderBy('p.id', 'ASC').getMany()",
+            "title": "SELECT de todas",
+            "note": "Devuelve los registros asociados ordenadas por ID."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /comandas\n{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}\n\n201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Controller",
+        "path": "src/comandas/eliminar/controller.ts",
+        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('comandas/:comandaId')\n  @HttpCode(204)\n  async ejecutar(@Param('comandaId', ParseIntPipe) comandaId: number) {\n    return this.service.eliminarComandaService(comandaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Delete('comandas/:comandaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.eliminarComandaService(comandaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/comandas/eliminar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarComandaService(comandaId: number) {\n    return this.repository.eliminarComandaRepository(comandaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.eliminarComandaRepository(comandaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/comandas/eliminar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../entities/comanda.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>\n  ) {}\n\n  async eliminarComandaRepository(comandaId: number) {\n    await this.comandas.delete(comandaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.comandas.delete(comandaId)",
+            "title": "DELETE por ID",
+            "note": "Borra el registro asociado de prueba. Las otras se conservan."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /comandas/10\n\n204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Controller",
+        "path": "src/comandas/modificar-importe-centimos/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarImporteCentimosService } from './service';\n\n@Controller()\nexport class ModificarImporteCentimosController {\n  constructor(private readonly service: ModificarImporteCentimosService) {}\n\n  @Patch('comandas/:comandaId')\n  async ejecutar(@Param('comandaId', ParseIntPipe) comandaId: number,\n    @Body() datos: { importeCentimos: number }) {\n    return this.service.modificarImporteCentimosService(comandaId, datos.importeCentimos);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('comandas/:comandaId')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.modificarImporteCentimosService(comandaId, datos.importeCentimos)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/comandas/modificar-importe-centimos/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarImporteCentimosRepository } from './repository';\n\n@Injectable()\nexport class ModificarImporteCentimosService {\n  constructor(private readonly repository: ModificarImporteCentimosRepository) {}\n\n  modificarImporteCentimosService(comandaId: number, importeCentimos: number) {\n    return this.repository.modificarImporteCentimosRepository(comandaId, importeCentimos);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.modificarImporteCentimosRepository(comandaId, importeCentimos)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/comandas/modificar-importe-centimos/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../entities/comanda.entity';\n\n@Injectable()\nexport class ModificarImporteCentimosRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>\n  ) {}\n\n  async modificarImporteCentimosRepository(comandaId: number, importeCentimos: number) {\n    await this.comandas.update(comandaId, { importeCentimos });\n    return this.comandas.createQueryBuilder('p')\n      .where('p.id = :comandaId', { comandaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.comandas.update(comandaId, { importeCentimos })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :comandaId', { comandaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /comandas/7\n{\"importeCentimos\":1700}\n\n200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Controller",
+        "path": "src/comandas/trasladar/controller.ts",
+        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('comandas/:comandaId/cafeteria')\n  async ejecutar(@Param('comandaId', ParseIntPipe) comandaId: number,\n    @Body() datos: { cafeteriaId: number }) {\n    return this.service.trasladarComandaService(comandaId, datos.cafeteriaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Patch('comandas/:comandaId/cafeteria')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.trasladarComandaService(comandaId, datos.cafeteriaId)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/comandas/trasladar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarComandaService(comandaId: number, cafeteriaId: number) {\n    return this.repository.trasladarComandaRepository(comandaId, cafeteriaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.trasladarComandaRepository(comandaId, cafeteriaId)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/comandas/trasladar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../entities/comanda.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>\n  ) {}\n\n  async trasladarComandaRepository(comandaId: number, cafeteriaId: number) {\n    await this.comandas.update(comandaId, { cafeteria: { id: cafeteriaId } });\n    return this.comandas.createQueryBuilder('p')\n      .where('p.id = :comandaId', { comandaId }).getOne();\n  }\n}",
+        "cues": [
+          {
+            "text": "this.comandas.update(comandaId, { cafeteria: { id: cafeteriaId } })",
+            "title": "UPDATE de un campo",
+            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+          },
+          {
+            "text": ".where('p.id = :comandaId', { comandaId }).getOne()",
+            "title": "Leer la ficha modificada",
+            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /comandas/7/cafeteria\n{\"cafeteriaId\":2}\n\n200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Controller",
+        "path": "src/cafeterias/consultar/controller.ts",
+        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarCafeteriaService } from './service';\n\n@Controller()\nexport class ConsultarCafeteriaController {\n  constructor(private readonly service: ConsultarCafeteriaService) {}\n\n  @Get('cafeterias/:cafeteriaId/comandas')\n  async ejecutar(@Param('cafeteriaId', ParseIntPipe) cafeteriaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarCafeteriaService(cafeteriaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "@Get('cafeterias/:cafeteriaId/comandas')",
+            "title": "Ruta → controller",
+            "note": "Nest dirige esta petición al método ejecutar."
+          },
+          {
+            "text": "this.service.consultarCafeteriaService(cafeteriaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El controller entrega los mismos datos al service."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cafeterias/consultar/service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarCafeteriaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarCafeteriaService {\n  constructor(private readonly repository: ConsultarCafeteriaRepository) {}\n\n  consultarCafeteriaService(cafeteriaId: number, minimo: number) {\n    return this.repository.consultarCafeteriaRepository(cafeteriaId, minimo);\n  }\n}",
+        "cues": [
+          {
+            "text": "this.repository.consultarCafeteriaRepository(cafeteriaId, minimo)",
+            "title": "Delegar la persistencia",
+            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cafeterias/consultar/repository.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Comanda } from '../../comandas/entities/comanda.entity';\nimport { Cafeteria } from '../entities/cafeteria.entity';\n\n@Injectable()\nexport class ConsultarCafeteriaRepository {\n  constructor(\n    @InjectRepository(Comanda) private readonly comandas: Repository<Comanda>,\n    @InjectRepository(Cafeteria) private readonly cafeterias: Repository<Cafeteria>\n  ) {}\n\n  async consultarCafeteriaRepository(cafeteriaId: number, minimo: number) {\n    const cafeteria = await this.cafeterias.createQueryBuilder('h')\n      .where('h.id = :cafeteriaId', { cafeteriaId }).getOne();\n    const comandas = await this.comandas.createQueryBuilder('p')\n      .innerJoin('p.cafeteria', 'h')\n      .where('h.id = :cafeteriaId', { cafeteriaId })\n      .andWhere('p.importeCentimos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { cafeteria, comandas };\n  }\n}",
+        "cues": [
+          {
+            "text": ".innerJoin('p.cafeteria', 'h')",
+            "title": "JOIN de la relación",
+            "note": "p representa COMANDA y h representa CAFETERIA."
+          },
+          {
+            "text": ".where('h.id = :cafeteriaId', { cafeteriaId })",
+            "title": "Seleccionar el registro principal",
+            "note": "WHERE h.ID = 2. :cafeteriaId es un parámetro."
+          },
+          {
+            "text": ".andWhere('p.importeCentimos >= :minimo', { minimo })",
+            "title": "Aplicar el mínimo",
+            "note": "AND p.IMPORTE_CENTIMOS >= 1251. El SQL filtra en PostgreSQL."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cafeterias/2/comandas?minimo=1251\n\n200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ],
+    "cloud": [
+      {
+        "chapter": 0,
+        "name": "La relación",
+        "path": "Modelo entidad–relación",
+        "code": "CAFETERIA  1 ───────── 0..N  COMANDA\n\nCAFETERIA                         COMANDA\nID         PK                  ID             PK\nNOMBRE                         NOMBRE\n                               IMPORTE_CENTIMOS\n                               ID_CAFETERIA      FK",
+        "cues": [
+          {
+            "text": "1",
+            "title": "Un dueño por comanda",
+            "note": "Cada registro asociado pertenece a un registro principal."
+          },
+          {
+            "text": "0..N",
+            "title": "Varias comandas",
+            "note": "Un cafeteria puede tener cero, una o muchas comandas."
+          },
+          {
+            "text": "ID_CAFETERIA",
+            "title": "El enlace",
+            "note": "El registro asociado guarda el ID del registro principal. Ese valor puede repetirse."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "er"
+      },
+      {
+        "chapter": 0,
+        "name": "Crear las tablas",
+        "path": "serverless.yml · resources",
+        "code": "provider:\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+        "cues": [
+          {
+            "text": "TableName: CAFETERIAS",
+            "title": "Tabla principal",
+            "note": "Serverless entrega esta definición a CloudFormation para crear CAFETERIAS."
+          },
+          {
+            "text": "TableName: COMANDAS",
+            "title": "Tabla de comandas",
+            "note": "La tabla usa COMANDA_ID como partition key. No tiene sort key."
+          },
+          {
+            "text": "IndexName: PorCafeteria",
+            "title": "Otra vía de lectura",
+            "note": "El GSI agrupa por CAFETERIA_ID y ordena por COMANDA_ID."
+          },
+          {
+            "text": "KeyType: RANGE",
+            "title": "Orden dentro del grupo",
+            "note": "RANGE es sort key. Aquí pertenece al índice; no cambia la clave de la tabla."
+          },
+          {
+            "text": "ProjectionType: INCLUDE",
+            "title": "Qué copia el índice",
+            "note": "Las claves van siempre. Se añaden NOMBRE y IMPORTE_CENTIMOS para el listado."
+          }
+        ],
+        "page": 1,
+        "exact": true,
+        "scene": "index"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Table",
+        "path": "src/models/cafeteria-comanda.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CAFETERIAS = new Table({\n  name: process.env.TABLA_CAFETERIAS, documentClient: db,\n  partitionKey: { name: 'CAFETERIA_ID', type: 'number' }\n});\n\nexport const TABLA_COMANDAS = new Table({\n  name: process.env.TABLA_COMANDAS, documentClient: db,\n  partitionKey: { name: 'COMANDA_ID', type: 'number' },\n  indexes: {\n    PorCafeteria: {\n      type: 'global',\n      partitionKey: { name: 'CAFETERIA_ID', type: 'number' },\n      sortKey: { name: 'COMANDA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CAFETERIA = new Entity({\n  name: 'Cafeteria', table: TABLA_CAFETERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cafeteriaId: number().key().savedAs('CAFETERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COMANDA = new Entity({\n  name: 'Comanda', table: TABLA_COMANDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    comandaId: number().key().savedAs('COMANDA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    importeCentimos: number().savedAs('IMPORTE_CENTIMOS'),\n    cafeteriaId: number().savedAs('CAFETERIA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const TABLA_COMANDAS = new Table({",
+            "title": "El mapa de la tabla",
+            "note": "Table describe para Toolbox una tabla que el YAML crea en AWS. export permite reutilizar esta constante."
+          },
+          {
+            "text": "name: process.env.TABLA_COMANDAS, documentClient: db,",
+            "title": "Nombre real y cliente",
+            "note": "name recibe el nombre desde la variable de Lambda, cargada por Ref en el YAML. documentClient: db usa el cliente preparado en datos/dynamo.mjs."
+          },
+          {
+            "text": "partitionKey: { name: 'COMANDA_ID', type: 'number' }",
+            "title": "La clave debe coincidir",
+            "note": "COMANDA_ID es la partition key numérica del YAML. Esta tabla no tiene sort key."
+          },
+          {
+            "text": "PorCafeteria: {",
+            "title": "Declarar la otra lectura",
+            "note": "indexes describe el GSI PorCafeteria que ya crea el YAML. No crea un índice desde JavaScript."
+          },
+          {
+            "text": "type: 'global'",
+            "title": "Un índice global",
+            "note": "Su partition key es CAFETERIA_ID y su sort key COMANDA_ID: agrupa comandas de toda la tabla por cafeteria."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "table"
+      },
+      {
+        "chapter": 0,
+        "name": "Preparar Entity",
+        "path": "src/models/cafeteria-comanda.model.mjs",
+        "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CAFETERIAS = new Table({\n  name: process.env.TABLA_CAFETERIAS, documentClient: db,\n  partitionKey: { name: 'CAFETERIA_ID', type: 'number' }\n});\n\nexport const TABLA_COMANDAS = new Table({\n  name: process.env.TABLA_COMANDAS, documentClient: db,\n  partitionKey: { name: 'COMANDA_ID', type: 'number' },\n  indexes: {\n    PorCafeteria: {\n      type: 'global',\n      partitionKey: { name: 'CAFETERIA_ID', type: 'number' },\n      sortKey: { name: 'COMANDA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CAFETERIA = new Entity({\n  name: 'Cafeteria', table: TABLA_CAFETERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cafeteriaId: number().key().savedAs('CAFETERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COMANDA = new Entity({\n  name: 'Comanda', table: TABLA_COMANDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    comandaId: number().key().savedAs('COMANDA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    importeCentimos: number().savedAs('IMPORTE_CENTIMOS'),\n    cafeteriaId: number().savedAs('CAFETERIA_ID')\n  })\n});",
+        "cues": [
+          {
+            "text": "export const MODELO_COMANDA = new Entity({",
+            "title": "La ficha de un registro asociado",
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COMANDA en el repository."
+          },
+          {
+            "text": "name: 'Comanda', table: TABLA_COMANDAS,",
+            "title": "Unir Entity con Table",
+            "note": "table recibe exactamente la constante TABLA_COMANDAS declarada antes. La Entity conoce así el destino y sus claves."
+          },
+          {
+            "text": "comandaId: number().key().savedAs('COMANDA_ID')",
+            "title": "Nombre del código → nombre guardado",
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce comandaId a COMANDA_ID."
+          },
+          {
+            "text": "importeCentimos: number().savedAs('IMPORTE_CENTIMOS')",
+            "title": "Atributos de la ficha",
+            "note": "schema: item(...) reúne los atributos. importeCentimos es un número; se guarda como IMPORTE_CENTIMOS y no forma parte de la clave."
+          },
+          {
+            "text": "cafeteriaId: number().savedAs('CAFETERIA_ID')",
+            "title": "Guardar la referencia",
+            "note": "CAFETERIA_ID es un atributo de COMANDAS y la clave del índice PorCafeteria. Aquí no lleva .key(): la clave de la tabla sigue siendo COMANDA_ID."
+          },
+          {
+            "text": "entityAttribute: false, timestamps: false",
+            "title": "Opciones de cada Entity",
+            "note": "Estas opciones aparecen en las dos Entities. false omite el tipo automático (_et) y las fechas automáticas (_ct y _md)."
+          }
+        ],
+        "page": 3,
+        "exact": true,
+        "scene": "entity"
+      },
+      {
+        "chapter": 0,
+        "name": "Usarlos en Repository",
+        "path": "src/comandas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function crearComandaRepository(comanda) {\n  await MODELO_COMANDA.build(PutItemCommand)\n    .item(comanda)\n    .options({ condition: { attr: 'comandaId', exists: false } })\n    .send();\n}\n\nexport async function listarComandasRepository() {\n  const { Items = [] } = await TABLA_COMANDAS.build(ScanCommand)\n    .entities(MODELO_COMANDA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "import { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';",
+            "title": "Importar lo preparado",
+            "note": "El repository recibe las constantes exportadas en models/cafeteria-comanda.model.mjs. No vuelve a definir Table ni Entity."
+          },
+          {
+            "text": "MODELO_COMANDA.build(PutItemCommand)",
+            "title": "Modelo + operación",
+            "note": "build construye un comando de escritura con la configuración de MODELO_COMANDA. Todavía no envía nada a DynamoDB."
+          },
+          {
+            "text": ".item(comanda)",
+            "title": "Adjuntar una ficha",
+            "note": "El objeto usa comandaId, nombre, importeCentimos y cafeteriaId. La Entity conoce sus tipos y sus nombres guardados."
+          },
+          {
+            "text": ".send()",
+            "title": "Enviar a DynamoDB",
+            "note": "send ejecuta el comando. La condición impide sobrescribir un registro asociado con la misma clave."
+          },
+          {
+            "text": "TABLA_COMANDAS.build(ScanCommand)",
+            "title": "Una operación sobre la tabla",
+            "note": "Scan y Query se construyen desde Table. Put, Get, Update y Delete se construyen desde Entity."
+          },
+          {
+            "text": ".entities(MODELO_COMANDA)",
+            "title": "Leer con el mismo modelo",
+            "note": "Al listar, Toolbox usa MODELO_COMANDA para interpretar los ítems: COMANDA_ID vuelve a ser comandaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "binding"
+      },
+      {
+        "chapter": 0,
+        "name": "Conectar las funciones",
+        "path": "serverless.yml · functions",
+        "code": "functions:\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /comandas }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /comandas }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /comandas/{comandaId} }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /comandas/{comandaId} }\n  trasladarComanda:\n    handler: src/comandas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /comandas/{comandaId}/cafeteria }\n  consultarCafeteria:\n    handler: src/cafeterias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /cafeterias/{cafeteriaId}/comandas }",
+        "cues": [
+          {
+            "text": "src/comandas/crear-listar/handler.crearHandler",
+            "title": "Archivo y función",
+            "note": "src/comandas/crear-listar/handler.mjs exporta crearHandler."
+          },
+          {
+            "text": "method: POST, path: /comandas",
+            "title": "Petición → Lambda",
+            "note": "API Gateway envía a crearHandler el body con nombre, importeCentimos y cafeteriaId."
+          },
+          {
+            "text": "path: /comandas/{comandaId}",
+            "title": "Un ID en la ruta",
+            "note": "API Gateway lo coloca en event.pathParameters.comandaId."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Handler",
+        "path": "src/comandas/crear-listar/handler.mjs",
+        "code": "import { crearComandaService, listarComandasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, importeCentimos, cafeteriaId } = JSON.parse(event.body);\n  const comanda = await crearComandaService(nombre, importeCentimos, cafeteriaId);\n  return { statusCode: 201, body: JSON.stringify(comanda) };\n}\n\nexport async function listarHandler() {\n  const comandas = await listarComandasService();\n  return { statusCode: 200, body: JSON.stringify(comandas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Abrir el sobre",
+            "note": "El body HTTP es texto JSON. parse obtiene el objeto."
+          },
+          {
+            "text": "crearComandaService(nombre, importeCentimos, cafeteriaId)",
+            "title": "Entregar tres valores",
+            "note": "Los mismos datos pasan al service en ese orden."
+          },
+          {
+            "text": "statusCode: 201",
+            "title": "Responder al cliente",
+            "note": "La promesa del service devuelve el registro asociado creada."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Service",
+        "path": "src/comandas/crear-listar/service.mjs",
+        "code": "import { crearComandaRepository, listarComandasRepository } from './repository.mjs';\n\nexport async function crearComandaService(nombre, importeCentimos, cafeteriaId) {\n  const comandaId = Date.now();\n  const comanda = { comandaId, nombre, importeCentimos, cafeteriaId };\n  await crearComandaRepository(comanda);\n  return comanda;\n}\n\nexport function listarComandasService() {\n  return listarComandasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "ID de la aplicación",
+            "note": "DynamoDB no genera IDs. Para esta demostración usamos milisegundos; no garantiza unicidad a gran concurrencia."
+          },
+          {
+            "text": "await crearComandaRepository(comanda)",
+            "title": "Esperar la escritura",
+            "note": "Se devuelve la ficha después de guardar. El modelo traduce sus nombres."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Repository",
+        "path": "src/comandas/crear-listar/repository.mjs",
+        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function crearComandaRepository(comanda) {\n  await MODELO_COMANDA.build(PutItemCommand)\n    .item(comanda)\n    .options({ condition: { attr: 'comandaId', exists: false } })\n    .send();\n}\n\nexport async function listarComandasRepository() {\n  const { Items = [] } = await TABLA_COMANDAS.build(ScanCommand)\n    .entities(MODELO_COMANDA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "PutItemCommand",
+            "title": "Guardar la ficha",
+            "note": "Put escribe un ítem. La condición evita sobrescribir una clave existente."
+          },
+          {
+            "text": ".item(comanda)",
+            "title": "Adjuntar los datos",
+            "note": "El objeto lleva comandaId, nombre, importeCentimos y cafeteriaId."
+          },
+          {
+            "text": "ScanCommand",
+            "title": "Listar toda la tabla",
+            "note": "Esta primera página basta para los cuatro registros de la ficha; grandes tablas requieren paginar."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 1,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "POST /comandas\n{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}\n\n201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
+        "cues": [
+          {
+            "text": "201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros",
+            "title": "Comprobar el resultado",
+            "note": "201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 2,
+        "name": "Handler",
+        "path": "src/comandas/eliminar/handler.mjs",
+        "code": "import { eliminarComandaService } from './service.mjs';\n\nexport async function handler(event) {\n  const comandaId = Number(event.pathParameters.comandaId);\n  await eliminarComandaService(comandaId);\n  return { statusCode: 204 };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.comandaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "eliminarComandaService(comandaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Service",
+        "path": "src/comandas/eliminar/service.mjs",
+        "code": "import { eliminarComandaRepository } from './repository.mjs';\n\nexport async function eliminarComandaService(comandaId) {\n  await eliminarComandaRepository(comandaId);\n}",
+        "cues": [
+          {
+            "text": "await eliminarComandaRepository(comandaId)",
+            "title": "Borrar una clave",
+            "note": "Solo se entrega el ID elegido, nunca una orden de vaciar la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Repository",
+        "path": "src/comandas/eliminar/repository.mjs",
+        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function eliminarComandaRepository(comandaId) {\n  await MODELO_COMANDA.build(DeleteItemCommand)\n    .key({ comandaId })\n    .send();\n}",
+        "cues": [
+          {
+            "text": "DeleteItemCommand",
+            "title": "Borrar una ficha",
+            "note": "La operación afecta al ítem señalado por la clave."
+          },
+          {
+            "text": ".key({ comandaId })",
+            "title": "La dirección exacta",
+            "note": "Solo el registro asociado 10, creada en el caso 1."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 2,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "DELETE /comandas/10\n\n204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9",
+        "cues": [
+          {
+            "text": "204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9",
+            "title": "Comprobar el resultado",
+            "note": "204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 3,
+        "name": "Handler",
+        "path": "src/comandas/modificar-importe-centimos/handler.mjs",
+        "code": "import { modificarImporteCentimosService } from './service.mjs';\n\nexport async function handler(event) {\n  const comandaId = Number(event.pathParameters.comandaId);\n  const { importeCentimos } = JSON.parse(event.body);\n  const resultado = await modificarImporteCentimosService(comandaId, importeCentimos);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.comandaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "modificarImporteCentimosService(comandaId, importeCentimos)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Service",
+        "path": "src/comandas/modificar-importe-centimos/service.mjs",
+        "code": "import { modificarImporteCentimosRepository } from './repository.mjs';\n\nexport function modificarImporteCentimosService(comandaId, importeCentimos) {\n  return modificarImporteCentimosRepository(comandaId, importeCentimos);\n}",
+        "cues": [
+          {
+            "text": "modificarImporteCentimosRepository(comandaId, importeCentimos)",
+            "title": "Cambiar un dato",
+            "note": "El ID localiza la ficha. importeCentimos es el nuevo valor."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Repository",
+        "path": "src/comandas/modificar-importe-centimos/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function modificarImporteCentimosRepository(comandaId, importeCentimos) {\n  const { Attributes } = await MODELO_COMANDA.build(UpdateItemCommand)\n    .item({ comandaId, importeCentimos })\n    .options({\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ comandaId, importeCentimos })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo importeCentimos. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 3,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /comandas/7\n{\"importeCentimos\":1700}\n\n200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 4,
+        "name": "Handler",
+        "path": "src/comandas/trasladar/handler.mjs",
+        "code": "import { trasladarComandaService } from './service.mjs';\n\nexport async function handler(event) {\n  const comandaId = Number(event.pathParameters.comandaId);\n  const { cafeteriaId } = JSON.parse(event.body);\n  const resultado = await trasladarComandaService(comandaId, cafeteriaId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.comandaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "trasladarComandaService(comandaId, cafeteriaId)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Service",
+        "path": "src/comandas/trasladar/service.mjs",
+        "code": "import { trasladarComandaRepository } from './repository.mjs';\nimport { buscarCafeteriaRepository } from '../../cafeterias/consultar/repository.mjs';\n\nexport async function trasladarComandaService(comandaId, cafeteriaId) {\n  const cafeteria = await buscarCafeteriaRepository(cafeteriaId);\n  if (!cafeteria) throw new Error('Cafeteria no encontrado');\n  return trasladarComandaRepository(comandaId, cafeteriaId);\n}",
+        "cues": [
+          {
+            "text": "await buscarCafeteriaRepository(cafeteriaId)",
+            "title": "Comprobar el destino",
+            "note": "DynamoDB no tiene foreign keys: la aplicación comprueba que el registro principal 2 existe."
+          },
+          {
+            "text": "trasladarComandaRepository(comandaId, cafeteriaId)",
+            "title": "Cambiar el vínculo",
+            "note": "Actualiza CAFETERIA_ID. COMANDA_ID sigue siendo 7."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Repository",
+        "path": "src/comandas/trasladar/repository.mjs",
+        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function trasladarComandaRepository(comandaId, cafeteriaId) {\n  const { Attributes } = await MODELO_COMANDA.build(UpdateItemCommand)\n    .item({ comandaId, cafeteriaId })\n    .options({\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+        "cues": [
+          {
+            "text": ".item({ comandaId, cafeteriaId })",
+            "title": "Clave + campo que cambia",
+            "note": "Localiza el registro asociado 7 y cambia solo cafeteriaId. Los demás campos se conservan."
+          },
+          {
+            "text": "returnValues: 'ALL_NEW'",
+            "title": "Volver con la ficha",
+            "note": "Attributes contiene el registro después de modificarlo."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 4,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "PATCH /comandas/7/cafeteria\n{\"cafeteriaId\":2}\n\n200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+        "cues": [
+          {
+            "text": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+            "title": "Comprobar el resultado",
+            "note": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      },
+      {
+        "chapter": 5,
+        "name": "Handler",
+        "path": "src/cafeterias/consultar/handler.mjs",
+        "code": "import { consultarCafeteriaService } from './service.mjs';\n\nexport async function handler(event) {\n  const cafeteriaId = Number(event.pathParameters.cafeteriaId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarCafeteriaService(cafeteriaId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+        "cues": [
+          {
+            "text": "Number(event.pathParameters.cafeteriaId)",
+            "title": "De ruta a número",
+            "note": "Los parámetros de ruta llegan como texto; Number los convierte."
+          },
+          {
+            "text": "consultarCafeteriaService(cafeteriaId, minimo)",
+            "title": "Entrar en negocio",
+            "note": "El handler entrega datos al service; no consulta la tabla."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Service",
+        "path": "src/cafeterias/consultar/service.mjs",
+        "code": "import { buscarCafeteriaRepository, consultarCafeteriaRepository } from './repository.mjs';\n\nexport async function consultarCafeteriaService(cafeteriaId, minimo) {\n  const cafeteria = await buscarCafeteriaRepository(cafeteriaId);\n  if (!cafeteria) throw new Error('Cafeteria no encontrado');\n  const comandas = await consultarCafeteriaRepository(cafeteriaId, minimo);\n  return { cafeteria, comandas };\n}",
+        "cues": [
+          {
+            "text": "await buscarCafeteriaRepository(cafeteriaId)",
+            "title": "Leer el lado uno",
+            "note": "GetItem localiza el registro principal 2 por su clave."
+          },
+          {
+            "text": "await consultarCafeteriaRepository(cafeteriaId, minimo)",
+            "title": "Leer el grupo",
+            "note": "Query consulta los registros asociados del registro principal y aplica el mínimo."
+          },
+          {
+            "text": "return { cafeteria, comandas }",
+            "title": "Juntar la respuesta",
+            "note": "No hay JOIN automático en DynamoDB. El service compone el resultado."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "flow"
+      },
+      {
+        "chapter": 5,
+        "name": "Repository",
+        "path": "src/cafeterias/consultar/repository.mjs",
+        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function buscarCafeteriaRepository(cafeteriaId) {\n  const { Item } = await MODELO_CAFETERIA.build(GetItemCommand)\n    .key({ cafeteriaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCafeteriaRepository(cafeteriaId, minimo) {\n  const { Items = [] } = await TABLA_COMANDAS.build(QueryCommand)\n    .entities(MODELO_COMANDA)\n    .query({ index: 'PorCafeteria', partition: cafeteriaId })\n    .options({ filters: { Comanda: { attr: 'importeCentimos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "GetItemCommand",
+            "title": "Una clave completa",
+            "note": "Lee el registro principal 2 con CAFETERIA_ID = 2."
+          },
+          {
+            "text": ".query({ index: 'PorCafeteria', partition: cafeteriaId })",
+            "title": "Abrir el grupo del registro principal",
+            "note": "Query lee el índice por CAFETERIA_ID. No busca por COMANDA_ID."
+          },
+          {
+            "text": "attr: 'importeCentimos', gte: minimo",
+            "title": "Filtrar el grupo leído",
+            "note": "gte significa mayor o igual. El filtro se aplica después de leer; no reduce esa lectura."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "index"
+      },
+      {
+        "chapter": 5,
+        "name": "Comprobar",
+        "path": "Petición y resultado · ficha página 4",
+        "code": "GET /cafeterias/2/comandas?minimo=1251\n\n200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+        "cues": [
+          {
+            "text": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+            "title": "Comprobar el resultado",
+            "note": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1)."
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "result"
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": 7,
+      "name": "Comanda C-01",
+      "value": 450,
+      "parent": 1
+    },
+    {
+      "id": 8,
+      "name": "Comanda C-02",
+      "value": 1250,
+      "parent": 2
+    },
+    {
+      "id": 9,
+      "name": "Comanda C-01 · nuevo",
+      "value": 2150,
+      "parent": 1
+    }
+  ],
+  "operations": [
+    {
+      "ch": 1,
+      "slug": "crear-listar",
+      "title": "Añadir y listar",
+      "verb": "POST",
+      "route": "/comandas",
+      "request": "POST /comandas\n{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}",
+      "fields": "nombre, importeCentimos, cafeteriaId",
+      "args": "nombre, importeCentimos, cafeteriaId",
+      "result": "201 · Registro 10 creado → GET /comandas → 200 · aparecen 4 registros",
+      "service": "crearComandaService",
+      "repo": "crearComandaRepository",
+      "command": "PutItemCommand"
+    },
+    {
+      "ch": 2,
+      "slug": "eliminar",
+      "title": "Eliminar la de prueba",
+      "verb": "DELETE",
+      "route": "/comandas/:comandaId",
+      "request": "DELETE /comandas/10",
+      "fields": "comandaId",
+      "args": "comandaId",
+      "result": "204 · Registro 10 eliminado → GET /comandas → 200 · quedan 7, 8 y 9",
+      "service": "eliminarComandaService",
+      "repo": "eliminarComandaRepository",
+      "command": "DeleteItemCommand"
+    },
+    {
+      "ch": 3,
+      "slug": "modificar-importe-centimos",
+      "title": "Cambiar importe",
+      "verb": "PATCH",
+      "route": "/comandas/:comandaId",
+      "request": "PATCH /comandas/7\n{\"importeCentimos\":1700}",
+      "fields": "comandaId, importeCentimos",
+      "args": "comandaId, importeCentimos",
+      "result": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+      "service": "modificarImporteCentimosService",
+      "repo": "modificarImporteCentimosRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 4,
+      "slug": "trasladar",
+      "title": "Trasladar de cafeteria",
+      "verb": "PATCH",
+      "route": "/comandas/:comandaId/cafeteria",
+      "request": "PATCH /comandas/7/cafeteria\n{\"cafeteriaId\":2}",
+      "fields": "comandaId, cafeteriaId",
+      "args": "comandaId, cafeteriaId",
+      "result": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+      "service": "trasladarComandaService",
+      "repo": "trasladarComandaRepository",
+      "command": "UpdateItemCommand"
+    },
+    {
+      "ch": 5,
+      "slug": "consultar",
+      "title": "Leer un cafeteria",
+      "verb": "GET",
+      "route": "/cafeterias/:cafeteriaId/comandas",
+      "request": "GET /cafeterias/2/comandas?minimo=1251",
+      "fields": "cafeteriaId, minimo",
+      "args": "cafeteriaId, minimo",
+      "result": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+      "service": "consultarCafeteriaService",
+      "repo": "consultarCafeteriaRepository",
+      "command": "QueryCommand"
+    }
+  ],
+  "context": {
+    "id": "CH-23",
+    "title": "Cafeteria → Comanda",
+    "parent": {
+      "entity": "Cafeteria",
+      "sql": "CAFETERIA",
+      "table": "CAFETERIAS",
+      "route": "cafeterias",
+      "property": "cafeteria",
+      "input": "cafeteriaId",
+      "variable": "TABLA_CAFETERIAS",
+      "model": "MODELO_CAFETERIA",
+      "file": "src/cafeterias/entities/cafeteria.entity.ts",
+      "examples": [
+        "Cafetería Plaza",
+        "Cafetería Jardín"
+      ]
+    },
+    "child": {
+      "entity": "Comanda",
+      "sql": "COMANDA",
+      "table": "COMANDAS",
+      "route": "comandas",
+      "property": "comanda",
+      "input": "comandaId",
+      "inverse": "comandas",
+      "variable": "TABLA_COMANDAS",
+      "model": "MODELO_COMANDA",
+      "file": "src/comandas/entities/comanda.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "importeCentimos",
+      "column": "IMPORTE_CENTIMOS",
+      "label": "Importe",
+      "unit": "céntimos",
+      "initial": 450,
+      "other": 1250,
+      "after": 1700,
+      "minimum": 1251,
+      "create": 451,
+      "unrelated": 2150
+    },
+    "foreignKey": "ID_CAFETERIA",
+    "index": "PorCafeteria",
+    "modelFile": "src/models/cafeteria-comanda.model.mjs",
+    "createName": "Registro de prueba"
+  }
+}
