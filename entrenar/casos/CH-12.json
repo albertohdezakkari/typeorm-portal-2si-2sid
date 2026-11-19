@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Lote",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'KILOS', type: 'integer' })",
-            "title": "Una peso numérica",
+            "title": "KILOS es una columna numérica",
             "note": "kilos se guarda en KILOS, de tipo entero. El siguiente paso detalla la relación con Cooperativa."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_COOPERATIVAS: { Ref: TablaCooperativas }\n    TABLA_LOTES: { Ref: TablaLotes }\n\nresources:\n  Resources:\n    TablaCooperativas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COOPERATIVAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COOPERATIVA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaLotes:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LOTES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: LOTE_ID, AttributeType: N }\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LOTE_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en LOTES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCooperativa\n            # Clave compuesta = partition key + sort key:\n            # (COOPERATIVA_ID, LOTE_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COOPERATIVA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cooperativa.\n              - AttributeName: LOTE_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - KILOS",
+        "code": "provider:\n  environment:\n    TABLA_COOPERATIVAS: { Ref: TablaCooperativas }\n    TABLA_LOTES: { Ref: TablaLotes }\n\nresources:\n  Resources:\n    TablaCooperativas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COOPERATIVAS\n        # PARTITION KEY: COOPERATIVA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COOPERATIVA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COOPERATIVA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaLotes:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LOTES\n        # PARTITION KEY: LOTE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   COOPERATIVA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_LOTE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: LOTE_ID, AttributeType: N }\n          - { AttributeName: COOPERATIVA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LOTE_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en LOTES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCooperativa\n            # Clave compuesta = partition key + sort key:\n            # (COOPERATIVA_ID, LOTE_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COOPERATIVA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cooperativa.\n              - AttributeName: LOTE_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de LOTES copiados al índice.\n                - NOMBRE\n                - KILOS",
         "cues": [
           {
             "text": "TableName: COOPERATIVAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear COOPERATIVAS."
+            "note": "El YAML crea COOPERATIVAS y declara su clave COOPERATIVA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_COOPERATIVA."
           },
           {
             "text": "TableName: LOTES",
             "title": "Tabla de lotes",
-            "note": "La tabla usa LOTE_ID como partition key. No tiene sort key."
+            "note": "LOTES usa LOTE_ID como partition key. Los otros atributos son NOMBRE, KILOS y COOPERATIVA_ID; los cuatro aparecen en MODELO_LOTE."
           },
           {
             "text": "IndexName: PorCooperativa",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y KILOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y KILOS. Esos datos pertenecen a LOTES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/cooperativa-lote.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COOPERATIVAS = new Table({\n  name: process.env.TABLA_COOPERATIVAS, documentClient: db,\n  partitionKey: { name: 'COOPERATIVA_ID', type: 'number' }\n});\n\nexport const TABLA_LOTES = new Table({\n  name: process.env.TABLA_LOTES, documentClient: db,\n  partitionKey: { name: 'LOTE_ID', type: 'number' },\n  indexes: {\n    PorCooperativa: {\n      type: 'global',\n      partitionKey: { name: 'COOPERATIVA_ID', type: 'number' },\n      sortKey: { name: 'LOTE_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COOPERATIVA = new Entity({\n  name: 'Cooperativa', table: TABLA_COOPERATIVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cooperativaId: number().key().savedAs('COOPERATIVA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_LOTE = new Entity({\n  name: 'Lote', table: TABLA_LOTES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    loteId: number().key().savedAs('LOTE_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    cooperativaId: number().savedAs('COOPERATIVA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_COOPERATIVAS = new Table({",
+            "title": "Primero, Table de Cooperativa",
+            "note": "Table describe COOPERATIVAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'COOPERATIVA_ID', type: 'number' }",
+            "title": "Clave de Cooperativa",
+            "note": "COOPERATIVA_ID identifica cada registro de COOPERATIVAS. El tipo de NOMBRE se declara en MODELO_COOPERATIVA."
+          },
           {
             "text": "export const TABLA_LOTES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COOPERATIVAS = new Table({\n  name: process.env.TABLA_COOPERATIVAS, documentClient: db,\n  partitionKey: { name: 'COOPERATIVA_ID', type: 'number' }\n});\n\nexport const TABLA_LOTES = new Table({\n  name: process.env.TABLA_LOTES, documentClient: db,\n  partitionKey: { name: 'LOTE_ID', type: 'number' },\n  indexes: {\n    PorCooperativa: {\n      type: 'global',\n      partitionKey: { name: 'COOPERATIVA_ID', type: 'number' },\n      sortKey: { name: 'LOTE_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COOPERATIVA = new Entity({\n  name: 'Cooperativa', table: TABLA_COOPERATIVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cooperativaId: number().key().savedAs('COOPERATIVA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_LOTE = new Entity({\n  name: 'Lote', table: TABLA_LOTES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    loteId: number().key().savedAs('LOTE_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    cooperativaId: number().savedAs('COOPERATIVA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_COOPERATIVA = new Entity({",
+            "title": "Campos de Cooperativa",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en COOPERATIVAS."
+          },
+          {
+            "text": "cooperativaId: number().key().savedAs('COOPERATIVA_ID')",
+            "after": "export const MODELO_COOPERATIVA",
+            "title": "ID → COOPERATIVA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como COOPERATIVA_ID. number() define el tipo; key() lo vincula a la partition key de COOPERATIVAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_COOPERATIVA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Cooperativa. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_LOTE = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_LOTE en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_LOTE en el repository.",
+            "after": "export const MODELO_LOTE"
           },
           {
             "text": "name: 'Lote', table: TABLA_LOTES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_LOTES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_LOTES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_LOTE"
           },
           {
             "text": "loteId: number().key().savedAs('LOTE_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce loteId a LOTE_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce loteId a LOTE_ID.",
+            "after": "export const MODELO_LOTE"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_LOTE",
+            "title": "Texto de Lote → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_LOTE. Guarda nombre en NOMBRE, dentro del ítem de LOTES."
           },
           {
             "text": "kilos: number().savedAs('KILOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. kilos es un número; se guarda como KILOS y no forma parte de la clave."
+            "title": "KILOS también se configura",
+            "note": "number() describe kilos. savedAs lo guarda en KILOS. Es un dato de Lote; no forma parte de la clave principal.",
+            "after": "export const MODELO_LOTE"
           },
           {
             "text": "cooperativaId: number().savedAs('COOPERATIVA_ID')",
-            "title": "Guardar la referencia",
-            "note": "COOPERATIVA_ID es un atributo de LOTES y la clave del índice PorCooperativa. Aquí no lleva .key(): la clave de la tabla sigue siendo LOTE_ID."
+            "title": "Referencia a Cooperativa",
+            "note": "cooperativaId se guarda en COOPERATIVA_ID. Es la referencia a Cooperativa y la partition key del GSI PorCooperativa. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_LOTE"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorCooperativa",
     "modelFile": "src/models/cooperativa-lote.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Cooperativa",
+        "sql": "COOPERATIVA",
+        "dynamo": "COOPERATIVAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "cooperativaId",
+              "column": "COOPERATIVA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Cooperativa Olivo",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Lote",
+        "sql": "LOTE",
+        "dynamo": "LOTES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "loteId",
+              "column": "LOTE_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Lote de manzanas",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "KILOS",
+            "role": "data",
+            "example": 40,
+            "nest": {
+              "property": "kilos",
+              "column": "KILOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "kilos",
+              "column": "KILOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_COOPERATIVA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "cooperativa.id",
+              "column": "ID_COOPERATIVA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "cooperativaId",
+              "column": "COOPERATIVA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

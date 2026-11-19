@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Reparacion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'COSTE_CENTIMOS', type: 'integer' })",
-            "title": "Una coste numérica",
+            "title": "COSTE_CENTIMOS es una columna numérica",
             "note": "costeCentimos se guarda en COSTE_CENTIMOS, de tipo entero. El siguiente paso detalla la relación con Taller."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+        "code": "provider:\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
         "cues": [
           {
             "text": "TableName: TALLERES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear TALLERES."
+            "note": "El YAML crea TALLERES y declara su clave TALLER_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_TALLER."
           },
           {
             "text": "TableName: REPARACIONES",
             "title": "Tabla de reparaciones",
-            "note": "La tabla usa REPARACION_ID como partition key. No tiene sort key."
+            "note": "REPARACIONES usa REPARACION_ID como partition key. Los otros atributos son NOMBRE, COSTE_CENTIMOS y TALLER_ID; los cuatro aparecen en MODELO_REPARACION."
           },
           {
             "text": "IndexName: PorTaller",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y COSTE_CENTIMOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y COSTE_CENTIMOS. Esos datos pertenecen a REPARACIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/taller-reparacion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TALLERES = new Table({\n  name: process.env.TABLA_TALLERES, documentClient: db,\n  partitionKey: { name: 'TALLER_ID', type: 'number' }\n});\n\nexport const TABLA_REPARACIONES = new Table({\n  name: process.env.TABLA_REPARACIONES, documentClient: db,\n  partitionKey: { name: 'REPARACION_ID', type: 'number' },\n  indexes: {\n    PorTaller: {\n      type: 'global',\n      partitionKey: { name: 'TALLER_ID', type: 'number' },\n      sortKey: { name: 'REPARACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TALLER = new Entity({\n  name: 'Taller', table: TABLA_TALLERES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tallerId: number().key().savedAs('TALLER_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_REPARACION = new Entity({\n  name: 'Reparacion', table: TABLA_REPARACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reparacionId: number().key().savedAs('REPARACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    costeCentimos: number().savedAs('COSTE_CENTIMOS'),\n    tallerId: number().savedAs('TALLER_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_TALLERES = new Table({",
+            "title": "Primero, Table de Taller",
+            "note": "Table describe TALLERES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'TALLER_ID', type: 'number' }",
+            "title": "Clave de Taller",
+            "note": "TALLER_ID identifica cada registro de TALLERES. El tipo de NOMBRE se declara en MODELO_TALLER."
+          },
           {
             "text": "export const TABLA_REPARACIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TALLERES = new Table({\n  name: process.env.TABLA_TALLERES, documentClient: db,\n  partitionKey: { name: 'TALLER_ID', type: 'number' }\n});\n\nexport const TABLA_REPARACIONES = new Table({\n  name: process.env.TABLA_REPARACIONES, documentClient: db,\n  partitionKey: { name: 'REPARACION_ID', type: 'number' },\n  indexes: {\n    PorTaller: {\n      type: 'global',\n      partitionKey: { name: 'TALLER_ID', type: 'number' },\n      sortKey: { name: 'REPARACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TALLER = new Entity({\n  name: 'Taller', table: TABLA_TALLERES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    tallerId: number().key().savedAs('TALLER_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_REPARACION = new Entity({\n  name: 'Reparacion', table: TABLA_REPARACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reparacionId: number().key().savedAs('REPARACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    costeCentimos: number().savedAs('COSTE_CENTIMOS'),\n    tallerId: number().savedAs('TALLER_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_TALLER = new Entity({",
+            "title": "Campos de Taller",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en TALLERES."
+          },
+          {
+            "text": "tallerId: number().key().savedAs('TALLER_ID')",
+            "after": "export const MODELO_TALLER",
+            "title": "ID → TALLER_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como TALLER_ID. number() define el tipo; key() lo vincula a la partition key de TALLERES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_TALLER",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Taller. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_REPARACION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_REPARACION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_REPARACION en el repository.",
+            "after": "export const MODELO_REPARACION"
           },
           {
             "text": "name: 'Reparacion', table: TABLA_REPARACIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_REPARACIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_REPARACIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_REPARACION"
           },
           {
             "text": "reparacionId: number().key().savedAs('REPARACION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce reparacionId a REPARACION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce reparacionId a REPARACION_ID.",
+            "after": "export const MODELO_REPARACION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_REPARACION",
+            "title": "Texto de Reparacion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_REPARACION. Guarda nombre en NOMBRE, dentro del ítem de REPARACIONES."
           },
           {
             "text": "costeCentimos: number().savedAs('COSTE_CENTIMOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. costeCentimos es un número; se guarda como COSTE_CENTIMOS y no forma parte de la clave."
+            "title": "COSTE_CENTIMOS también se configura",
+            "note": "number() describe costeCentimos. savedAs lo guarda en COSTE_CENTIMOS. Es un dato de Reparacion; no forma parte de la clave principal.",
+            "after": "export const MODELO_REPARACION"
           },
           {
             "text": "tallerId: number().savedAs('TALLER_ID')",
-            "title": "Guardar la referencia",
-            "note": "TALLER_ID es un atributo de REPARACIONES y la clave del índice PorTaller. Aquí no lleva .key(): la clave de la tabla sigue siendo REPARACION_ID."
+            "title": "Referencia a Taller",
+            "note": "tallerId se guarda en TALLER_ID. Es la referencia a Taller y la partition key del GSI PorTaller. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_REPARACION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorTaller",
     "modelFile": "src/models/taller-reparacion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Taller",
+        "sql": "TALLER",
+        "dynamo": "TALLERES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "tallerId",
+              "column": "TALLER_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Taller Norte",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Reparacion",
+        "sql": "REPARACION",
+        "dynamo": "REPARACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "reparacionId",
+              "column": "REPARACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Ajuste de frenos",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "COSTE_CENTIMOS",
+            "role": "data",
+            "example": 2500,
+            "nest": {
+              "property": "costeCentimos",
+              "column": "COSTE_CENTIMOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "costeCentimos",
+              "column": "COSTE_CENTIMOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_TALLER",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "taller.id",
+              "column": "ID_TALLER",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "tallerId",
+              "column": "TALLER_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

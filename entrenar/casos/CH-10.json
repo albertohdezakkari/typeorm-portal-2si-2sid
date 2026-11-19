@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Habitacion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'CAMAS', type: 'integer' })",
-            "title": "Una capacidad numérica",
+            "title": "CAMAS es una columna numérica",
             "note": "camas se guarda en CAMAS, de tipo entero. El siguiente paso detalla la relación con Hospital."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_HOSPITALES: { Ref: TablaHospitales }\n    TABLA_HABITACIONES: { Ref: TablaHabitaciones }\n\nresources:\n  Resources:\n    TablaHospitales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HOSPITALES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HOSPITAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HOSPITAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaHabitaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HABITACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: HABITACION_ID, AttributeType: N }\n          - { AttributeName: HOSPITAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HABITACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en HABITACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHospital\n            # Clave compuesta = partition key + sort key:\n            # (HOSPITAL_ID, HABITACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HOSPITAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Hospital.\n              - AttributeName: HABITACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - CAMAS",
+        "code": "provider:\n  environment:\n    TABLA_HOSPITALES: { Ref: TablaHospitales }\n    TABLA_HABITACIONES: { Ref: TablaHabitaciones }\n\nresources:\n  Resources:\n    TablaHospitales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HOSPITALES\n        # PARTITION KEY: HOSPITAL_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HOSPITAL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HOSPITAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HOSPITAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaHabitaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HABITACIONES\n        # PARTITION KEY: HABITACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAMAS (N: número).\n        #   HOSPITAL_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_HABITACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: HABITACION_ID, AttributeType: N }\n          - { AttributeName: HOSPITAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HABITACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en HABITACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHospital\n            # Clave compuesta = partition key + sort key:\n            # (HOSPITAL_ID, HABITACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HOSPITAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Hospital.\n              - AttributeName: HABITACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de HABITACIONES copiados al índice.\n                - NOMBRE\n                - CAMAS",
         "cues": [
           {
             "text": "TableName: HOSPITALES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear HOSPITALES."
+            "note": "El YAML crea HOSPITALES y declara su clave HOSPITAL_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_HOSPITAL."
           },
           {
             "text": "TableName: HABITACIONES",
             "title": "Tabla de habitaciones",
-            "note": "La tabla usa HABITACION_ID como partition key. No tiene sort key."
+            "note": "HABITACIONES usa HABITACION_ID como partition key. Los otros atributos son NOMBRE, CAMAS y HOSPITAL_ID; los cuatro aparecen en MODELO_HABITACION."
           },
           {
             "text": "IndexName: PorHospital",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y CAMAS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y CAMAS. Esos datos pertenecen a HABITACIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/hospital-habitacion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HOSPITALES = new Table({\n  name: process.env.TABLA_HOSPITALES, documentClient: db,\n  partitionKey: { name: 'HOSPITAL_ID', type: 'number' }\n});\n\nexport const TABLA_HABITACIONES = new Table({\n  name: process.env.TABLA_HABITACIONES, documentClient: db,\n  partitionKey: { name: 'HABITACION_ID', type: 'number' },\n  indexes: {\n    PorHospital: {\n      type: 'global',\n      partitionKey: { name: 'HOSPITAL_ID', type: 'number' },\n      sortKey: { name: 'HABITACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HOSPITAL = new Entity({\n  name: 'Hospital', table: TABLA_HOSPITALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    hospitalId: number().key().savedAs('HOSPITAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_HABITACION = new Entity({\n  name: 'Habitacion', table: TABLA_HABITACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    habitacionId: number().key().savedAs('HABITACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    camas: number().savedAs('CAMAS'),\n    hospitalId: number().savedAs('HOSPITAL_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_HOSPITALES = new Table({",
+            "title": "Primero, Table de Hospital",
+            "note": "Table describe HOSPITALES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'HOSPITAL_ID', type: 'number' }",
+            "title": "Clave de Hospital",
+            "note": "HOSPITAL_ID identifica cada registro de HOSPITALES. El tipo de NOMBRE se declara en MODELO_HOSPITAL."
+          },
           {
             "text": "export const TABLA_HABITACIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HOSPITALES = new Table({\n  name: process.env.TABLA_HOSPITALES, documentClient: db,\n  partitionKey: { name: 'HOSPITAL_ID', type: 'number' }\n});\n\nexport const TABLA_HABITACIONES = new Table({\n  name: process.env.TABLA_HABITACIONES, documentClient: db,\n  partitionKey: { name: 'HABITACION_ID', type: 'number' },\n  indexes: {\n    PorHospital: {\n      type: 'global',\n      partitionKey: { name: 'HOSPITAL_ID', type: 'number' },\n      sortKey: { name: 'HABITACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HOSPITAL = new Entity({\n  name: 'Hospital', table: TABLA_HOSPITALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    hospitalId: number().key().savedAs('HOSPITAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_HABITACION = new Entity({\n  name: 'Habitacion', table: TABLA_HABITACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    habitacionId: number().key().savedAs('HABITACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    camas: number().savedAs('CAMAS'),\n    hospitalId: number().savedAs('HOSPITAL_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_HOSPITAL = new Entity({",
+            "title": "Campos de Hospital",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en HOSPITALES."
+          },
+          {
+            "text": "hospitalId: number().key().savedAs('HOSPITAL_ID')",
+            "after": "export const MODELO_HOSPITAL",
+            "title": "ID → HOSPITAL_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como HOSPITAL_ID. number() define el tipo; key() lo vincula a la partition key de HOSPITALES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_HOSPITAL",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Hospital. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_HABITACION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_HABITACION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_HABITACION en el repository.",
+            "after": "export const MODELO_HABITACION"
           },
           {
             "text": "name: 'Habitacion', table: TABLA_HABITACIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_HABITACIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_HABITACIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_HABITACION"
           },
           {
             "text": "habitacionId: number().key().savedAs('HABITACION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce habitacionId a HABITACION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce habitacionId a HABITACION_ID.",
+            "after": "export const MODELO_HABITACION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_HABITACION",
+            "title": "Texto de Habitacion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_HABITACION. Guarda nombre en NOMBRE, dentro del ítem de HABITACIONES."
           },
           {
             "text": "camas: number().savedAs('CAMAS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. camas es un número; se guarda como CAMAS y no forma parte de la clave."
+            "title": "CAMAS también se configura",
+            "note": "number() describe camas. savedAs lo guarda en CAMAS. Es un dato de Habitacion; no forma parte de la clave principal.",
+            "after": "export const MODELO_HABITACION"
           },
           {
             "text": "hospitalId: number().savedAs('HOSPITAL_ID')",
-            "title": "Guardar la referencia",
-            "note": "HOSPITAL_ID es un atributo de HABITACIONES y la clave del índice PorHospital. Aquí no lleva .key(): la clave de la tabla sigue siendo HABITACION_ID."
+            "title": "Referencia a Hospital",
+            "note": "hospitalId se guarda en HOSPITAL_ID. Es la referencia a Hospital y la partition key del GSI PorHospital. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_HABITACION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorHospital",
     "modelFile": "src/models/hospital-habitacion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Hospital",
+        "sql": "HOSPITAL",
+        "dynamo": "HOSPITALES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "hospitalId",
+              "column": "HOSPITAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Hospital Central",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Habitacion",
+        "sql": "HABITACION",
+        "dynamo": "HABITACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "habitacionId",
+              "column": "HABITACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Habitación A",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "CAMAS",
+            "role": "data",
+            "example": 1,
+            "nest": {
+              "property": "camas",
+              "column": "CAMAS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "camas",
+              "column": "CAMAS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_HOSPITAL",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "hospital.id",
+              "column": "ID_HOSPITAL",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "hospitalId",
+              "column": "HOSPITAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

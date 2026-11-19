@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Pieza",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'ANTIGUEDAD_ANIOS', type: 'integer' })",
-            "title": "Una antigüedad numérica",
+            "title": "ANTIGUEDAD_ANIOS es una columna numérica",
             "note": "antiguedadAnios se guarda en ANTIGUEDAD_ANIOS, de tipo entero. El siguiente paso detalla la relación con Museo."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+        "code": "provider:\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
         "cues": [
           {
             "text": "TableName: MUSEOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear MUSEOS."
+            "note": "El YAML crea MUSEOS y declara su clave MUSEO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_MUSEO."
           },
           {
             "text": "TableName: PIEZAS",
             "title": "Tabla de piezas",
-            "note": "La tabla usa PIEZA_ID como partition key. No tiene sort key."
+            "note": "PIEZAS usa PIEZA_ID como partition key. Los otros atributos son NOMBRE, ANTIGUEDAD_ANIOS y MUSEO_ID; los cuatro aparecen en MODELO_PIEZA."
           },
           {
             "text": "IndexName: PorMuseo",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y ANTIGUEDAD_ANIOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y ANTIGUEDAD_ANIOS. Esos datos pertenecen a PIEZAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/museo-pieza.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_MUSEOS = new Table({\n  name: process.env.TABLA_MUSEOS, documentClient: db,\n  partitionKey: { name: 'MUSEO_ID', type: 'number' }\n});\n\nexport const TABLA_PIEZAS = new Table({\n  name: process.env.TABLA_PIEZAS, documentClient: db,\n  partitionKey: { name: 'PIEZA_ID', type: 'number' },\n  indexes: {\n    PorMuseo: {\n      type: 'global',\n      partitionKey: { name: 'MUSEO_ID', type: 'number' },\n      sortKey: { name: 'PIEZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_MUSEO = new Entity({\n  name: 'Museo', table: TABLA_MUSEOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    museoId: number().key().savedAs('MUSEO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PIEZA = new Entity({\n  name: 'Pieza', table: TABLA_PIEZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    piezaId: number().key().savedAs('PIEZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    antiguedadAnios: number().savedAs('ANTIGUEDAD_ANIOS'),\n    museoId: number().savedAs('MUSEO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_MUSEOS = new Table({",
+            "title": "Primero, Table de Museo",
+            "note": "Table describe MUSEOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'MUSEO_ID', type: 'number' }",
+            "title": "Clave de Museo",
+            "note": "MUSEO_ID identifica cada registro de MUSEOS. El tipo de NOMBRE se declara en MODELO_MUSEO."
+          },
           {
             "text": "export const TABLA_PIEZAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_MUSEOS = new Table({\n  name: process.env.TABLA_MUSEOS, documentClient: db,\n  partitionKey: { name: 'MUSEO_ID', type: 'number' }\n});\n\nexport const TABLA_PIEZAS = new Table({\n  name: process.env.TABLA_PIEZAS, documentClient: db,\n  partitionKey: { name: 'PIEZA_ID', type: 'number' },\n  indexes: {\n    PorMuseo: {\n      type: 'global',\n      partitionKey: { name: 'MUSEO_ID', type: 'number' },\n      sortKey: { name: 'PIEZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_MUSEO = new Entity({\n  name: 'Museo', table: TABLA_MUSEOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    museoId: number().key().savedAs('MUSEO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PIEZA = new Entity({\n  name: 'Pieza', table: TABLA_PIEZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    piezaId: number().key().savedAs('PIEZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    antiguedadAnios: number().savedAs('ANTIGUEDAD_ANIOS'),\n    museoId: number().savedAs('MUSEO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_MUSEO = new Entity({",
+            "title": "Campos de Museo",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en MUSEOS."
+          },
+          {
+            "text": "museoId: number().key().savedAs('MUSEO_ID')",
+            "after": "export const MODELO_MUSEO",
+            "title": "ID → MUSEO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como MUSEO_ID. number() define el tipo; key() lo vincula a la partition key de MUSEOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_MUSEO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Museo. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PIEZA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PIEZA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PIEZA en el repository.",
+            "after": "export const MODELO_PIEZA"
           },
           {
             "text": "name: 'Pieza', table: TABLA_PIEZAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PIEZAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PIEZAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PIEZA"
           },
           {
             "text": "piezaId: number().key().savedAs('PIEZA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce piezaId a PIEZA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce piezaId a PIEZA_ID.",
+            "after": "export const MODELO_PIEZA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PIEZA",
+            "title": "Texto de Pieza → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PIEZA. Guarda nombre en NOMBRE, dentro del ítem de PIEZAS."
           },
           {
             "text": "antiguedadAnios: number().savedAs('ANTIGUEDAD_ANIOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. antiguedadAnios es un número; se guarda como ANTIGUEDAD_ANIOS y no forma parte de la clave."
+            "title": "ANTIGUEDAD_ANIOS también se configura",
+            "note": "number() describe antiguedadAnios. savedAs lo guarda en ANTIGUEDAD_ANIOS. Es un dato de Pieza; no forma parte de la clave principal.",
+            "after": "export const MODELO_PIEZA"
           },
           {
             "text": "museoId: number().savedAs('MUSEO_ID')",
-            "title": "Guardar la referencia",
-            "note": "MUSEO_ID es un atributo de PIEZAS y la clave del índice PorMuseo. Aquí no lleva .key(): la clave de la tabla sigue siendo PIEZA_ID."
+            "title": "Referencia a Museo",
+            "note": "museoId se guarda en MUSEO_ID. Es la referencia a Museo y la partition key del GSI PorMuseo. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PIEZA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorMuseo",
     "modelFile": "src/models/museo-pieza.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Museo",
+        "sql": "MUSEO",
+        "dynamo": "MUSEOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "museoId",
+              "column": "MUSEO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Museo del Barrio",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Pieza",
+        "sql": "PIEZA",
+        "dynamo": "PIEZAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "piezaId",
+              "column": "PIEZA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Vasija azul",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "ANTIGUEDAD_ANIOS",
+            "role": "data",
+            "example": 30,
+            "nest": {
+              "property": "antiguedadAnios",
+              "column": "ANTIGUEDAD_ANIOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "antiguedadAnios",
+              "column": "ANTIGUEDAD_ANIOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_MUSEO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "museo.id",
+              "column": "ID_MUSEO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "museoId",
+              "column": "MUSEO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

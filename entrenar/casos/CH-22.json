@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla:\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS",
+        "code": "provider:\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS",
         "cues": [
           {
             "text": "TableName: AYUNTAMIENTOS",
             "title": "Tabla principal",
-            "note": "El YAML crea AYUNTAMIENTOS y declara su clave AYUNTAMIENTO_ID. Su atributo NOMBRE se describe con string() en MODELO_AYUNTAMIENTO."
+            "note": "El YAML crea AYUNTAMIENTOS y declara su clave AYUNTAMIENTO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_AYUNTAMIENTO."
           },
           {
             "text": "TableName: OBRAS",
             "title": "Tabla de obras",
-            "note": "OBRAS tiene OBRA_ID como partition key. Sus ítems guardan además NOMBRE, PRESUPUESTO_EUROS y AYUNTAMIENTO_ID; los cuatro aparecen en MODELO_OBRA."
+            "note": "OBRAS usa OBRA_ID como partition key. Los otros atributos son NOMBRE, PRESUPUESTO_EUROS y AYUNTAMIENTO_ID; los cuatro aparecen en MODELO_OBRA."
           },
           {
             "text": "IndexName: PorAyuntamiento",
@@ -644,7 +644,7 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y PRESUPUESTO_EUROS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y PRESUPUESTO_EUROS. Esos datos pertenecen a OBRAS."
           }
         ],
         "page": 1,
@@ -660,13 +660,13 @@
         "cues": [
           {
             "text": "export const TABLA_AYUNTAMIENTOS = new Table({",
-            "title": "Primero, la tabla Ayuntamiento",
-            "note": "Table describe AYUNTAMIENTOS: su nombre, cliente y clave. Los atributos normales se definen después en Entity."
+            "title": "Primero, Table de Ayuntamiento",
+            "note": "Table describe AYUNTAMIENTOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
           },
           {
             "text": "partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }",
-            "title": "La clave del ayuntamiento",
-            "note": "AYUNTAMIENTO_ID identifica cada ayuntamiento. NOMBRE también se guarda, pero su tipo se declara en MODELO_AYUNTAMIENTO."
+            "title": "Clave de Ayuntamiento",
+            "note": "AYUNTAMIENTO_ID identifica cada registro de AYUNTAMIENTOS. El tipo de NOMBRE se declara en MODELO_AYUNTAMIENTO."
           },
           {
             "text": "export const TABLA_OBRAS = new Table({",
@@ -706,20 +706,20 @@
         "cues": [
           {
             "text": "export const MODELO_AYUNTAMIENTO = new Entity({",
-            "title": "Los campos del ayuntamiento",
-            "note": "Esta Entity reúne los dos atributos del ER: el identificador y el nombre. Table indica dónde se guardan."
+            "title": "Campos de Ayuntamiento",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en AYUNTAMIENTOS."
           },
           {
             "text": "ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID')",
             "after": "export const MODELO_AYUNTAMIENTO",
-            "title": "ID del ayuntamiento → AYUNTAMIENTO_ID",
-            "note": "En el ER es ID. En DynamoDB lo llamamos AYUNTAMIENTO_ID. number() es el tipo y key() lo vincula a la partition key de AYUNTAMIENTOS."
+            "title": "ID → AYUNTAMIENTO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como AYUNTAMIENTO_ID. number() define el tipo; key() lo vincula a la partition key de AYUNTAMIENTOS."
           },
           {
             "text": "nombre: string().savedAs('NOMBRE')",
             "after": "export const MODELO_AYUNTAMIENTO",
             "title": "NOMBRE también se configura",
-            "note": "string() describe el texto del ayuntamiento. savedAs guarda la propiedad nombre con el atributo NOMBRE. No es una clave."
+            "note": "string() describe el texto de Ayuntamiento. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
           },
           {
             "text": "export const MODELO_OBRA = new Entity({",
@@ -742,19 +742,19 @@
           {
             "text": "nombre: string().savedAs('NOMBRE')",
             "after": "export const MODELO_OBRA",
-            "title": "El nombre de la obra",
-            "note": "Esta línea pertenece a MODELO_OBRA. Guarda el texto nombre en NOMBRE, dentro del ítem de OBRAS."
+            "title": "Texto de Obra → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_OBRA. Guarda nombre en NOMBRE, dentro del ítem de OBRAS."
           },
           {
             "text": "presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS')",
             "title": "PRESUPUESTO_EUROS también se configura",
-            "note": "number() describe el presupuesto. savedAs guarda presupuestoEuros en PRESUPUESTO_EUROS. Es un dato de la obra; no forma parte de la clave principal.",
+            "note": "number() describe presupuestoEuros. savedAs lo guarda en PRESUPUESTO_EUROS. Es un dato de Obra; no forma parte de la clave principal.",
             "after": "export const MODELO_OBRA"
           },
           {
             "text": "ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')",
-            "title": "La referencia al ayuntamiento",
-            "note": "ayuntamientoId se guarda en AYUNTAMIENTO_ID. Es la referencia al ayuntamiento y la partition key del GSI PorAyuntamiento. DynamoDB no comprueba una foreign key entre tablas.",
+            "title": "Referencia a Ayuntamiento",
+            "note": "ayuntamientoId se guarda en AYUNTAMIENTO_ID. Es la referencia a Ayuntamiento y la partition key del GSI PorAyuntamiento. DynamoDB no comprueba una foreign key entre tablas.",
             "after": "export const MODELO_OBRA"
           },
           {

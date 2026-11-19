@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Trayecto",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'DISTANCIA_KM', type: 'integer' })",
-            "title": "Una distancia numérica",
+            "title": "DISTANCIA_KM es una columna numérica",
             "note": "distanciaKm se guarda en DISTANCIA_KM, de tipo entero. El siguiente paso detalla la relación con Estacion."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DISTANCIA_KM",
+        "code": "provider:\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
         "cues": [
           {
             "text": "TableName: ESTACIONES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear ESTACIONES."
+            "note": "El YAML crea ESTACIONES y declara su clave ESTACION_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_ESTACION."
           },
           {
             "text": "TableName: TRAYECTOS",
             "title": "Tabla de trayectos",
-            "note": "La tabla usa TRAYECTO_ID como partition key. No tiene sort key."
+            "note": "TRAYECTOS usa TRAYECTO_ID como partition key. Los otros atributos son NOMBRE, DISTANCIA_KM y ESTACION_ID; los cuatro aparecen en MODELO_TRAYECTO."
           },
           {
             "text": "IndexName: PorEstacion",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y DISTANCIA_KM para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y DISTANCIA_KM. Esos datos pertenecen a TRAYECTOS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/estacion-trayecto.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_ESTACIONES = new Table({\n  name: process.env.TABLA_ESTACIONES, documentClient: db,\n  partitionKey: { name: 'ESTACION_ID', type: 'number' }\n});\n\nexport const TABLA_TRAYECTOS = new Table({\n  name: process.env.TABLA_TRAYECTOS, documentClient: db,\n  partitionKey: { name: 'TRAYECTO_ID', type: 'number' },\n  indexes: {\n    PorEstacion: {\n      type: 'global',\n      partitionKey: { name: 'ESTACION_ID', type: 'number' },\n      sortKey: { name: 'TRAYECTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_ESTACION = new Entity({\n  name: 'Estacion', table: TABLA_ESTACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    estacionId: number().key().savedAs('ESTACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_TRAYECTO = new Entity({\n  name: 'Trayecto', table: TABLA_TRAYECTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    trayectoId: number().key().savedAs('TRAYECTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    distanciaKm: number().savedAs('DISTANCIA_KM'),\n    estacionId: number().savedAs('ESTACION_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_ESTACIONES = new Table({",
+            "title": "Primero, Table de Estacion",
+            "note": "Table describe ESTACIONES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'ESTACION_ID', type: 'number' }",
+            "title": "Clave de Estacion",
+            "note": "ESTACION_ID identifica cada registro de ESTACIONES. El tipo de NOMBRE se declara en MODELO_ESTACION."
+          },
           {
             "text": "export const TABLA_TRAYECTOS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_ESTACIONES = new Table({\n  name: process.env.TABLA_ESTACIONES, documentClient: db,\n  partitionKey: { name: 'ESTACION_ID', type: 'number' }\n});\n\nexport const TABLA_TRAYECTOS = new Table({\n  name: process.env.TABLA_TRAYECTOS, documentClient: db,\n  partitionKey: { name: 'TRAYECTO_ID', type: 'number' },\n  indexes: {\n    PorEstacion: {\n      type: 'global',\n      partitionKey: { name: 'ESTACION_ID', type: 'number' },\n      sortKey: { name: 'TRAYECTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_ESTACION = new Entity({\n  name: 'Estacion', table: TABLA_ESTACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    estacionId: number().key().savedAs('ESTACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_TRAYECTO = new Entity({\n  name: 'Trayecto', table: TABLA_TRAYECTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    trayectoId: number().key().savedAs('TRAYECTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    distanciaKm: number().savedAs('DISTANCIA_KM'),\n    estacionId: number().savedAs('ESTACION_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_ESTACION = new Entity({",
+            "title": "Campos de Estacion",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en ESTACIONES."
+          },
+          {
+            "text": "estacionId: number().key().savedAs('ESTACION_ID')",
+            "after": "export const MODELO_ESTACION",
+            "title": "ID → ESTACION_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como ESTACION_ID. number() define el tipo; key() lo vincula a la partition key de ESTACIONES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_ESTACION",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Estacion. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_TRAYECTO = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_TRAYECTO en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_TRAYECTO en el repository.",
+            "after": "export const MODELO_TRAYECTO"
           },
           {
             "text": "name: 'Trayecto', table: TABLA_TRAYECTOS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_TRAYECTOS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_TRAYECTOS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_TRAYECTO"
           },
           {
             "text": "trayectoId: number().key().savedAs('TRAYECTO_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce trayectoId a TRAYECTO_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce trayectoId a TRAYECTO_ID.",
+            "after": "export const MODELO_TRAYECTO"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_TRAYECTO",
+            "title": "Texto de Trayecto → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_TRAYECTO. Guarda nombre en NOMBRE, dentro del ítem de TRAYECTOS."
           },
           {
             "text": "distanciaKm: number().savedAs('DISTANCIA_KM')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. distanciaKm es un número; se guarda como DISTANCIA_KM y no forma parte de la clave."
+            "title": "DISTANCIA_KM también se configura",
+            "note": "number() describe distanciaKm. savedAs lo guarda en DISTANCIA_KM. Es un dato de Trayecto; no forma parte de la clave principal.",
+            "after": "export const MODELO_TRAYECTO"
           },
           {
             "text": "estacionId: number().savedAs('ESTACION_ID')",
-            "title": "Guardar la referencia",
-            "note": "ESTACION_ID es un atributo de TRAYECTOS y la clave del índice PorEstacion. Aquí no lleva .key(): la clave de la tabla sigue siendo TRAYECTO_ID."
+            "title": "Referencia a Estacion",
+            "note": "estacionId se guarda en ESTACION_ID. Es la referencia a Estacion y la partition key del GSI PorEstacion. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_TRAYECTO"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorEstacion",
     "modelFile": "src/models/estacion-trayecto.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Estacion",
+        "sql": "ESTACION",
+        "dynamo": "ESTACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "estacionId",
+              "column": "ESTACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Estación Central",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Trayecto",
+        "sql": "TRAYECTO",
+        "dynamo": "TRAYECTOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "trayectoId",
+              "column": "TRAYECTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Ruta del valle",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "DISTANCIA_KM",
+            "role": "data",
+            "example": 35,
+            "nest": {
+              "property": "distanciaKm",
+              "column": "DISTANCIA_KM",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "distanciaKm",
+              "column": "DISTANCIA_KM",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_ESTACION",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "estacion.id",
+              "column": "ID_ESTACION",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "estacionId",
+              "column": "ESTACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

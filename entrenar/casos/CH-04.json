@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Publicacion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'PAGINAS', type: 'integer' })",
-            "title": "Una extensión numérica",
+            "title": "PAGINAS es una columna numérica",
             "note": "paginas se guarda en PAGINAS, de tipo entero. El siguiente paso detalla la relación con Editorial."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_EDITORIALES: { Ref: TablaEditoriales }\n    TABLA_PUBLICACIONES: { Ref: TablaPublicaciones }\n\nresources:\n  Resources:\n    TablaEditoriales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EDITORIALES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: EDITORIAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EDITORIAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPublicaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUBLICACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PUBLICACION_ID, AttributeType: N }\n          - { AttributeName: EDITORIAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUBLICACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PUBLICACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEditorial\n            # Clave compuesta = partition key + sort key:\n            # (EDITORIAL_ID, PUBLICACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: EDITORIAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Editorial.\n              - AttributeName: PUBLICACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - PAGINAS",
+        "code": "provider:\n  environment:\n    TABLA_EDITORIALES: { Ref: TablaEditoriales }\n    TABLA_PUBLICACIONES: { Ref: TablaPublicaciones }\n\nresources:\n  Resources:\n    TablaEditoriales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EDITORIALES\n        # PARTITION KEY: EDITORIAL_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_EDITORIAL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: EDITORIAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EDITORIAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPublicaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUBLICACIONES\n        # PARTITION KEY: PUBLICACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PAGINAS (N: número).\n        #   EDITORIAL_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PUBLICACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PUBLICACION_ID, AttributeType: N }\n          - { AttributeName: EDITORIAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUBLICACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PUBLICACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEditorial\n            # Clave compuesta = partition key + sort key:\n            # (EDITORIAL_ID, PUBLICACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: EDITORIAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Editorial.\n              - AttributeName: PUBLICACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PUBLICACIONES copiados al índice.\n                - NOMBRE\n                - PAGINAS",
         "cues": [
           {
             "text": "TableName: EDITORIALES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear EDITORIALES."
+            "note": "El YAML crea EDITORIALES y declara su clave EDITORIAL_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_EDITORIAL."
           },
           {
             "text": "TableName: PUBLICACIONES",
             "title": "Tabla de publicaciones",
-            "note": "La tabla usa PUBLICACION_ID como partition key. No tiene sort key."
+            "note": "PUBLICACIONES usa PUBLICACION_ID como partition key. Los otros atributos son NOMBRE, PAGINAS y EDITORIAL_ID; los cuatro aparecen en MODELO_PUBLICACION."
           },
           {
             "text": "IndexName: PorEditorial",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y PAGINAS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y PAGINAS. Esos datos pertenecen a PUBLICACIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/editorial-publicacion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EDITORIALES = new Table({\n  name: process.env.TABLA_EDITORIALES, documentClient: db,\n  partitionKey: { name: 'EDITORIAL_ID', type: 'number' }\n});\n\nexport const TABLA_PUBLICACIONES = new Table({\n  name: process.env.TABLA_PUBLICACIONES, documentClient: db,\n  partitionKey: { name: 'PUBLICACION_ID', type: 'number' },\n  indexes: {\n    PorEditorial: {\n      type: 'global',\n      partitionKey: { name: 'EDITORIAL_ID', type: 'number' },\n      sortKey: { name: 'PUBLICACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EDITORIAL = new Entity({\n  name: 'Editorial', table: TABLA_EDITORIALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    editorialId: number().key().savedAs('EDITORIAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PUBLICACION = new Entity({\n  name: 'Publicacion', table: TABLA_PUBLICACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    publicacionId: number().key().savedAs('PUBLICACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    paginas: number().savedAs('PAGINAS'),\n    editorialId: number().savedAs('EDITORIAL_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_EDITORIALES = new Table({",
+            "title": "Primero, Table de Editorial",
+            "note": "Table describe EDITORIALES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'EDITORIAL_ID', type: 'number' }",
+            "title": "Clave de Editorial",
+            "note": "EDITORIAL_ID identifica cada registro de EDITORIALES. El tipo de NOMBRE se declara en MODELO_EDITORIAL."
+          },
           {
             "text": "export const TABLA_PUBLICACIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EDITORIALES = new Table({\n  name: process.env.TABLA_EDITORIALES, documentClient: db,\n  partitionKey: { name: 'EDITORIAL_ID', type: 'number' }\n});\n\nexport const TABLA_PUBLICACIONES = new Table({\n  name: process.env.TABLA_PUBLICACIONES, documentClient: db,\n  partitionKey: { name: 'PUBLICACION_ID', type: 'number' },\n  indexes: {\n    PorEditorial: {\n      type: 'global',\n      partitionKey: { name: 'EDITORIAL_ID', type: 'number' },\n      sortKey: { name: 'PUBLICACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EDITORIAL = new Entity({\n  name: 'Editorial', table: TABLA_EDITORIALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    editorialId: number().key().savedAs('EDITORIAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PUBLICACION = new Entity({\n  name: 'Publicacion', table: TABLA_PUBLICACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    publicacionId: number().key().savedAs('PUBLICACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    paginas: number().savedAs('PAGINAS'),\n    editorialId: number().savedAs('EDITORIAL_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_EDITORIAL = new Entity({",
+            "title": "Campos de Editorial",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en EDITORIALES."
+          },
+          {
+            "text": "editorialId: number().key().savedAs('EDITORIAL_ID')",
+            "after": "export const MODELO_EDITORIAL",
+            "title": "ID → EDITORIAL_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como EDITORIAL_ID. number() define el tipo; key() lo vincula a la partition key de EDITORIALES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_EDITORIAL",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Editorial. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PUBLICACION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PUBLICACION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PUBLICACION en el repository.",
+            "after": "export const MODELO_PUBLICACION"
           },
           {
             "text": "name: 'Publicacion', table: TABLA_PUBLICACIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PUBLICACIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PUBLICACIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PUBLICACION"
           },
           {
             "text": "publicacionId: number().key().savedAs('PUBLICACION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce publicacionId a PUBLICACION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce publicacionId a PUBLICACION_ID.",
+            "after": "export const MODELO_PUBLICACION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PUBLICACION",
+            "title": "Texto de Publicacion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PUBLICACION. Guarda nombre en NOMBRE, dentro del ítem de PUBLICACIONES."
           },
           {
             "text": "paginas: number().savedAs('PAGINAS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. paginas es un número; se guarda como PAGINAS y no forma parte de la clave."
+            "title": "PAGINAS también se configura",
+            "note": "number() describe paginas. savedAs lo guarda en PAGINAS. Es un dato de Publicacion; no forma parte de la clave principal.",
+            "after": "export const MODELO_PUBLICACION"
           },
           {
             "text": "editorialId: number().savedAs('EDITORIAL_ID')",
-            "title": "Guardar la referencia",
-            "note": "EDITORIAL_ID es un atributo de PUBLICACIONES y la clave del índice PorEditorial. Aquí no lleva .key(): la clave de la tabla sigue siendo PUBLICACION_ID."
+            "title": "Referencia a Editorial",
+            "note": "editorialId se guarda en EDITORIAL_ID. Es la referencia a Editorial y la partition key del GSI PorEditorial. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PUBLICACION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorEditorial",
     "modelFile": "src/models/editorial-publicacion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Editorial",
+        "sql": "EDITORIAL",
+        "dynamo": "EDITORIALES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "editorialId",
+              "column": "EDITORIAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Editorial Roble",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Publicacion",
+        "sql": "PUBLICACION",
+        "dynamo": "PUBLICACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "publicacionId",
+              "column": "PUBLICACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Rutas del Ebro",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "PAGINAS",
+            "role": "data",
+            "example": 80,
+            "nest": {
+              "property": "paginas",
+              "column": "PAGINAS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "paginas",
+              "column": "PAGINAS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_EDITORIAL",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "editorial.id",
+              "column": "ID_EDITORIAL",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "editorialId",
+              "column": "EDITORIAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

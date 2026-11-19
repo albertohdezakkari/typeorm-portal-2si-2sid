@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Actuacion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'DURACION_MINUTOS', type: 'integer' })",
-            "title": "Una duración numérica",
+            "title": "DURACION_MINUTOS es una columna numérica",
             "note": "duracionMinutos se guarda en DURACION_MINUTOS, de tipo entero. El siguiente paso detalla la relación con Festival."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_FESTIVALES: { Ref: TablaFestivales }\n    TABLA_ACTUACIONES: { Ref: TablaActuaciones }\n\nresources:\n  Resources:\n    TablaFestivales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: FESTIVALES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: FESTIVAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaActuaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ACTUACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ACTUACION_ID, AttributeType: N }\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ACTUACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ACTUACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorFestival\n            # Clave compuesta = partition key + sort key:\n            # (FESTIVAL_ID, ACTUACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: FESTIVAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Festival.\n              - AttributeName: ACTUACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_MINUTOS",
+        "code": "provider:\n  environment:\n    TABLA_FESTIVALES: { Ref: TablaFestivales }\n    TABLA_ACTUACIONES: { Ref: TablaActuaciones }\n\nresources:\n  Resources:\n    TablaFestivales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: FESTIVALES\n        # PARTITION KEY: FESTIVAL_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_FESTIVAL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: FESTIVAL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaActuaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ACTUACIONES\n        # PARTITION KEY: ACTUACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   FESTIVAL_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ACTUACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ACTUACION_ID, AttributeType: N }\n          - { AttributeName: FESTIVAL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ACTUACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ACTUACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorFestival\n            # Clave compuesta = partition key + sort key:\n            # (FESTIVAL_ID, ACTUACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: FESTIVAL_ID\n                KeyType: HASH   # Partition key. Agrupa por Festival.\n              - AttributeName: ACTUACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ACTUACIONES copiados al índice.\n                - NOMBRE\n                - DURACION_MINUTOS",
         "cues": [
           {
             "text": "TableName: FESTIVALES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear FESTIVALES."
+            "note": "El YAML crea FESTIVALES y declara su clave FESTIVAL_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_FESTIVAL."
           },
           {
             "text": "TableName: ACTUACIONES",
             "title": "Tabla de actuaciones",
-            "note": "La tabla usa ACTUACION_ID como partition key. No tiene sort key."
+            "note": "ACTUACIONES usa ACTUACION_ID como partition key. Los otros atributos son NOMBRE, DURACION_MINUTOS y FESTIVAL_ID; los cuatro aparecen en MODELO_ACTUACION."
           },
           {
             "text": "IndexName: PorFestival",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_MINUTOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y DURACION_MINUTOS. Esos datos pertenecen a ACTUACIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/festival-actuacion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_FESTIVALES = new Table({\n  name: process.env.TABLA_FESTIVALES, documentClient: db,\n  partitionKey: { name: 'FESTIVAL_ID', type: 'number' }\n});\n\nexport const TABLA_ACTUACIONES = new Table({\n  name: process.env.TABLA_ACTUACIONES, documentClient: db,\n  partitionKey: { name: 'ACTUACION_ID', type: 'number' },\n  indexes: {\n    PorFestival: {\n      type: 'global',\n      partitionKey: { name: 'FESTIVAL_ID', type: 'number' },\n      sortKey: { name: 'ACTUACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_FESTIVAL = new Entity({\n  name: 'Festival', table: TABLA_FESTIVALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    festivalId: number().key().savedAs('FESTIVAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ACTUACION = new Entity({\n  name: 'Actuacion', table: TABLA_ACTUACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    actuacionId: number().key().savedAs('ACTUACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    festivalId: number().savedAs('FESTIVAL_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_FESTIVALES = new Table({",
+            "title": "Primero, Table de Festival",
+            "note": "Table describe FESTIVALES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'FESTIVAL_ID', type: 'number' }",
+            "title": "Clave de Festival",
+            "note": "FESTIVAL_ID identifica cada registro de FESTIVALES. El tipo de NOMBRE se declara en MODELO_FESTIVAL."
+          },
           {
             "text": "export const TABLA_ACTUACIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_FESTIVALES = new Table({\n  name: process.env.TABLA_FESTIVALES, documentClient: db,\n  partitionKey: { name: 'FESTIVAL_ID', type: 'number' }\n});\n\nexport const TABLA_ACTUACIONES = new Table({\n  name: process.env.TABLA_ACTUACIONES, documentClient: db,\n  partitionKey: { name: 'ACTUACION_ID', type: 'number' },\n  indexes: {\n    PorFestival: {\n      type: 'global',\n      partitionKey: { name: 'FESTIVAL_ID', type: 'number' },\n      sortKey: { name: 'ACTUACION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_FESTIVAL = new Entity({\n  name: 'Festival', table: TABLA_FESTIVALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    festivalId: number().key().savedAs('FESTIVAL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ACTUACION = new Entity({\n  name: 'Actuacion', table: TABLA_ACTUACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    actuacionId: number().key().savedAs('ACTUACION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    festivalId: number().savedAs('FESTIVAL_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_FESTIVAL = new Entity({",
+            "title": "Campos de Festival",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en FESTIVALES."
+          },
+          {
+            "text": "festivalId: number().key().savedAs('FESTIVAL_ID')",
+            "after": "export const MODELO_FESTIVAL",
+            "title": "ID → FESTIVAL_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como FESTIVAL_ID. number() define el tipo; key() lo vincula a la partition key de FESTIVALES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_FESTIVAL",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Festival. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_ACTUACION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ACTUACION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ACTUACION en el repository.",
+            "after": "export const MODELO_ACTUACION"
           },
           {
             "text": "name: 'Actuacion', table: TABLA_ACTUACIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_ACTUACIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_ACTUACIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_ACTUACION"
           },
           {
             "text": "actuacionId: number().key().savedAs('ACTUACION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce actuacionId a ACTUACION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce actuacionId a ACTUACION_ID.",
+            "after": "export const MODELO_ACTUACION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_ACTUACION",
+            "title": "Texto de Actuacion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_ACTUACION. Guarda nombre en NOMBRE, dentro del ítem de ACTUACIONES."
           },
           {
             "text": "duracionMinutos: number().savedAs('DURACION_MINUTOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. duracionMinutos es un número; se guarda como DURACION_MINUTOS y no forma parte de la clave."
+            "title": "DURACION_MINUTOS también se configura",
+            "note": "number() describe duracionMinutos. savedAs lo guarda en DURACION_MINUTOS. Es un dato de Actuacion; no forma parte de la clave principal.",
+            "after": "export const MODELO_ACTUACION"
           },
           {
             "text": "festivalId: number().savedAs('FESTIVAL_ID')",
-            "title": "Guardar la referencia",
-            "note": "FESTIVAL_ID es un atributo de ACTUACIONES y la clave del índice PorFestival. Aquí no lleva .key(): la clave de la tabla sigue siendo ACTUACION_ID."
+            "title": "Referencia a Festival",
+            "note": "festivalId se guarda en FESTIVAL_ID. Es la referencia a Festival y la partition key del GSI PorFestival. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_ACTUACION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorFestival",
     "modelFile": "src/models/festival-actuacion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Festival",
+        "sql": "FESTIVAL",
+        "dynamo": "FESTIVALES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "festivalId",
+              "column": "FESTIVAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Festival del Sol",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Actuacion",
+        "sql": "ACTUACION",
+        "dynamo": "ACTUACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "actuacionId",
+              "column": "ACTUACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Concierto acústico",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "DURACION_MINUTOS",
+            "role": "data",
+            "example": 25,
+            "nest": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_FESTIVAL",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "festival.id",
+              "column": "ID_FESTIVAL",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "festivalId",
+              "column": "FESTIVAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

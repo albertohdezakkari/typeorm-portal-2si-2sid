@@ -19,7 +19,21 @@ CLOUD = r'''
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { calls } from './src/datos/dynamo.mjs';
+import yaml from 'js-yaml';
 const d=JSON.parse(await readFile('./data.json','utf8')),c=d.context,p=c.parent,n=c.child,m=c.metric;
+const resources=yaml.load(d.steps.cloud[1].code).resources.Resources;
+for(const entity of d.fieldGuide.entities){
+ const resource=Object.values(resources).find(r=>r.Properties.TableName===entity.dynamo).Properties;
+ const keys=new Set([...resource.KeySchema,...(resource.GlobalSecondaryIndexes||[]).flatMap(i=>i.KeySchema)].map(k=>k.AttributeName));
+ assert.deepEqual(resource.AttributeDefinitions.map(a=>a.AttributeName).sort(),[...keys].sort());
+ assert.ok(resource.AttributeDefinitions.every(a=>a.AttributeType==='N'));
+ if(resource.GlobalSecondaryIndexes){
+  const index=resource.GlobalSecondaryIndexes[0];
+  assert.equal(index.IndexName,c.index);
+  assert.equal(index.Projection.ProjectionType,'INCLUDE');
+  assert.deepEqual(index.Projection.NonKeyAttributes,[c.text.column,m.column]);
+ }
+}
 process.env[p.variable]=p.table;process.env[n.variable]=n.table;
 const stages=d.steps.cloud;
 const load=chapter=>import('./'+stages.find(s=>s.chapter===chapter&&s.name==='Handler').path);

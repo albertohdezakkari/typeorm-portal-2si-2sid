@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Plaza",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
-            "title": "Una superficie numérica",
+            "title": "SUPERFICIE_M2 es una columna numérica",
             "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Urbanizacion."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_URBANIZACIONES: { Ref: TablaUrbanizaciones }\n    TABLA_PLAZAS: { Ref: TablaPlazas }\n\nresources:\n  Resources:\n    TablaUrbanizaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: URBANIZACIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: URBANIZACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlazas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLAZAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLAZA_ID, AttributeType: N }\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLAZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLAZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorUrbanizacion\n            # Clave compuesta = partition key + sort key:\n            # (URBANIZACION_ID, PLAZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: URBANIZACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Urbanizacion.\n              - AttributeName: PLAZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "code": "provider:\n  environment:\n    TABLA_URBANIZACIONES: { Ref: TablaUrbanizaciones }\n    TABLA_PLAZAS: { Ref: TablaPlazas }\n\nresources:\n  Resources:\n    TablaUrbanizaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: URBANIZACIONES\n        # PARTITION KEY: URBANIZACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_URBANIZACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: URBANIZACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlazas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLAZAS\n        # PARTITION KEY: PLAZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   URBANIZACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLAZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLAZA_ID, AttributeType: N }\n          - { AttributeName: URBANIZACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLAZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLAZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorUrbanizacion\n            # Clave compuesta = partition key + sort key:\n            # (URBANIZACION_ID, PLAZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: URBANIZACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Urbanizacion.\n              - AttributeName: PLAZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLAZAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
         "cues": [
           {
             "text": "TableName: URBANIZACIONES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear URBANIZACIONES."
+            "note": "El YAML crea URBANIZACIONES y declara su clave URBANIZACION_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_URBANIZACION."
           },
           {
             "text": "TableName: PLAZAS",
             "title": "Tabla de plazas",
-            "note": "La tabla usa PLAZA_ID como partition key. No tiene sort key."
+            "note": "PLAZAS usa PLAZA_ID como partition key. Los otros atributos son NOMBRE, SUPERFICIE_M2 y URBANIZACION_ID; los cuatro aparecen en MODELO_PLAZA."
           },
           {
             "text": "IndexName: PorUrbanizacion",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y SUPERFICIE_M2. Esos datos pertenecen a PLAZAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/urbanizacion-plaza.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_URBANIZACIONES = new Table({\n  name: process.env.TABLA_URBANIZACIONES, documentClient: db,\n  partitionKey: { name: 'URBANIZACION_ID', type: 'number' }\n});\n\nexport const TABLA_PLAZAS = new Table({\n  name: process.env.TABLA_PLAZAS, documentClient: db,\n  partitionKey: { name: 'PLAZA_ID', type: 'number' },\n  indexes: {\n    PorUrbanizacion: {\n      type: 'global',\n      partitionKey: { name: 'URBANIZACION_ID', type: 'number' },\n      sortKey: { name: 'PLAZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_URBANIZACION = new Entity({\n  name: 'Urbanizacion', table: TABLA_URBANIZACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    urbanizacionId: number().key().savedAs('URBANIZACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PLAZA = new Entity({\n  name: 'Plaza', table: TABLA_PLAZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    plazaId: number().key().savedAs('PLAZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    urbanizacionId: number().savedAs('URBANIZACION_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_URBANIZACIONES = new Table({",
+            "title": "Primero, Table de Urbanizacion",
+            "note": "Table describe URBANIZACIONES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'URBANIZACION_ID', type: 'number' }",
+            "title": "Clave de Urbanizacion",
+            "note": "URBANIZACION_ID identifica cada registro de URBANIZACIONES. El tipo de NOMBRE se declara en MODELO_URBANIZACION."
+          },
           {
             "text": "export const TABLA_PLAZAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_URBANIZACIONES = new Table({\n  name: process.env.TABLA_URBANIZACIONES, documentClient: db,\n  partitionKey: { name: 'URBANIZACION_ID', type: 'number' }\n});\n\nexport const TABLA_PLAZAS = new Table({\n  name: process.env.TABLA_PLAZAS, documentClient: db,\n  partitionKey: { name: 'PLAZA_ID', type: 'number' },\n  indexes: {\n    PorUrbanizacion: {\n      type: 'global',\n      partitionKey: { name: 'URBANIZACION_ID', type: 'number' },\n      sortKey: { name: 'PLAZA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_URBANIZACION = new Entity({\n  name: 'Urbanizacion', table: TABLA_URBANIZACIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    urbanizacionId: number().key().savedAs('URBANIZACION_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PLAZA = new Entity({\n  name: 'Plaza', table: TABLA_PLAZAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    plazaId: number().key().savedAs('PLAZA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    urbanizacionId: number().savedAs('URBANIZACION_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_URBANIZACION = new Entity({",
+            "title": "Campos de Urbanizacion",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en URBANIZACIONES."
+          },
+          {
+            "text": "urbanizacionId: number().key().savedAs('URBANIZACION_ID')",
+            "after": "export const MODELO_URBANIZACION",
+            "title": "ID → URBANIZACION_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como URBANIZACION_ID. number() define el tipo; key() lo vincula a la partition key de URBANIZACIONES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_URBANIZACION",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Urbanizacion. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PLAZA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PLAZA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PLAZA en el repository.",
+            "after": "export const MODELO_PLAZA"
           },
           {
             "text": "name: 'Plaza', table: TABLA_PLAZAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PLAZAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PLAZAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PLAZA"
           },
           {
             "text": "plazaId: number().key().savedAs('PLAZA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce plazaId a PLAZA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce plazaId a PLAZA_ID.",
+            "after": "export const MODELO_PLAZA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PLAZA",
+            "title": "Texto de Plaza → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PLAZA. Guarda nombre en NOMBRE, dentro del ítem de PLAZAS."
           },
           {
             "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+            "title": "SUPERFICIE_M2 también se configura",
+            "note": "number() describe superficieM2. savedAs lo guarda en SUPERFICIE_M2. Es un dato de Plaza; no forma parte de la clave principal.",
+            "after": "export const MODELO_PLAZA"
           },
           {
             "text": "urbanizacionId: number().savedAs('URBANIZACION_ID')",
-            "title": "Guardar la referencia",
-            "note": "URBANIZACION_ID es un atributo de PLAZAS y la clave del índice PorUrbanizacion. Aquí no lleva .key(): la clave de la tabla sigue siendo PLAZA_ID."
+            "title": "Referencia a Urbanizacion",
+            "note": "urbanizacionId se guarda en URBANIZACION_ID. Es la referencia a Urbanizacion y la partition key del GSI PorUrbanizacion. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PLAZA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorUrbanizacion",
     "modelFile": "src/models/urbanizacion-plaza.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Urbanizacion",
+        "sql": "URBANIZACION",
+        "dynamo": "URBANIZACIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "urbanizacionId",
+              "column": "URBANIZACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Urbanización Jardín",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Plaza",
+        "sql": "PLAZA",
+        "dynamo": "PLAZAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "plazaId",
+              "column": "PLAZA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Plaza P-01",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "SUPERFICIE_M2",
+            "role": "data",
+            "example": 10,
+            "nest": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_URBANIZACION",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "urbanizacion.id",
+              "column": "ID_URBANIZACION",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "urbanizacionId",
+              "column": "URBANIZACION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

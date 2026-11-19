@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Animal",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'EDAD_MESES', type: 'integer' })",
-            "title": "Una edad numérica",
+            "title": "EDAD_MESES es una columna numérica",
             "note": "edadMeses se guarda en EDAD_MESES, de tipo entero. El siguiente paso detalla la relación con Refugio."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_REFUGIOS: { Ref: TablaRefugios }\n    TABLA_ANIMALES: { Ref: TablaAnimales }\n\nresources:\n  Resources:\n    TablaRefugios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REFUGIOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: REFUGIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REFUGIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAnimales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ANIMALES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ANIMAL_ID, AttributeType: N }\n          - { AttributeName: REFUGIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ANIMAL_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ANIMALES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorRefugio\n            # Clave compuesta = partition key + sort key:\n            # (REFUGIO_ID, ANIMAL_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: REFUGIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Refugio.\n              - AttributeName: ANIMAL_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - EDAD_MESES",
+        "code": "provider:\n  environment:\n    TABLA_REFUGIOS: { Ref: TablaRefugios }\n    TABLA_ANIMALES: { Ref: TablaAnimales }\n\nresources:\n  Resources:\n    TablaRefugios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REFUGIOS\n        # PARTITION KEY: REFUGIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_REFUGIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: REFUGIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REFUGIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAnimales:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ANIMALES\n        # PARTITION KEY: ANIMAL_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   EDAD_MESES (N: número).\n        #   REFUGIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ANIMAL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ANIMAL_ID, AttributeType: N }\n          - { AttributeName: REFUGIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ANIMAL_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ANIMALES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorRefugio\n            # Clave compuesta = partition key + sort key:\n            # (REFUGIO_ID, ANIMAL_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: REFUGIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Refugio.\n              - AttributeName: ANIMAL_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ANIMALES copiados al índice.\n                - NOMBRE\n                - EDAD_MESES",
         "cues": [
           {
             "text": "TableName: REFUGIOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear REFUGIOS."
+            "note": "El YAML crea REFUGIOS y declara su clave REFUGIO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_REFUGIO."
           },
           {
             "text": "TableName: ANIMALES",
             "title": "Tabla de animales",
-            "note": "La tabla usa ANIMAL_ID como partition key. No tiene sort key."
+            "note": "ANIMALES usa ANIMAL_ID como partition key. Los otros atributos son NOMBRE, EDAD_MESES y REFUGIO_ID; los cuatro aparecen en MODELO_ANIMAL."
           },
           {
             "text": "IndexName: PorRefugio",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y EDAD_MESES para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y EDAD_MESES. Esos datos pertenecen a ANIMALES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/refugio-animal.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_REFUGIOS = new Table({\n  name: process.env.TABLA_REFUGIOS, documentClient: db,\n  partitionKey: { name: 'REFUGIO_ID', type: 'number' }\n});\n\nexport const TABLA_ANIMALES = new Table({\n  name: process.env.TABLA_ANIMALES, documentClient: db,\n  partitionKey: { name: 'ANIMAL_ID', type: 'number' },\n  indexes: {\n    PorRefugio: {\n      type: 'global',\n      partitionKey: { name: 'REFUGIO_ID', type: 'number' },\n      sortKey: { name: 'ANIMAL_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_REFUGIO = new Entity({\n  name: 'Refugio', table: TABLA_REFUGIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    refugioId: number().key().savedAs('REFUGIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ANIMAL = new Entity({\n  name: 'Animal', table: TABLA_ANIMALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    animalId: number().key().savedAs('ANIMAL_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    edadMeses: number().savedAs('EDAD_MESES'),\n    refugioId: number().savedAs('REFUGIO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_REFUGIOS = new Table({",
+            "title": "Primero, Table de Refugio",
+            "note": "Table describe REFUGIOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'REFUGIO_ID', type: 'number' }",
+            "title": "Clave de Refugio",
+            "note": "REFUGIO_ID identifica cada registro de REFUGIOS. El tipo de NOMBRE se declara en MODELO_REFUGIO."
+          },
           {
             "text": "export const TABLA_ANIMALES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_REFUGIOS = new Table({\n  name: process.env.TABLA_REFUGIOS, documentClient: db,\n  partitionKey: { name: 'REFUGIO_ID', type: 'number' }\n});\n\nexport const TABLA_ANIMALES = new Table({\n  name: process.env.TABLA_ANIMALES, documentClient: db,\n  partitionKey: { name: 'ANIMAL_ID', type: 'number' },\n  indexes: {\n    PorRefugio: {\n      type: 'global',\n      partitionKey: { name: 'REFUGIO_ID', type: 'number' },\n      sortKey: { name: 'ANIMAL_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_REFUGIO = new Entity({\n  name: 'Refugio', table: TABLA_REFUGIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    refugioId: number().key().savedAs('REFUGIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_ANIMAL = new Entity({\n  name: 'Animal', table: TABLA_ANIMALES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    animalId: number().key().savedAs('ANIMAL_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    edadMeses: number().savedAs('EDAD_MESES'),\n    refugioId: number().savedAs('REFUGIO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_REFUGIO = new Entity({",
+            "title": "Campos de Refugio",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en REFUGIOS."
+          },
+          {
+            "text": "refugioId: number().key().savedAs('REFUGIO_ID')",
+            "after": "export const MODELO_REFUGIO",
+            "title": "ID → REFUGIO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como REFUGIO_ID. number() define el tipo; key() lo vincula a la partition key de REFUGIOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_REFUGIO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Refugio. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_ANIMAL = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ANIMAL en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_ANIMAL en el repository.",
+            "after": "export const MODELO_ANIMAL"
           },
           {
             "text": "name: 'Animal', table: TABLA_ANIMALES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_ANIMALES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_ANIMALES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_ANIMAL"
           },
           {
             "text": "animalId: number().key().savedAs('ANIMAL_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce animalId a ANIMAL_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce animalId a ANIMAL_ID.",
+            "after": "export const MODELO_ANIMAL"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_ANIMAL",
+            "title": "Texto de Animal → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_ANIMAL. Guarda nombre en NOMBRE, dentro del ítem de ANIMALES."
           },
           {
             "text": "edadMeses: number().savedAs('EDAD_MESES')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. edadMeses es un número; se guarda como EDAD_MESES y no forma parte de la clave."
+            "title": "EDAD_MESES también se configura",
+            "note": "number() describe edadMeses. savedAs lo guarda en EDAD_MESES. Es un dato de Animal; no forma parte de la clave principal.",
+            "after": "export const MODELO_ANIMAL"
           },
           {
             "text": "refugioId: number().savedAs('REFUGIO_ID')",
-            "title": "Guardar la referencia",
-            "note": "REFUGIO_ID es un atributo de ANIMALES y la clave del índice PorRefugio. Aquí no lleva .key(): la clave de la tabla sigue siendo ANIMAL_ID."
+            "title": "Referencia a Refugio",
+            "note": "refugioId se guarda en REFUGIO_ID. Es la referencia a Refugio y la partition key del GSI PorRefugio. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_ANIMAL"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorRefugio",
     "modelFile": "src/models/refugio-animal.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Refugio",
+        "sql": "REFUGIO",
+        "dynamo": "REFUGIOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "refugioId",
+              "column": "REFUGIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Refugio Norte",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Animal",
+        "sql": "ANIMAL",
+        "dynamo": "ANIMALES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "animalId",
+              "column": "ANIMAL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Nala",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "EDAD_MESES",
+            "role": "data",
+            "example": 8,
+            "nest": {
+              "property": "edadMeses",
+              "column": "EDAD_MESES",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "edadMeses",
+              "column": "EDAD_MESES",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_REFUGIO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "refugio.id",
+              "column": "ID_REFUGIO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "refugioId",
+              "column": "REFUGIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

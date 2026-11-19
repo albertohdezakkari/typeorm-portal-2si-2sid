@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Excursion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'DURACION_HORAS', type: 'integer' })",
-            "title": "Una duración numérica",
+            "title": "DURACION_HORAS es una columna numérica",
             "note": "duracionHoras se guarda en DURACION_HORAS, de tipo entero. El siguiente paso detalla la relación con Agencia."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_HORAS",
+        "code": "provider:\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
         "cues": [
           {
             "text": "TableName: AGENCIAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear AGENCIAS."
+            "note": "El YAML crea AGENCIAS y declara su clave AGENCIA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_AGENCIA."
           },
           {
             "text": "TableName: EXCURSIONES",
             "title": "Tabla de excursiones",
-            "note": "La tabla usa EXCURSION_ID como partition key. No tiene sort key."
+            "note": "EXCURSIONES usa EXCURSION_ID como partition key. Los otros atributos son NOMBRE, DURACION_HORAS y AGENCIA_ID; los cuatro aparecen en MODELO_EXCURSION."
           },
           {
             "text": "IndexName: PorAgencia",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_HORAS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y DURACION_HORAS. Esos datos pertenecen a EXCURSIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/agencia-excursion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AGENCIAS = new Table({\n  name: process.env.TABLA_AGENCIAS, documentClient: db,\n  partitionKey: { name: 'AGENCIA_ID', type: 'number' }\n});\n\nexport const TABLA_EXCURSIONES = new Table({\n  name: process.env.TABLA_EXCURSIONES, documentClient: db,\n  partitionKey: { name: 'EXCURSION_ID', type: 'number' },\n  indexes: {\n    PorAgencia: {\n      type: 'global',\n      partitionKey: { name: 'AGENCIA_ID', type: 'number' },\n      sortKey: { name: 'EXCURSION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AGENCIA = new Entity({\n  name: 'Agencia', table: TABLA_AGENCIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    agenciaId: number().key().savedAs('AGENCIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EXCURSION = new Entity({\n  name: 'Excursion', table: TABLA_EXCURSIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    excursionId: number().key().savedAs('EXCURSION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionHoras: number().savedAs('DURACION_HORAS'),\n    agenciaId: number().savedAs('AGENCIA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_AGENCIAS = new Table({",
+            "title": "Primero, Table de Agencia",
+            "note": "Table describe AGENCIAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'AGENCIA_ID', type: 'number' }",
+            "title": "Clave de Agencia",
+            "note": "AGENCIA_ID identifica cada registro de AGENCIAS. El tipo de NOMBRE se declara en MODELO_AGENCIA."
+          },
           {
             "text": "export const TABLA_EXCURSIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AGENCIAS = new Table({\n  name: process.env.TABLA_AGENCIAS, documentClient: db,\n  partitionKey: { name: 'AGENCIA_ID', type: 'number' }\n});\n\nexport const TABLA_EXCURSIONES = new Table({\n  name: process.env.TABLA_EXCURSIONES, documentClient: db,\n  partitionKey: { name: 'EXCURSION_ID', type: 'number' },\n  indexes: {\n    PorAgencia: {\n      type: 'global',\n      partitionKey: { name: 'AGENCIA_ID', type: 'number' },\n      sortKey: { name: 'EXCURSION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AGENCIA = new Entity({\n  name: 'Agencia', table: TABLA_AGENCIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    agenciaId: number().key().savedAs('AGENCIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_EXCURSION = new Entity({\n  name: 'Excursion', table: TABLA_EXCURSIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    excursionId: number().key().savedAs('EXCURSION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionHoras: number().savedAs('DURACION_HORAS'),\n    agenciaId: number().savedAs('AGENCIA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_AGENCIA = new Entity({",
+            "title": "Campos de Agencia",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en AGENCIAS."
+          },
+          {
+            "text": "agenciaId: number().key().savedAs('AGENCIA_ID')",
+            "after": "export const MODELO_AGENCIA",
+            "title": "ID → AGENCIA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como AGENCIA_ID. number() define el tipo; key() lo vincula a la partition key de AGENCIAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_AGENCIA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Agencia. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_EXCURSION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_EXCURSION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_EXCURSION en el repository.",
+            "after": "export const MODELO_EXCURSION"
           },
           {
             "text": "name: 'Excursion', table: TABLA_EXCURSIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_EXCURSIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_EXCURSIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_EXCURSION"
           },
           {
             "text": "excursionId: number().key().savedAs('EXCURSION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce excursionId a EXCURSION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce excursionId a EXCURSION_ID.",
+            "after": "export const MODELO_EXCURSION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_EXCURSION",
+            "title": "Texto de Excursion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_EXCURSION. Guarda nombre en NOMBRE, dentro del ítem de EXCURSIONES."
           },
           {
             "text": "duracionHoras: number().savedAs('DURACION_HORAS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. duracionHoras es un número; se guarda como DURACION_HORAS y no forma parte de la clave."
+            "title": "DURACION_HORAS también se configura",
+            "note": "number() describe duracionHoras. savedAs lo guarda en DURACION_HORAS. Es un dato de Excursion; no forma parte de la clave principal.",
+            "after": "export const MODELO_EXCURSION"
           },
           {
             "text": "agenciaId: number().savedAs('AGENCIA_ID')",
-            "title": "Guardar la referencia",
-            "note": "AGENCIA_ID es un atributo de EXCURSIONES y la clave del índice PorAgencia. Aquí no lleva .key(): la clave de la tabla sigue siendo EXCURSION_ID."
+            "title": "Referencia a Agencia",
+            "note": "agenciaId se guarda en AGENCIA_ID. Es la referencia a Agencia y la partition key del GSI PorAgencia. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_EXCURSION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorAgencia",
     "modelFile": "src/models/agencia-excursion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Agencia",
+        "sql": "AGENCIA",
+        "dynamo": "AGENCIAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "agenciaId",
+              "column": "AGENCIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Agencia Horizonte",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Excursion",
+        "sql": "EXCURSION",
+        "dynamo": "EXCURSIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "excursionId",
+              "column": "EXCURSION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Ruta del bosque",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "DURACION_HORAS",
+            "role": "data",
+            "example": 2,
+            "nest": {
+              "property": "duracionHoras",
+              "column": "DURACION_HORAS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "duracionHoras",
+              "column": "DURACION_HORAS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_AGENCIA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "agencia.id",
+              "column": "ID_AGENCIA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "agenciaId",
+              "column": "AGENCIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

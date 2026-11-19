@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Reserva",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'NOCHES', type: 'integer' })",
-            "title": "Una duración numérica",
+            "title": "NOCHES es una columna numérica",
             "note": "noches se guarda en NOCHES, de tipo entero. El siguiente paso detalla la relación con Hotel."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_HOTELES: { Ref: TablaHoteles }\n    TABLA_RESERVAS: { Ref: TablaReservas }\n\nresources:\n  Resources:\n    TablaHoteles:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HOTELES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HOTEL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HOTEL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReservas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: RESERVAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: RESERVA_ID, AttributeType: N }\n          - { AttributeName: HOTEL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: RESERVA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en RESERVAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHotel\n            # Clave compuesta = partition key + sort key:\n            # (HOTEL_ID, RESERVA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HOTEL_ID\n                KeyType: HASH   # Partition key. Agrupa por Hotel.\n              - AttributeName: RESERVA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - NOCHES",
+        "code": "provider:\n  environment:\n    TABLA_HOTELES: { Ref: TablaHoteles }\n    TABLA_RESERVAS: { Ref: TablaReservas }\n\nresources:\n  Resources:\n    TablaHoteles:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HOTELES\n        # PARTITION KEY: HOTEL_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HOTEL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HOTEL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HOTEL_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReservas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: RESERVAS\n        # PARTITION KEY: RESERVA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   NOCHES (N: número).\n        #   HOTEL_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_RESERVA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: RESERVA_ID, AttributeType: N }\n          - { AttributeName: HOTEL_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: RESERVA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en RESERVAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHotel\n            # Clave compuesta = partition key + sort key:\n            # (HOTEL_ID, RESERVA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HOTEL_ID\n                KeyType: HASH   # Partition key. Agrupa por Hotel.\n              - AttributeName: RESERVA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de RESERVAS copiados al índice.\n                - NOMBRE\n                - NOCHES",
         "cues": [
           {
             "text": "TableName: HOTELES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear HOTELES."
+            "note": "El YAML crea HOTELES y declara su clave HOTEL_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_HOTEL."
           },
           {
             "text": "TableName: RESERVAS",
             "title": "Tabla de reservas",
-            "note": "La tabla usa RESERVA_ID como partition key. No tiene sort key."
+            "note": "RESERVAS usa RESERVA_ID como partition key. Los otros atributos son NOMBRE, NOCHES y HOTEL_ID; los cuatro aparecen en MODELO_RESERVA."
           },
           {
             "text": "IndexName: PorHotel",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y NOCHES para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y NOCHES. Esos datos pertenecen a RESERVAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/hotel-reserva.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HOTELES = new Table({\n  name: process.env.TABLA_HOTELES, documentClient: db,\n  partitionKey: { name: 'HOTEL_ID', type: 'number' }\n});\n\nexport const TABLA_RESERVAS = new Table({\n  name: process.env.TABLA_RESERVAS, documentClient: db,\n  partitionKey: { name: 'RESERVA_ID', type: 'number' },\n  indexes: {\n    PorHotel: {\n      type: 'global',\n      partitionKey: { name: 'HOTEL_ID', type: 'number' },\n      sortKey: { name: 'RESERVA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HOTEL = new Entity({\n  name: 'Hotel', table: TABLA_HOTELES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    hotelId: number().key().savedAs('HOTEL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_RESERVA = new Entity({\n  name: 'Reserva', table: TABLA_RESERVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reservaId: number().key().savedAs('RESERVA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    noches: number().savedAs('NOCHES'),\n    hotelId: number().savedAs('HOTEL_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_HOTELES = new Table({",
+            "title": "Primero, Table de Hotel",
+            "note": "Table describe HOTELES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'HOTEL_ID', type: 'number' }",
+            "title": "Clave de Hotel",
+            "note": "HOTEL_ID identifica cada registro de HOTELES. El tipo de NOMBRE se declara en MODELO_HOTEL."
+          },
           {
             "text": "export const TABLA_RESERVAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HOTELES = new Table({\n  name: process.env.TABLA_HOTELES, documentClient: db,\n  partitionKey: { name: 'HOTEL_ID', type: 'number' }\n});\n\nexport const TABLA_RESERVAS = new Table({\n  name: process.env.TABLA_RESERVAS, documentClient: db,\n  partitionKey: { name: 'RESERVA_ID', type: 'number' },\n  indexes: {\n    PorHotel: {\n      type: 'global',\n      partitionKey: { name: 'HOTEL_ID', type: 'number' },\n      sortKey: { name: 'RESERVA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HOTEL = new Entity({\n  name: 'Hotel', table: TABLA_HOTELES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    hotelId: number().key().savedAs('HOTEL_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_RESERVA = new Entity({\n  name: 'Reserva', table: TABLA_RESERVAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    reservaId: number().key().savedAs('RESERVA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    noches: number().savedAs('NOCHES'),\n    hotelId: number().savedAs('HOTEL_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_HOTEL = new Entity({",
+            "title": "Campos de Hotel",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en HOTELES."
+          },
+          {
+            "text": "hotelId: number().key().savedAs('HOTEL_ID')",
+            "after": "export const MODELO_HOTEL",
+            "title": "ID → HOTEL_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como HOTEL_ID. number() define el tipo; key() lo vincula a la partition key de HOTELES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_HOTEL",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Hotel. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_RESERVA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_RESERVA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_RESERVA en el repository.",
+            "after": "export const MODELO_RESERVA"
           },
           {
             "text": "name: 'Reserva', table: TABLA_RESERVAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_RESERVAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_RESERVAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_RESERVA"
           },
           {
             "text": "reservaId: number().key().savedAs('RESERVA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce reservaId a RESERVA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce reservaId a RESERVA_ID.",
+            "after": "export const MODELO_RESERVA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_RESERVA",
+            "title": "Texto de Reserva → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_RESERVA. Guarda nombre en NOMBRE, dentro del ítem de RESERVAS."
           },
           {
             "text": "noches: number().savedAs('NOCHES')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. noches es un número; se guarda como NOCHES y no forma parte de la clave."
+            "title": "NOCHES también se configura",
+            "note": "number() describe noches. savedAs lo guarda en NOCHES. Es un dato de Reserva; no forma parte de la clave principal.",
+            "after": "export const MODELO_RESERVA"
           },
           {
             "text": "hotelId: number().savedAs('HOTEL_ID')",
-            "title": "Guardar la referencia",
-            "note": "HOTEL_ID es un atributo de RESERVAS y la clave del índice PorHotel. Aquí no lleva .key(): la clave de la tabla sigue siendo RESERVA_ID."
+            "title": "Referencia a Hotel",
+            "note": "hotelId se guarda en HOTEL_ID. Es la referencia a Hotel y la partition key del GSI PorHotel. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_RESERVA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorHotel",
     "modelFile": "src/models/hotel-reserva.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Hotel",
+        "sql": "HOTEL",
+        "dynamo": "HOTELES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "hotelId",
+              "column": "HOTEL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Hotel Aurora",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Reserva",
+        "sql": "RESERVA",
+        "dynamo": "RESERVAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "reservaId",
+              "column": "RESERVA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Reserva R-101",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "NOCHES",
+            "role": "data",
+            "example": 2,
+            "nest": {
+              "property": "noches",
+              "column": "NOCHES",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "noches",
+              "column": "NOCHES",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_HOTEL",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "hotel.id",
+              "column": "ID_HOTEL",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "hotelId",
+              "column": "HOTEL_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

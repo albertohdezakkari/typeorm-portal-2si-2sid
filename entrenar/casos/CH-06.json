@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Sesion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'PLAZAS', type: 'integer' })",
-            "title": "Una plazas numérica",
+            "title": "PLAZAS es una columna numérica",
             "note": "plazas se guarda en PLAZAS, de tipo entero. El siguiente paso detalla la relación con Gimnasio."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - PLAZAS",
+        "code": "provider:\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
         "cues": [
           {
             "text": "TableName: GIMNASIOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear GIMNASIOS."
+            "note": "El YAML crea GIMNASIOS y declara su clave GIMNASIO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_GIMNASIO."
           },
           {
             "text": "TableName: SESIONES",
             "title": "Tabla de sesiones",
-            "note": "La tabla usa SESION_ID como partition key. No tiene sort key."
+            "note": "SESIONES usa SESION_ID como partition key. Los otros atributos son NOMBRE, PLAZAS y GIMNASIO_ID; los cuatro aparecen en MODELO_SESION."
           },
           {
             "text": "IndexName: PorGimnasio",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y PLAZAS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y PLAZAS. Esos datos pertenecen a SESIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/gimnasio-sesion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GIMNASIOS = new Table({\n  name: process.env.TABLA_GIMNASIOS, documentClient: db,\n  partitionKey: { name: 'GIMNASIO_ID', type: 'number' }\n});\n\nexport const TABLA_SESIONES = new Table({\n  name: process.env.TABLA_SESIONES, documentClient: db,\n  partitionKey: { name: 'SESION_ID', type: 'number' },\n  indexes: {\n    PorGimnasio: {\n      type: 'global',\n      partitionKey: { name: 'GIMNASIO_ID', type: 'number' },\n      sortKey: { name: 'SESION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GIMNASIO = new Entity({\n  name: 'Gimnasio', table: TABLA_GIMNASIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    gimnasioId: number().key().savedAs('GIMNASIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_SESION = new Entity({\n  name: 'Sesion', table: TABLA_SESIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    sesionId: number().key().savedAs('SESION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    plazas: number().savedAs('PLAZAS'),\n    gimnasioId: number().savedAs('GIMNASIO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_GIMNASIOS = new Table({",
+            "title": "Primero, Table de Gimnasio",
+            "note": "Table describe GIMNASIOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'GIMNASIO_ID', type: 'number' }",
+            "title": "Clave de Gimnasio",
+            "note": "GIMNASIO_ID identifica cada registro de GIMNASIOS. El tipo de NOMBRE se declara en MODELO_GIMNASIO."
+          },
           {
             "text": "export const TABLA_SESIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GIMNASIOS = new Table({\n  name: process.env.TABLA_GIMNASIOS, documentClient: db,\n  partitionKey: { name: 'GIMNASIO_ID', type: 'number' }\n});\n\nexport const TABLA_SESIONES = new Table({\n  name: process.env.TABLA_SESIONES, documentClient: db,\n  partitionKey: { name: 'SESION_ID', type: 'number' },\n  indexes: {\n    PorGimnasio: {\n      type: 'global',\n      partitionKey: { name: 'GIMNASIO_ID', type: 'number' },\n      sortKey: { name: 'SESION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GIMNASIO = new Entity({\n  name: 'Gimnasio', table: TABLA_GIMNASIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    gimnasioId: number().key().savedAs('GIMNASIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_SESION = new Entity({\n  name: 'Sesion', table: TABLA_SESIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    sesionId: number().key().savedAs('SESION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    plazas: number().savedAs('PLAZAS'),\n    gimnasioId: number().savedAs('GIMNASIO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_GIMNASIO = new Entity({",
+            "title": "Campos de Gimnasio",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en GIMNASIOS."
+          },
+          {
+            "text": "gimnasioId: number().key().savedAs('GIMNASIO_ID')",
+            "after": "export const MODELO_GIMNASIO",
+            "title": "ID → GIMNASIO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como GIMNASIO_ID. number() define el tipo; key() lo vincula a la partition key de GIMNASIOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_GIMNASIO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Gimnasio. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_SESION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_SESION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_SESION en el repository.",
+            "after": "export const MODELO_SESION"
           },
           {
             "text": "name: 'Sesion', table: TABLA_SESIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_SESIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_SESIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_SESION"
           },
           {
             "text": "sesionId: number().key().savedAs('SESION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce sesionId a SESION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce sesionId a SESION_ID.",
+            "after": "export const MODELO_SESION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_SESION",
+            "title": "Texto de Sesion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_SESION. Guarda nombre en NOMBRE, dentro del ítem de SESIONES."
           },
           {
             "text": "plazas: number().savedAs('PLAZAS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. plazas es un número; se guarda como PLAZAS y no forma parte de la clave."
+            "title": "PLAZAS también se configura",
+            "note": "number() describe plazas. savedAs lo guarda en PLAZAS. Es un dato de Sesion; no forma parte de la clave principal.",
+            "after": "export const MODELO_SESION"
           },
           {
             "text": "gimnasioId: number().savedAs('GIMNASIO_ID')",
-            "title": "Guardar la referencia",
-            "note": "GIMNASIO_ID es un atributo de SESIONES y la clave del índice PorGimnasio. Aquí no lleva .key(): la clave de la tabla sigue siendo SESION_ID."
+            "title": "Referencia a Gimnasio",
+            "note": "gimnasioId se guarda en GIMNASIO_ID. Es la referencia a Gimnasio y la partition key del GSI PorGimnasio. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_SESION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorGimnasio",
     "modelFile": "src/models/gimnasio-sesion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Gimnasio",
+        "sql": "GIMNASIO",
+        "dynamo": "GIMNASIOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "gimnasioId",
+              "column": "GIMNASIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Gimnasio Norte",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Sesion",
+        "sql": "SESION",
+        "dynamo": "SESIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "sesionId",
+              "column": "SESION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Pilates inicial",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "PLAZAS",
+            "role": "data",
+            "example": 10,
+            "nest": {
+              "property": "plazas",
+              "column": "PLAZAS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "plazas",
+              "column": "PLAZAS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_GIMNASIO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "gimnasio.id",
+              "column": "ID_GIMNASIO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "gimnasioId",
+              "column": "GIMNASIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

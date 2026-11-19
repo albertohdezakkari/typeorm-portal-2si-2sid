@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Muestra",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'CANTIDAD_ML', type: 'integer' })",
-            "title": "Una cantidad numérica",
+            "title": "CANTIDAD_ML es una columna numérica",
             "note": "cantidadMl se guarda en CANTIDAD_ML, de tipo entero. El siguiente paso detalla la relación con Laboratorio."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - CANTIDAD_ML",
+        "code": "provider:\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
         "cues": [
           {
             "text": "TableName: LABORATORIOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear LABORATORIOS."
+            "note": "El YAML crea LABORATORIOS y declara su clave LABORATORIO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_LABORATORIO."
           },
           {
             "text": "TableName: MUESTRAS",
             "title": "Tabla de muestras",
-            "note": "La tabla usa MUESTRA_ID como partition key. No tiene sort key."
+            "note": "MUESTRAS usa MUESTRA_ID como partition key. Los otros atributos son NOMBRE, CANTIDAD_ML y LABORATORIO_ID; los cuatro aparecen en MODELO_MUESTRA."
           },
           {
             "text": "IndexName: PorLaboratorio",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y CANTIDAD_ML para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y CANTIDAD_ML. Esos datos pertenecen a MUESTRAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/laboratorio-muestra.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_LABORATORIOS = new Table({\n  name: process.env.TABLA_LABORATORIOS, documentClient: db,\n  partitionKey: { name: 'LABORATORIO_ID', type: 'number' }\n});\n\nexport const TABLA_MUESTRAS = new Table({\n  name: process.env.TABLA_MUESTRAS, documentClient: db,\n  partitionKey: { name: 'MUESTRA_ID', type: 'number' },\n  indexes: {\n    PorLaboratorio: {\n      type: 'global',\n      partitionKey: { name: 'LABORATORIO_ID', type: 'number' },\n      sortKey: { name: 'MUESTRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_LABORATORIO = new Entity({\n  name: 'Laboratorio', table: TABLA_LABORATORIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    laboratorioId: number().key().savedAs('LABORATORIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_MUESTRA = new Entity({\n  name: 'Muestra', table: TABLA_MUESTRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    muestraId: number().key().savedAs('MUESTRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    cantidadMl: number().savedAs('CANTIDAD_ML'),\n    laboratorioId: number().savedAs('LABORATORIO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_LABORATORIOS = new Table({",
+            "title": "Primero, Table de Laboratorio",
+            "note": "Table describe LABORATORIOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'LABORATORIO_ID', type: 'number' }",
+            "title": "Clave de Laboratorio",
+            "note": "LABORATORIO_ID identifica cada registro de LABORATORIOS. El tipo de NOMBRE se declara en MODELO_LABORATORIO."
+          },
           {
             "text": "export const TABLA_MUESTRAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_LABORATORIOS = new Table({\n  name: process.env.TABLA_LABORATORIOS, documentClient: db,\n  partitionKey: { name: 'LABORATORIO_ID', type: 'number' }\n});\n\nexport const TABLA_MUESTRAS = new Table({\n  name: process.env.TABLA_MUESTRAS, documentClient: db,\n  partitionKey: { name: 'MUESTRA_ID', type: 'number' },\n  indexes: {\n    PorLaboratorio: {\n      type: 'global',\n      partitionKey: { name: 'LABORATORIO_ID', type: 'number' },\n      sortKey: { name: 'MUESTRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_LABORATORIO = new Entity({\n  name: 'Laboratorio', table: TABLA_LABORATORIOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    laboratorioId: number().key().savedAs('LABORATORIO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_MUESTRA = new Entity({\n  name: 'Muestra', table: TABLA_MUESTRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    muestraId: number().key().savedAs('MUESTRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    cantidadMl: number().savedAs('CANTIDAD_ML'),\n    laboratorioId: number().savedAs('LABORATORIO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_LABORATORIO = new Entity({",
+            "title": "Campos de Laboratorio",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en LABORATORIOS."
+          },
+          {
+            "text": "laboratorioId: number().key().savedAs('LABORATORIO_ID')",
+            "after": "export const MODELO_LABORATORIO",
+            "title": "ID → LABORATORIO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como LABORATORIO_ID. number() define el tipo; key() lo vincula a la partition key de LABORATORIOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_LABORATORIO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Laboratorio. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_MUESTRA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_MUESTRA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_MUESTRA en el repository.",
+            "after": "export const MODELO_MUESTRA"
           },
           {
             "text": "name: 'Muestra', table: TABLA_MUESTRAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_MUESTRAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_MUESTRAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_MUESTRA"
           },
           {
             "text": "muestraId: number().key().savedAs('MUESTRA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce muestraId a MUESTRA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce muestraId a MUESTRA_ID.",
+            "after": "export const MODELO_MUESTRA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_MUESTRA",
+            "title": "Texto de Muestra → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_MUESTRA. Guarda nombre en NOMBRE, dentro del ítem de MUESTRAS."
           },
           {
             "text": "cantidadMl: number().savedAs('CANTIDAD_ML')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. cantidadMl es un número; se guarda como CANTIDAD_ML y no forma parte de la clave."
+            "title": "CANTIDAD_ML también se configura",
+            "note": "number() describe cantidadMl. savedAs lo guarda en CANTIDAD_ML. Es un dato de Muestra; no forma parte de la clave principal.",
+            "after": "export const MODELO_MUESTRA"
           },
           {
             "text": "laboratorioId: number().savedAs('LABORATORIO_ID')",
-            "title": "Guardar la referencia",
-            "note": "LABORATORIO_ID es un atributo de MUESTRAS y la clave del índice PorLaboratorio. Aquí no lleva .key(): la clave de la tabla sigue siendo MUESTRA_ID."
+            "title": "Referencia a Laboratorio",
+            "note": "laboratorioId se guarda en LABORATORIO_ID. Es la referencia a Laboratorio y la partition key del GSI PorLaboratorio. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_MUESTRA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorLaboratorio",
     "modelFile": "src/models/laboratorio-muestra.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Laboratorio",
+        "sql": "LABORATORIO",
+        "dynamo": "LABORATORIOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "laboratorioId",
+              "column": "LABORATORIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Laboratorio Azul",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Muestra",
+        "sql": "MUESTRA",
+        "dynamo": "MUESTRAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "muestraId",
+              "column": "MUESTRA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Muestra M-01",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "CANTIDAD_ML",
+            "role": "data",
+            "example": 15,
+            "nest": {
+              "property": "cantidadMl",
+              "column": "CANTIDAD_ML",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "cantidadMl",
+              "column": "CANTIDAD_ML",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_LABORATORIO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "laboratorio.id",
+              "column": "ID_LABORATORIO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "laboratorioId",
+              "column": "LABORATORIO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

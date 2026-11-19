@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Producto",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'PRECIO_CENTIMOS', type: 'integer' })",
-            "title": "Una precio numérica",
+            "title": "PRECIO_CENTIMOS es una columna numérica",
             "note": "precioCentimos se guarda en PRECIO_CENTIMOS, de tipo entero. El siguiente paso detalla la relación con Panaderia."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_PANADERIAS: { Ref: TablaPanaderias }\n    TABLA_PRODUCTOS: { Ref: TablaProductos }\n\nresources:\n  Resources:\n    TablaPanaderias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PANADERIAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PANADERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PANADERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaProductos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PRODUCTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PRODUCTO_ID, AttributeType: N }\n          - { AttributeName: PANADERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PRODUCTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PRODUCTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPanaderia\n            # Clave compuesta = partition key + sort key:\n            # (PANADERIA_ID, PRODUCTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PANADERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Panaderia.\n              - AttributeName: PRODUCTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - PRECIO_CENTIMOS",
+        "code": "provider:\n  environment:\n    TABLA_PANADERIAS: { Ref: TablaPanaderias }\n    TABLA_PRODUCTOS: { Ref: TablaProductos }\n\nresources:\n  Resources:\n    TablaPanaderias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PANADERIAS\n        # PARTITION KEY: PANADERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PANADERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PANADERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PANADERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaProductos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PRODUCTOS\n        # PARTITION KEY: PRODUCTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRECIO_CENTIMOS (N: número).\n        #   PANADERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PRODUCTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PRODUCTO_ID, AttributeType: N }\n          - { AttributeName: PANADERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PRODUCTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PRODUCTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPanaderia\n            # Clave compuesta = partition key + sort key:\n            # (PANADERIA_ID, PRODUCTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PANADERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Panaderia.\n              - AttributeName: PRODUCTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PRODUCTOS copiados al índice.\n                - NOMBRE\n                - PRECIO_CENTIMOS",
         "cues": [
           {
             "text": "TableName: PANADERIAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear PANADERIAS."
+            "note": "El YAML crea PANADERIAS y declara su clave PANADERIA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_PANADERIA."
           },
           {
             "text": "TableName: PRODUCTOS",
             "title": "Tabla de productos",
-            "note": "La tabla usa PRODUCTO_ID como partition key. No tiene sort key."
+            "note": "PRODUCTOS usa PRODUCTO_ID como partition key. Los otros atributos son NOMBRE, PRECIO_CENTIMOS y PANADERIA_ID; los cuatro aparecen en MODELO_PRODUCTO."
           },
           {
             "text": "IndexName: PorPanaderia",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y PRECIO_CENTIMOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y PRECIO_CENTIMOS. Esos datos pertenecen a PRODUCTOS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/panaderia-producto.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_PANADERIAS = new Table({\n  name: process.env.TABLA_PANADERIAS, documentClient: db,\n  partitionKey: { name: 'PANADERIA_ID', type: 'number' }\n});\n\nexport const TABLA_PRODUCTOS = new Table({\n  name: process.env.TABLA_PRODUCTOS, documentClient: db,\n  partitionKey: { name: 'PRODUCTO_ID', type: 'number' },\n  indexes: {\n    PorPanaderia: {\n      type: 'global',\n      partitionKey: { name: 'PANADERIA_ID', type: 'number' },\n      sortKey: { name: 'PRODUCTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_PANADERIA = new Entity({\n  name: 'Panaderia', table: TABLA_PANADERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    panaderiaId: number().key().savedAs('PANADERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PRODUCTO = new Entity({\n  name: 'Producto', table: TABLA_PRODUCTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    productoId: number().key().savedAs('PRODUCTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    precioCentimos: number().savedAs('PRECIO_CENTIMOS'),\n    panaderiaId: number().savedAs('PANADERIA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_PANADERIAS = new Table({",
+            "title": "Primero, Table de Panaderia",
+            "note": "Table describe PANADERIAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'PANADERIA_ID', type: 'number' }",
+            "title": "Clave de Panaderia",
+            "note": "PANADERIA_ID identifica cada registro de PANADERIAS. El tipo de NOMBRE se declara en MODELO_PANADERIA."
+          },
           {
             "text": "export const TABLA_PRODUCTOS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_PANADERIAS = new Table({\n  name: process.env.TABLA_PANADERIAS, documentClient: db,\n  partitionKey: { name: 'PANADERIA_ID', type: 'number' }\n});\n\nexport const TABLA_PRODUCTOS = new Table({\n  name: process.env.TABLA_PRODUCTOS, documentClient: db,\n  partitionKey: { name: 'PRODUCTO_ID', type: 'number' },\n  indexes: {\n    PorPanaderia: {\n      type: 'global',\n      partitionKey: { name: 'PANADERIA_ID', type: 'number' },\n      sortKey: { name: 'PRODUCTO_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_PANADERIA = new Entity({\n  name: 'Panaderia', table: TABLA_PANADERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    panaderiaId: number().key().savedAs('PANADERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PRODUCTO = new Entity({\n  name: 'Producto', table: TABLA_PRODUCTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    productoId: number().key().savedAs('PRODUCTO_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    precioCentimos: number().savedAs('PRECIO_CENTIMOS'),\n    panaderiaId: number().savedAs('PANADERIA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_PANADERIA = new Entity({",
+            "title": "Campos de Panaderia",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en PANADERIAS."
+          },
+          {
+            "text": "panaderiaId: number().key().savedAs('PANADERIA_ID')",
+            "after": "export const MODELO_PANADERIA",
+            "title": "ID → PANADERIA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como PANADERIA_ID. number() define el tipo; key() lo vincula a la partition key de PANADERIAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PANADERIA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Panaderia. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PRODUCTO = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PRODUCTO en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PRODUCTO en el repository.",
+            "after": "export const MODELO_PRODUCTO"
           },
           {
             "text": "name: 'Producto', table: TABLA_PRODUCTOS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PRODUCTOS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PRODUCTOS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PRODUCTO"
           },
           {
             "text": "productoId: number().key().savedAs('PRODUCTO_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce productoId a PRODUCTO_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce productoId a PRODUCTO_ID.",
+            "after": "export const MODELO_PRODUCTO"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PRODUCTO",
+            "title": "Texto de Producto → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PRODUCTO. Guarda nombre en NOMBRE, dentro del ítem de PRODUCTOS."
           },
           {
             "text": "precioCentimos: number().savedAs('PRECIO_CENTIMOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. precioCentimos es un número; se guarda como PRECIO_CENTIMOS y no forma parte de la clave."
+            "title": "PRECIO_CENTIMOS también se configura",
+            "note": "number() describe precioCentimos. savedAs lo guarda en PRECIO_CENTIMOS. Es un dato de Producto; no forma parte de la clave principal.",
+            "after": "export const MODELO_PRODUCTO"
           },
           {
             "text": "panaderiaId: number().savedAs('PANADERIA_ID')",
-            "title": "Guardar la referencia",
-            "note": "PANADERIA_ID es un atributo de PRODUCTOS y la clave del índice PorPanaderia. Aquí no lleva .key(): la clave de la tabla sigue siendo PRODUCTO_ID."
+            "title": "Referencia a Panaderia",
+            "note": "panaderiaId se guarda en PANADERIA_ID. Es la referencia a Panaderia y la partition key del GSI PorPanaderia. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PRODUCTO"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorPanaderia",
     "modelFile": "src/models/panaderia-producto.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Panaderia",
+        "sql": "PANADERIA",
+        "dynamo": "PANADERIAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "panaderiaId",
+              "column": "PANADERIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Panadería Espiga",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Producto",
+        "sql": "PRODUCTO",
+        "dynamo": "PRODUCTOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "productoId",
+              "column": "PRODUCTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Pan integral",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "PRECIO_CENTIMOS",
+            "role": "data",
+            "example": 180,
+            "nest": {
+              "property": "precioCentimos",
+              "column": "PRECIO_CENTIMOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "precioCentimos",
+              "column": "PRECIO_CENTIMOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_PANADERIA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "panaderia.id",
+              "column": "ID_PANADERIA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "panaderiaId",
+              "column": "PANADERIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

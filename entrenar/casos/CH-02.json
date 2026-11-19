@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de la parcela",
+            "title": "NOMBRE es una columna de Parcela",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
-            "title": "Una superficie numérica",
+            "title": "SUPERFICIE_M2 es una columna numérica",
             "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Huerto."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "code": "provider:\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
         "cues": [
           {
             "text": "TableName: HUERTOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear HUERTOS."
+            "note": "El YAML crea HUERTOS y declara su clave HUERTO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_HUERTO."
           },
           {
             "text": "TableName: PARCELAS",
             "title": "Tabla de parcelas",
-            "note": "La tabla usa PARCELA_ID como partition key. No tiene sort key."
+            "note": "PARCELAS usa PARCELA_ID como partition key. Los otros atributos son NOMBRE, SUPERFICIE_M2 y HUERTO_ID; los cuatro aparecen en MODELO_PARCELA."
           },
           {
             "text": "IndexName: PorHuerto",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y SUPERFICIE_M2. Esos datos pertenecen a PARCELAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/huerto-parcela.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HUERTOS = new Table({\n  name: process.env.TABLA_HUERTOS, documentClient: db,\n  partitionKey: { name: 'HUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_PARCELAS = new Table({\n  name: process.env.TABLA_PARCELAS, documentClient: db,\n  partitionKey: { name: 'PARCELA_ID', type: 'number' },\n  indexes: {\n    PorHuerto: {\n      type: 'global',\n      partitionKey: { name: 'HUERTO_ID', type: 'number' },\n      sortKey: { name: 'PARCELA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HUERTO = new Entity({\n  name: 'Huerto', table: TABLA_HUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    huertoId: number().key().savedAs('HUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PARCELA = new Entity({\n  name: 'Parcela', table: TABLA_PARCELAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    parcelaId: number().key().savedAs('PARCELA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    huertoId: number().savedAs('HUERTO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_HUERTOS = new Table({",
+            "title": "Primero, Table de Huerto",
+            "note": "Table describe HUERTOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'HUERTO_ID', type: 'number' }",
+            "title": "Clave de Huerto",
+            "note": "HUERTO_ID identifica cada registro de HUERTOS. El tipo de NOMBRE se declara en MODELO_HUERTO."
+          },
           {
             "text": "export const TABLA_PARCELAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_HUERTOS = new Table({\n  name: process.env.TABLA_HUERTOS, documentClient: db,\n  partitionKey: { name: 'HUERTO_ID', type: 'number' }\n});\n\nexport const TABLA_PARCELAS = new Table({\n  name: process.env.TABLA_PARCELAS, documentClient: db,\n  partitionKey: { name: 'PARCELA_ID', type: 'number' },\n  indexes: {\n    PorHuerto: {\n      type: 'global',\n      partitionKey: { name: 'HUERTO_ID', type: 'number' },\n      sortKey: { name: 'PARCELA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_HUERTO = new Entity({\n  name: 'Huerto', table: TABLA_HUERTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    huertoId: number().key().savedAs('HUERTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PARCELA = new Entity({\n  name: 'Parcela', table: TABLA_PARCELAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    parcelaId: number().key().savedAs('PARCELA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    huertoId: number().savedAs('HUERTO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_HUERTO = new Entity({",
+            "title": "Campos de Huerto",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en HUERTOS."
+          },
+          {
+            "text": "huertoId: number().key().savedAs('HUERTO_ID')",
+            "after": "export const MODELO_HUERTO",
+            "title": "ID → HUERTO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como HUERTO_ID. number() define el tipo; key() lo vincula a la partition key de HUERTOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_HUERTO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Huerto. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PARCELA = new Entity({",
             "title": "La ficha de una parcela",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PARCELA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PARCELA en el repository.",
+            "after": "export const MODELO_PARCELA"
           },
           {
             "text": "name: 'Parcela', table: TABLA_PARCELAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PARCELAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PARCELAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PARCELA"
           },
           {
             "text": "parcelaId: number().key().savedAs('PARCELA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce parcelaId a PARCELA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce parcelaId a PARCELA_ID.",
+            "after": "export const MODELO_PARCELA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PARCELA",
+            "title": "Texto de Parcela → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PARCELA. Guarda nombre en NOMBRE, dentro del ítem de PARCELAS."
           },
           {
             "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+            "title": "SUPERFICIE_M2 también se configura",
+            "note": "number() describe superficieM2. savedAs lo guarda en SUPERFICIE_M2. Es un dato de Parcela; no forma parte de la clave principal.",
+            "after": "export const MODELO_PARCELA"
           },
           {
             "text": "huertoId: number().savedAs('HUERTO_ID')",
-            "title": "Guardar la referencia",
-            "note": "HUERTO_ID es un atributo de PARCELAS y la clave del índice PorHuerto. Aquí no lleva .key(): la clave de la tabla sigue siendo PARCELA_ID."
+            "title": "Referencia a Huerto",
+            "note": "huertoId se guarda en HUERTO_ID. Es la referencia a Huerto y la partition key del GSI PorHuerto. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PARCELA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorHuerto",
     "modelFile": "src/models/huerto-parcela.model.mjs",
     "createName": "Parcela de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Huerto",
+        "sql": "HUERTO",
+        "dynamo": "HUERTOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "huertoId",
+              "column": "HUERTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Huerto del Río",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Parcela",
+        "sql": "PARCELA",
+        "dynamo": "PARCELAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "parcelaId",
+              "column": "PARCELA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Parcela A",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "SUPERFICIE_M2",
+            "role": "data",
+            "example": 20,
+            "nest": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_HUERTO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "huerto.id",
+              "column": "ID_HUERTO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "huertoId",
+              "column": "HUERTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

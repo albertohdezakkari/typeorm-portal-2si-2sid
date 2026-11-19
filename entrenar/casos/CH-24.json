@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Pista",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'SUPERFICIE_M2', type: 'integer' })",
-            "title": "Una superficie numérica",
+            "title": "SUPERFICIE_M2 es una columna numérica",
             "note": "superficieM2 se guarda en SUPERFICIE_M2, de tipo entero. El siguiente paso detalla la relación con Complejo."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - SUPERFICIE_M2",
+        "code": "provider:\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
         "cues": [
           {
             "text": "TableName: COMPLEJOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear COMPLEJOS."
+            "note": "El YAML crea COMPLEJOS y declara su clave COMPLEJO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_COMPLEJO."
           },
           {
             "text": "TableName: PISTAS",
             "title": "Tabla de pistas",
-            "note": "La tabla usa PISTA_ID como partition key. No tiene sort key."
+            "note": "PISTAS usa PISTA_ID como partition key. Los otros atributos son NOMBRE, SUPERFICIE_M2 y COMPLEJO_ID; los cuatro aparecen en MODELO_PISTA."
           },
           {
             "text": "IndexName: PorComplejo",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y SUPERFICIE_M2 para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y SUPERFICIE_M2. Esos datos pertenecen a PISTAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/complejo-pista.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COMPLEJOS = new Table({\n  name: process.env.TABLA_COMPLEJOS, documentClient: db,\n  partitionKey: { name: 'COMPLEJO_ID', type: 'number' }\n});\n\nexport const TABLA_PISTAS = new Table({\n  name: process.env.TABLA_PISTAS, documentClient: db,\n  partitionKey: { name: 'PISTA_ID', type: 'number' },\n  indexes: {\n    PorComplejo: {\n      type: 'global',\n      partitionKey: { name: 'COMPLEJO_ID', type: 'number' },\n      sortKey: { name: 'PISTA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COMPLEJO = new Entity({\n  name: 'Complejo', table: TABLA_COMPLEJOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    complejoId: number().key().savedAs('COMPLEJO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PISTA = new Entity({\n  name: 'Pista', table: TABLA_PISTAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    pistaId: number().key().savedAs('PISTA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    complejoId: number().savedAs('COMPLEJO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_COMPLEJOS = new Table({",
+            "title": "Primero, Table de Complejo",
+            "note": "Table describe COMPLEJOS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'COMPLEJO_ID', type: 'number' }",
+            "title": "Clave de Complejo",
+            "note": "COMPLEJO_ID identifica cada registro de COMPLEJOS. El tipo de NOMBRE se declara en MODELO_COMPLEJO."
+          },
           {
             "text": "export const TABLA_PISTAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_COMPLEJOS = new Table({\n  name: process.env.TABLA_COMPLEJOS, documentClient: db,\n  partitionKey: { name: 'COMPLEJO_ID', type: 'number' }\n});\n\nexport const TABLA_PISTAS = new Table({\n  name: process.env.TABLA_PISTAS, documentClient: db,\n  partitionKey: { name: 'PISTA_ID', type: 'number' },\n  indexes: {\n    PorComplejo: {\n      type: 'global',\n      partitionKey: { name: 'COMPLEJO_ID', type: 'number' },\n      sortKey: { name: 'PISTA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_COMPLEJO = new Entity({\n  name: 'Complejo', table: TABLA_COMPLEJOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    complejoId: number().key().savedAs('COMPLEJO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PISTA = new Entity({\n  name: 'Pista', table: TABLA_PISTAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    pistaId: number().key().savedAs('PISTA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    superficieM2: number().savedAs('SUPERFICIE_M2'),\n    complejoId: number().savedAs('COMPLEJO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_COMPLEJO = new Entity({",
+            "title": "Campos de Complejo",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en COMPLEJOS."
+          },
+          {
+            "text": "complejoId: number().key().savedAs('COMPLEJO_ID')",
+            "after": "export const MODELO_COMPLEJO",
+            "title": "ID → COMPLEJO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como COMPLEJO_ID. number() define el tipo; key() lo vincula a la partition key de COMPLEJOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_COMPLEJO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Complejo. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PISTA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PISTA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PISTA en el repository.",
+            "after": "export const MODELO_PISTA"
           },
           {
             "text": "name: 'Pista', table: TABLA_PISTAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PISTAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PISTAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PISTA"
           },
           {
             "text": "pistaId: number().key().savedAs('PISTA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce pistaId a PISTA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce pistaId a PISTA_ID.",
+            "after": "export const MODELO_PISTA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PISTA",
+            "title": "Texto de Pista → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PISTA. Guarda nombre en NOMBRE, dentro del ítem de PISTAS."
           },
           {
             "text": "superficieM2: number().savedAs('SUPERFICIE_M2')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. superficieM2 es un número; se guarda como SUPERFICIE_M2 y no forma parte de la clave."
+            "title": "SUPERFICIE_M2 también se configura",
+            "note": "number() describe superficieM2. savedAs lo guarda en SUPERFICIE_M2. Es un dato de Pista; no forma parte de la clave principal.",
+            "after": "export const MODELO_PISTA"
           },
           {
             "text": "complejoId: number().savedAs('COMPLEJO_ID')",
-            "title": "Guardar la referencia",
-            "note": "COMPLEJO_ID es un atributo de PISTAS y la clave del índice PorComplejo. Aquí no lleva .key(): la clave de la tabla sigue siendo PISTA_ID."
+            "title": "Referencia a Complejo",
+            "note": "complejoId se guarda en COMPLEJO_ID. Es la referencia a Complejo y la partition key del GSI PorComplejo. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PISTA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorComplejo",
     "modelFile": "src/models/complejo-pista.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Complejo",
+        "sql": "COMPLEJO",
+        "dynamo": "COMPLEJOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "complejoId",
+              "column": "COMPLEJO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Complejo Municipal",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Pista",
+        "sql": "PISTA",
+        "dynamo": "PISTAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "pistaId",
+              "column": "PISTA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Pista cubierta",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "SUPERFICIE_M2",
+            "role": "data",
+            "example": 120,
+            "nest": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "superficieM2",
+              "column": "SUPERFICIE_M2",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_COMPLEJO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "complejo.id",
+              "column": "ID_COMPLEJO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "complejoId",
+              "column": "COMPLEJO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Funcion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'AFORO', type: 'integer' })",
-            "title": "Una aforo numérica",
+            "title": "AFORO es una columna numérica",
             "note": "aforo se guarda en AFORO, de tipo entero. El siguiente paso detalla la relación con Teatro."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_TEATROS: { Ref: TablaTeatros }\n    TABLA_FUNCIONES: { Ref: TablaFunciones }\n\nresources:\n  Resources:\n    TablaTeatros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TEATROS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TEATRO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TEATRO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaFunciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: FUNCIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: FUNCION_ID, AttributeType: N }\n          - { AttributeName: TEATRO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: FUNCION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en FUNCIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTeatro\n            # Clave compuesta = partition key + sort key:\n            # (TEATRO_ID, FUNCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TEATRO_ID\n                KeyType: HASH   # Partition key. Agrupa por Teatro.\n              - AttributeName: FUNCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - AFORO",
+        "code": "provider:\n  environment:\n    TABLA_TEATROS: { Ref: TablaTeatros }\n    TABLA_FUNCIONES: { Ref: TablaFunciones }\n\nresources:\n  Resources:\n    TablaTeatros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TEATROS\n        # PARTITION KEY: TEATRO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TEATRO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TEATRO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TEATRO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaFunciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: FUNCIONES\n        # PARTITION KEY: FUNCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   AFORO (N: número).\n        #   TEATRO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_FUNCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: FUNCION_ID, AttributeType: N }\n          - { AttributeName: TEATRO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: FUNCION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en FUNCIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTeatro\n            # Clave compuesta = partition key + sort key:\n            # (TEATRO_ID, FUNCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TEATRO_ID\n                KeyType: HASH   # Partition key. Agrupa por Teatro.\n              - AttributeName: FUNCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de FUNCIONES copiados al índice.\n                - NOMBRE\n                - AFORO",
         "cues": [
           {
             "text": "TableName: TEATROS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear TEATROS."
+            "note": "El YAML crea TEATROS y declara su clave TEATRO_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_TEATRO."
           },
           {
             "text": "TableName: FUNCIONES",
             "title": "Tabla de funciones",
-            "note": "La tabla usa FUNCION_ID como partition key. No tiene sort key."
+            "note": "FUNCIONES usa FUNCION_ID como partition key. Los otros atributos son NOMBRE, AFORO y TEATRO_ID; los cuatro aparecen en MODELO_FUNCION."
           },
           {
             "text": "IndexName: PorTeatro",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y AFORO para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y AFORO. Esos datos pertenecen a FUNCIONES."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/teatro-funcion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TEATROS = new Table({\n  name: process.env.TABLA_TEATROS, documentClient: db,\n  partitionKey: { name: 'TEATRO_ID', type: 'number' }\n});\n\nexport const TABLA_FUNCIONES = new Table({\n  name: process.env.TABLA_FUNCIONES, documentClient: db,\n  partitionKey: { name: 'FUNCION_ID', type: 'number' },\n  indexes: {\n    PorTeatro: {\n      type: 'global',\n      partitionKey: { name: 'TEATRO_ID', type: 'number' },\n      sortKey: { name: 'FUNCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TEATRO = new Entity({\n  name: 'Teatro', table: TABLA_TEATROS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    teatroId: number().key().savedAs('TEATRO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_FUNCION = new Entity({\n  name: 'Funcion', table: TABLA_FUNCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    funcionId: number().key().savedAs('FUNCION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    aforo: number().savedAs('AFORO'),\n    teatroId: number().savedAs('TEATRO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_TEATROS = new Table({",
+            "title": "Primero, Table de Teatro",
+            "note": "Table describe TEATROS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'TEATRO_ID', type: 'number' }",
+            "title": "Clave de Teatro",
+            "note": "TEATRO_ID identifica cada registro de TEATROS. El tipo de NOMBRE se declara en MODELO_TEATRO."
+          },
           {
             "text": "export const TABLA_FUNCIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_TEATROS = new Table({\n  name: process.env.TABLA_TEATROS, documentClient: db,\n  partitionKey: { name: 'TEATRO_ID', type: 'number' }\n});\n\nexport const TABLA_FUNCIONES = new Table({\n  name: process.env.TABLA_FUNCIONES, documentClient: db,\n  partitionKey: { name: 'FUNCION_ID', type: 'number' },\n  indexes: {\n    PorTeatro: {\n      type: 'global',\n      partitionKey: { name: 'TEATRO_ID', type: 'number' },\n      sortKey: { name: 'FUNCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_TEATRO = new Entity({\n  name: 'Teatro', table: TABLA_TEATROS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    teatroId: number().key().savedAs('TEATRO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_FUNCION = new Entity({\n  name: 'Funcion', table: TABLA_FUNCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    funcionId: number().key().savedAs('FUNCION_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    aforo: number().savedAs('AFORO'),\n    teatroId: number().savedAs('TEATRO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_TEATRO = new Entity({",
+            "title": "Campos de Teatro",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en TEATROS."
+          },
+          {
+            "text": "teatroId: number().key().savedAs('TEATRO_ID')",
+            "after": "export const MODELO_TEATRO",
+            "title": "ID → TEATRO_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como TEATRO_ID. number() define el tipo; key() lo vincula a la partition key de TEATROS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_TEATRO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Teatro. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_FUNCION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_FUNCION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_FUNCION en el repository.",
+            "after": "export const MODELO_FUNCION"
           },
           {
             "text": "name: 'Funcion', table: TABLA_FUNCIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_FUNCIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_FUNCIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_FUNCION"
           },
           {
             "text": "funcionId: number().key().savedAs('FUNCION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce funcionId a FUNCION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce funcionId a FUNCION_ID.",
+            "after": "export const MODELO_FUNCION"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_FUNCION",
+            "title": "Texto de Funcion → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_FUNCION. Guarda nombre en NOMBRE, dentro del ítem de FUNCIONES."
           },
           {
             "text": "aforo: number().savedAs('AFORO')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. aforo es un número; se guarda como AFORO y no forma parte de la clave."
+            "title": "AFORO también se configura",
+            "note": "number() describe aforo. savedAs lo guarda en AFORO. Es un dato de Funcion; no forma parte de la clave principal.",
+            "after": "export const MODELO_FUNCION"
           },
           {
             "text": "teatroId: number().savedAs('TEATRO_ID')",
-            "title": "Guardar la referencia",
-            "note": "TEATRO_ID es un atributo de FUNCIONES y la clave del índice PorTeatro. Aquí no lleva .key(): la clave de la tabla sigue siendo FUNCION_ID."
+            "title": "Referencia a Teatro",
+            "note": "teatroId se guarda en TEATRO_ID. Es la referencia a Teatro y la partition key del GSI PorTeatro. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_FUNCION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorTeatro",
     "modelFile": "src/models/teatro-funcion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Teatro",
+        "sql": "TEATRO",
+        "dynamo": "TEATROS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "teatroId",
+              "column": "TEATRO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Teatro Aurora",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Funcion",
+        "sql": "FUNCION",
+        "dynamo": "FUNCIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "funcionId",
+              "column": "FUNCION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "La puerta azul",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "AFORO",
+            "role": "data",
+            "example": 100,
+            "nest": {
+              "property": "aforo",
+              "column": "AFORO",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "aforo",
+              "column": "AFORO",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_TEATRO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "teatro.id",
+              "column": "ID_TEATRO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "teatroId",
+              "column": "TEATRO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

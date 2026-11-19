@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Comanda",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'IMPORTE_CENTIMOS', type: 'integer' })",
-            "title": "Una importe numérica",
+            "title": "IMPORTE_CENTIMOS es una columna numérica",
             "note": "importeCentimos se guarda en IMPORTE_CENTIMOS, de tipo entero. El siguiente paso detalla la relación con Cafeteria."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+        "code": "provider:\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
         "cues": [
           {
             "text": "TableName: CAFETERIAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear CAFETERIAS."
+            "note": "El YAML crea CAFETERIAS y declara su clave CAFETERIA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_CAFETERIA."
           },
           {
             "text": "TableName: COMANDAS",
             "title": "Tabla de comandas",
-            "note": "La tabla usa COMANDA_ID como partition key. No tiene sort key."
+            "note": "COMANDAS usa COMANDA_ID como partition key. Los otros atributos son NOMBRE, IMPORTE_CENTIMOS y CAFETERIA_ID; los cuatro aparecen en MODELO_COMANDA."
           },
           {
             "text": "IndexName: PorCafeteria",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y IMPORTE_CENTIMOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y IMPORTE_CENTIMOS. Esos datos pertenecen a COMANDAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/cafeteria-comanda.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CAFETERIAS = new Table({\n  name: process.env.TABLA_CAFETERIAS, documentClient: db,\n  partitionKey: { name: 'CAFETERIA_ID', type: 'number' }\n});\n\nexport const TABLA_COMANDAS = new Table({\n  name: process.env.TABLA_COMANDAS, documentClient: db,\n  partitionKey: { name: 'COMANDA_ID', type: 'number' },\n  indexes: {\n    PorCafeteria: {\n      type: 'global',\n      partitionKey: { name: 'CAFETERIA_ID', type: 'number' },\n      sortKey: { name: 'COMANDA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CAFETERIA = new Entity({\n  name: 'Cafeteria', table: TABLA_CAFETERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cafeteriaId: number().key().savedAs('CAFETERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COMANDA = new Entity({\n  name: 'Comanda', table: TABLA_COMANDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    comandaId: number().key().savedAs('COMANDA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    importeCentimos: number().savedAs('IMPORTE_CENTIMOS'),\n    cafeteriaId: number().savedAs('CAFETERIA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_CAFETERIAS = new Table({",
+            "title": "Primero, Table de Cafeteria",
+            "note": "Table describe CAFETERIAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'CAFETERIA_ID', type: 'number' }",
+            "title": "Clave de Cafeteria",
+            "note": "CAFETERIA_ID identifica cada registro de CAFETERIAS. El tipo de NOMBRE se declara en MODELO_CAFETERIA."
+          },
           {
             "text": "export const TABLA_COMANDAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CAFETERIAS = new Table({\n  name: process.env.TABLA_CAFETERIAS, documentClient: db,\n  partitionKey: { name: 'CAFETERIA_ID', type: 'number' }\n});\n\nexport const TABLA_COMANDAS = new Table({\n  name: process.env.TABLA_COMANDAS, documentClient: db,\n  partitionKey: { name: 'COMANDA_ID', type: 'number' },\n  indexes: {\n    PorCafeteria: {\n      type: 'global',\n      partitionKey: { name: 'CAFETERIA_ID', type: 'number' },\n      sortKey: { name: 'COMANDA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CAFETERIA = new Entity({\n  name: 'Cafeteria', table: TABLA_CAFETERIAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cafeteriaId: number().key().savedAs('CAFETERIA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COMANDA = new Entity({\n  name: 'Comanda', table: TABLA_COMANDAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    comandaId: number().key().savedAs('COMANDA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    importeCentimos: number().savedAs('IMPORTE_CENTIMOS'),\n    cafeteriaId: number().savedAs('CAFETERIA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_CAFETERIA = new Entity({",
+            "title": "Campos de Cafeteria",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en CAFETERIAS."
+          },
+          {
+            "text": "cafeteriaId: number().key().savedAs('CAFETERIA_ID')",
+            "after": "export const MODELO_CAFETERIA",
+            "title": "ID → CAFETERIA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como CAFETERIA_ID. number() define el tipo; key() lo vincula a la partition key de CAFETERIAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_CAFETERIA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Cafeteria. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_COMANDA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COMANDA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COMANDA en el repository.",
+            "after": "export const MODELO_COMANDA"
           },
           {
             "text": "name: 'Comanda', table: TABLA_COMANDAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_COMANDAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_COMANDAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_COMANDA"
           },
           {
             "text": "comandaId: number().key().savedAs('COMANDA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce comandaId a COMANDA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce comandaId a COMANDA_ID.",
+            "after": "export const MODELO_COMANDA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_COMANDA",
+            "title": "Texto de Comanda → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_COMANDA. Guarda nombre en NOMBRE, dentro del ítem de COMANDAS."
           },
           {
             "text": "importeCentimos: number().savedAs('IMPORTE_CENTIMOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. importeCentimos es un número; se guarda como IMPORTE_CENTIMOS y no forma parte de la clave."
+            "title": "IMPORTE_CENTIMOS también se configura",
+            "note": "number() describe importeCentimos. savedAs lo guarda en IMPORTE_CENTIMOS. Es un dato de Comanda; no forma parte de la clave principal.",
+            "after": "export const MODELO_COMANDA"
           },
           {
             "text": "cafeteriaId: number().savedAs('CAFETERIA_ID')",
-            "title": "Guardar la referencia",
-            "note": "CAFETERIA_ID es un atributo de COMANDAS y la clave del índice PorCafeteria. Aquí no lleva .key(): la clave de la tabla sigue siendo COMANDA_ID."
+            "title": "Referencia a Cafeteria",
+            "note": "cafeteriaId se guarda en CAFETERIA_ID. Es la referencia a Cafeteria y la partition key del GSI PorCafeteria. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_COMANDA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorCafeteria",
     "modelFile": "src/models/cafeteria-comanda.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Cafeteria",
+        "sql": "CAFETERIA",
+        "dynamo": "CAFETERIAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "cafeteriaId",
+              "column": "CAFETERIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Cafetería Plaza",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Comanda",
+        "sql": "COMANDA",
+        "dynamo": "COMANDAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "comandaId",
+              "column": "COMANDA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Comanda C-01",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "IMPORTE_CENTIMOS",
+            "role": "data",
+            "example": 450,
+            "nest": {
+              "property": "importeCentimos",
+              "column": "IMPORTE_CENTIMOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "importeCentimos",
+              "column": "IMPORTE_CENTIMOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_CAFETERIA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "cafeteria.id",
+              "column": "ID_CAFETERIA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "cafeteriaId",
+              "column": "CAFETERIA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

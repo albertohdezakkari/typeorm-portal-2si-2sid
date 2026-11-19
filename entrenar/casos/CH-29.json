@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Cosecha",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'KILOS', type: 'integer' })",
-            "title": "Una producción numérica",
+            "title": "KILOS es una columna numérica",
             "note": "kilos se guarda en KILOS, de tipo entero. El siguiente paso detalla la relación con Granja."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - KILOS",
+        "code": "provider:\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
         "cues": [
           {
             "text": "TableName: GRANJAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear GRANJAS."
+            "note": "El YAML crea GRANJAS y declara su clave GRANJA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_GRANJA."
           },
           {
             "text": "TableName: COSECHAS",
             "title": "Tabla de cosechas",
-            "note": "La tabla usa COSECHA_ID como partition key. No tiene sort key."
+            "note": "COSECHAS usa COSECHA_ID como partition key. Los otros atributos son NOMBRE, KILOS y GRANJA_ID; los cuatro aparecen en MODELO_COSECHA."
           },
           {
             "text": "IndexName: PorGranja",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y KILOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y KILOS. Esos datos pertenecen a COSECHAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/granja-cosecha.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GRANJAS = new Table({\n  name: process.env.TABLA_GRANJAS, documentClient: db,\n  partitionKey: { name: 'GRANJA_ID', type: 'number' }\n});\n\nexport const TABLA_COSECHAS = new Table({\n  name: process.env.TABLA_COSECHAS, documentClient: db,\n  partitionKey: { name: 'COSECHA_ID', type: 'number' },\n  indexes: {\n    PorGranja: {\n      type: 'global',\n      partitionKey: { name: 'GRANJA_ID', type: 'number' },\n      sortKey: { name: 'COSECHA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GRANJA = new Entity({\n  name: 'Granja', table: TABLA_GRANJAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    granjaId: number().key().savedAs('GRANJA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COSECHA = new Entity({\n  name: 'Cosecha', table: TABLA_COSECHAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cosechaId: number().key().savedAs('COSECHA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    granjaId: number().savedAs('GRANJA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_GRANJAS = new Table({",
+            "title": "Primero, Table de Granja",
+            "note": "Table describe GRANJAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'GRANJA_ID', type: 'number' }",
+            "title": "Clave de Granja",
+            "note": "GRANJA_ID identifica cada registro de GRANJAS. El tipo de NOMBRE se declara en MODELO_GRANJA."
+          },
           {
             "text": "export const TABLA_COSECHAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_GRANJAS = new Table({\n  name: process.env.TABLA_GRANJAS, documentClient: db,\n  partitionKey: { name: 'GRANJA_ID', type: 'number' }\n});\n\nexport const TABLA_COSECHAS = new Table({\n  name: process.env.TABLA_COSECHAS, documentClient: db,\n  partitionKey: { name: 'COSECHA_ID', type: 'number' },\n  indexes: {\n    PorGranja: {\n      type: 'global',\n      partitionKey: { name: 'GRANJA_ID', type: 'number' },\n      sortKey: { name: 'COSECHA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_GRANJA = new Entity({\n  name: 'Granja', table: TABLA_GRANJAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    granjaId: number().key().savedAs('GRANJA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_COSECHA = new Entity({\n  name: 'Cosecha', table: TABLA_COSECHAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cosechaId: number().key().savedAs('COSECHA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    kilos: number().savedAs('KILOS'),\n    granjaId: number().savedAs('GRANJA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_GRANJA = new Entity({",
+            "title": "Campos de Granja",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en GRANJAS."
+          },
+          {
+            "text": "granjaId: number().key().savedAs('GRANJA_ID')",
+            "after": "export const MODELO_GRANJA",
+            "title": "ID → GRANJA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como GRANJA_ID. number() define el tipo; key() lo vincula a la partition key de GRANJAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_GRANJA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Granja. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_COSECHA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COSECHA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_COSECHA en el repository.",
+            "after": "export const MODELO_COSECHA"
           },
           {
             "text": "name: 'Cosecha', table: TABLA_COSECHAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_COSECHAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_COSECHAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_COSECHA"
           },
           {
             "text": "cosechaId: number().key().savedAs('COSECHA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce cosechaId a COSECHA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce cosechaId a COSECHA_ID.",
+            "after": "export const MODELO_COSECHA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_COSECHA",
+            "title": "Texto de Cosecha → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_COSECHA. Guarda nombre en NOMBRE, dentro del ítem de COSECHAS."
           },
           {
             "text": "kilos: number().savedAs('KILOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. kilos es un número; se guarda como KILOS y no forma parte de la clave."
+            "title": "KILOS también se configura",
+            "note": "number() describe kilos. savedAs lo guarda en KILOS. Es un dato de Cosecha; no forma parte de la clave principal.",
+            "after": "export const MODELO_COSECHA"
           },
           {
             "text": "granjaId: number().savedAs('GRANJA_ID')",
-            "title": "Guardar la referencia",
-            "note": "GRANJA_ID es un atributo de COSECHAS y la clave del índice PorGranja. Aquí no lleva .key(): la clave de la tabla sigue siendo COSECHA_ID."
+            "title": "Referencia a Granja",
+            "note": "granjaId se guarda en GRANJA_ID. Es la referencia a Granja y la partition key del GSI PorGranja. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_COSECHA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorGranja",
     "modelFile": "src/models/granja-cosecha.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Granja",
+        "sql": "GRANJA",
+        "dynamo": "GRANJAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "granjaId",
+              "column": "GRANJA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Granja del Sol",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Cosecha",
+        "sql": "COSECHA",
+        "dynamo": "COSECHAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "cosechaId",
+              "column": "COSECHA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Cosecha de tomate",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "KILOS",
+            "role": "data",
+            "example": 80,
+            "nest": {
+              "property": "kilos",
+              "column": "KILOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "kilos",
+              "column": "KILOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_GRANJA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "granja.id",
+              "column": "ID_GRANJA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "granjaId",
+              "column": "GRANJA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

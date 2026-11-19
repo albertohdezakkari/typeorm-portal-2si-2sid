@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Programa",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'DURACION_MINUTOS', type: 'integer' })",
-            "title": "Una duración numérica",
+            "title": "DURACION_MINUTOS es una columna numérica",
             "note": "duracionMinutos se guarda en DURACION_MINUTOS, de tipo entero. El siguiente paso detalla la relación con Emisora."
           }
         ],
@@ -619,17 +619,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_EMISORAS: { Ref: TablaEmisoras }\n    TABLA_PROGRAMAS: { Ref: TablaProgramas }\n\nresources:\n  Resources:\n    TablaEmisoras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMISORAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: EMISORA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMISORA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaProgramas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROGRAMAS\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROGRAMA_ID, AttributeType: N }\n          - { AttributeName: EMISORA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROGRAMA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PROGRAMAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEmisora\n            # Clave compuesta = partition key + sort key:\n            # (EMISORA_ID, PROGRAMA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: EMISORA_ID\n                KeyType: HASH   # Partition key. Agrupa por Emisora.\n              - AttributeName: PROGRAMA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_MINUTOS",
+        "code": "provider:\n  environment:\n    TABLA_EMISORAS: { Ref: TablaEmisoras }\n    TABLA_PROGRAMAS: { Ref: TablaProgramas }\n\nresources:\n  Resources:\n    TablaEmisoras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMISORAS\n        # PARTITION KEY: EMISORA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_EMISORA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: EMISORA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMISORA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaProgramas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROGRAMAS\n        # PARTITION KEY: PROGRAMA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   EMISORA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROGRAMA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROGRAMA_ID, AttributeType: N }\n          - { AttributeName: EMISORA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROGRAMA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PROGRAMAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEmisora\n            # Clave compuesta = partition key + sort key:\n            # (EMISORA_ID, PROGRAMA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: EMISORA_ID\n                KeyType: HASH   # Partition key. Agrupa por Emisora.\n              - AttributeName: PROGRAMA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROGRAMAS copiados al índice.\n                - NOMBRE\n                - DURACION_MINUTOS",
         "cues": [
           {
             "text": "TableName: EMISORAS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear EMISORAS."
+            "note": "El YAML crea EMISORAS y declara su clave EMISORA_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_EMISORA."
           },
           {
             "text": "TableName: PROGRAMAS",
             "title": "Tabla de programas",
-            "note": "La tabla usa PROGRAMA_ID como partition key. No tiene sort key."
+            "note": "PROGRAMAS usa PROGRAMA_ID como partition key. Los otros atributos son NOMBRE, DURACION_MINUTOS y EMISORA_ID; los cuatro aparecen en MODELO_PROGRAMA."
           },
           {
             "text": "IndexName: PorEmisora",
@@ -644,12 +644,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_MINUTOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos NOMBRE y DURACION_MINUTOS. Esos datos pertenecen a PROGRAMAS."
           }
         ],
         "page": 1,
         "exact": true,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -657,6 +658,16 @@
         "path": "src/models/emisora-programa.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EMISORAS = new Table({\n  name: process.env.TABLA_EMISORAS, documentClient: db,\n  partitionKey: { name: 'EMISORA_ID', type: 'number' }\n});\n\nexport const TABLA_PROGRAMAS = new Table({\n  name: process.env.TABLA_PROGRAMAS, documentClient: db,\n  partitionKey: { name: 'PROGRAMA_ID', type: 'number' },\n  indexes: {\n    PorEmisora: {\n      type: 'global',\n      partitionKey: { name: 'EMISORA_ID', type: 'number' },\n      sortKey: { name: 'PROGRAMA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EMISORA = new Entity({\n  name: 'Emisora', table: TABLA_EMISORAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    emisoraId: number().key().savedAs('EMISORA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROGRAMA = new Entity({\n  name: 'Programa', table: TABLA_PROGRAMAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    programaId: number().key().savedAs('PROGRAMA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    emisoraId: number().savedAs('EMISORA_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_EMISORAS = new Table({",
+            "title": "Primero, Table de Emisora",
+            "note": "Table describe EMISORAS: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'EMISORA_ID', type: 'number' }",
+            "title": "Clave de Emisora",
+            "note": "EMISORA_ID identifica cada registro de EMISORAS. El tipo de NOMBRE se declara en MODELO_EMISORA."
+          },
           {
             "text": "export const TABLA_PROGRAMAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +705,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_EMISORAS = new Table({\n  name: process.env.TABLA_EMISORAS, documentClient: db,\n  partitionKey: { name: 'EMISORA_ID', type: 'number' }\n});\n\nexport const TABLA_PROGRAMAS = new Table({\n  name: process.env.TABLA_PROGRAMAS, documentClient: db,\n  partitionKey: { name: 'PROGRAMA_ID', type: 'number' },\n  indexes: {\n    PorEmisora: {\n      type: 'global',\n      partitionKey: { name: 'EMISORA_ID', type: 'number' },\n      sortKey: { name: 'PROGRAMA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_EMISORA = new Entity({\n  name: 'Emisora', table: TABLA_EMISORAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    emisoraId: number().key().savedAs('EMISORA_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROGRAMA = new Entity({\n  name: 'Programa', table: TABLA_PROGRAMAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    programaId: number().key().savedAs('PROGRAMA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    emisoraId: number().savedAs('EMISORA_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_EMISORA = new Entity({",
+            "title": "Campos de Emisora",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en EMISORAS."
+          },
+          {
+            "text": "emisoraId: number().key().savedAs('EMISORA_ID')",
+            "after": "export const MODELO_EMISORA",
+            "title": "ID → EMISORA_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como EMISORA_ID. number() define el tipo; key() lo vincula a la partition key de EMISORAS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_EMISORA",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Emisora. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PROGRAMA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROGRAMA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROGRAMA en el repository.",
+            "after": "export const MODELO_PROGRAMA"
           },
           {
             "text": "name: 'Programa', table: TABLA_PROGRAMAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PROGRAMAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PROGRAMAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PROGRAMA"
           },
           {
             "text": "programaId: number().key().savedAs('PROGRAMA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce programaId a PROGRAMA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce programaId a PROGRAMA_ID.",
+            "after": "export const MODELO_PROGRAMA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_PROGRAMA",
+            "title": "Texto de Programa → NOMBRE",
+            "note": "Esta línea pertenece a MODELO_PROGRAMA. Guarda nombre en NOMBRE, dentro del ítem de PROGRAMAS."
           },
           {
             "text": "duracionMinutos: number().savedAs('DURACION_MINUTOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. duracionMinutos es un número; se guarda como DURACION_MINUTOS y no forma parte de la clave."
+            "title": "DURACION_MINUTOS también se configura",
+            "note": "number() describe duracionMinutos. savedAs lo guarda en DURACION_MINUTOS. Es un dato de Programa; no forma parte de la clave principal.",
+            "after": "export const MODELO_PROGRAMA"
           },
           {
             "text": "emisoraId: number().savedAs('EMISORA_ID')",
-            "title": "Guardar la referencia",
-            "note": "EMISORA_ID es un atributo de PROGRAMAS y la clave del índice PorEmisora. Aquí no lleva .key(): la clave de la tabla sigue siendo PROGRAMA_ID."
+            "title": "Referencia a Emisora",
+            "note": "emisoraId se guarda en EMISORA_ID. Es la referencia a Emisora y la partition key del GSI PorEmisora. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PROGRAMA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1383,142 @@
     "index": "PorEmisora",
     "modelFile": "src/models/emisora-programa.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Emisora",
+        "sql": "EMISORA",
+        "dynamo": "EMISORAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "emisoraId",
+              "column": "EMISORA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Radio Horizonte",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Programa",
+        "sql": "PROGRAMA",
+        "dynamo": "PROGRAMAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "programaId",
+              "column": "PROGRAMA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Buenos días",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "DURACION_MINUTOS",
+            "role": "data",
+            "example": 30,
+            "nest": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_EMISORA",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "emisora.id",
+              "column": "ID_EMISORA",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "emisoraId",
+              "column": "EMISORA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

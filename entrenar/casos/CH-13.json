@@ -89,12 +89,12 @@
           },
           {
             "text": "@Column({ name: 'PELICULA', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "PELICULA es una columna de Proyeccion",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'DURACION_MINUTOS', type: 'integer' })",
-            "title": "Una duración numérica",
+            "title": "DURACION_MINUTOS es una columna numérica",
             "note": "duracionMinutos se guarda en DURACION_MINUTOS, de tipo entero. El siguiente paso detalla la relación con Cine."
           }
         ],
@@ -617,17 +617,17 @@
         "chapter": 0,
         "name": "Crear las tablas",
         "path": "serverless.yml · resources",
-        "code": "provider:\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos extra del listado.\n                - NOMBRE\n                - DURACION_MINUTOS",
+        "code": "provider:\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
         "cues": [
           {
             "text": "TableName: CINES",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear CINES."
+            "note": "El YAML crea CINES y declara su clave CINE_ID. El inventario comentado recuerda NOMBRE; su tipo se describe en MODELO_CINE."
           },
           {
             "text": "TableName: PROYECCIONES",
             "title": "Tabla de proyecciones",
-            "note": "La tabla usa PROYECCION_ID como partition key. No tiene sort key."
+            "note": "PROYECCIONES usa PROYECCION_ID como partition key. Los otros atributos son PELICULA, DURACION_MINUTOS y CINE_ID; los cuatro aparecen en MODELO_PROYECCION."
           },
           {
             "text": "IndexName: PorCine",
@@ -642,12 +642,13 @@
           {
             "text": "ProjectionType: INCLUDE",
             "title": "Qué copia el índice",
-            "note": "Las claves van siempre. Se añaden NOMBRE y DURACION_MINUTOS para el listado."
+            "note": "INCLUDE copia al índice las claves y los atributos PELICULA y DURACION_MINUTOS. Esos datos pertenecen a PROYECCIONES."
           }
         ],
         "page": 1,
         "exact": false,
-        "scene": "index"
+        "scene": "index",
+        "annotated": true
       },
       {
         "chapter": 0,
@@ -655,6 +656,16 @@
         "path": "src/models/cine-proyeccion.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CINES = new Table({\n  name: process.env.TABLA_CINES, documentClient: db,\n  partitionKey: { name: 'CINE_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECCIONES = new Table({\n  name: process.env.TABLA_PROYECCIONES, documentClient: db,\n  partitionKey: { name: 'PROYECCION_ID', type: 'number' },\n  indexes: {\n    PorCine: {\n      type: 'global',\n      partitionKey: { name: 'CINE_ID', type: 'number' },\n      sortKey: { name: 'PROYECCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CINE = new Entity({\n  name: 'Cine', table: TABLA_CINES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cineId: number().key().savedAs('CINE_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECCION = new Entity({\n  name: 'Proyeccion', table: TABLA_PROYECCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyeccionId: number().key().savedAs('PROYECCION_ID'),\n    pelicula: string().savedAs('PELICULA'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    cineId: number().savedAs('CINE_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_CINES = new Table({",
+            "title": "Primero, Table de Cine",
+            "note": "Table describe CINES: nombre, cliente y clave. NOMBRE se describe después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'CINE_ID', type: 'number' }",
+            "title": "Clave de Cine",
+            "note": "CINE_ID identifica cada registro de CINES. El tipo de NOMBRE se declara en MODELO_CINE."
+          },
           {
             "text": "export const TABLA_PROYECCIONES = new Table({",
             "title": "El mapa de la tabla",
@@ -692,29 +703,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_CINES = new Table({\n  name: process.env.TABLA_CINES, documentClient: db,\n  partitionKey: { name: 'CINE_ID', type: 'number' }\n});\n\nexport const TABLA_PROYECCIONES = new Table({\n  name: process.env.TABLA_PROYECCIONES, documentClient: db,\n  partitionKey: { name: 'PROYECCION_ID', type: 'number' },\n  indexes: {\n    PorCine: {\n      type: 'global',\n      partitionKey: { name: 'CINE_ID', type: 'number' },\n      sortKey: { name: 'PROYECCION_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_CINE = new Entity({\n  name: 'Cine', table: TABLA_CINES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    cineId: number().key().savedAs('CINE_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_PROYECCION = new Entity({\n  name: 'Proyeccion', table: TABLA_PROYECCIONES,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    proyeccionId: number().key().savedAs('PROYECCION_ID'),\n    pelicula: string().savedAs('PELICULA'),\n    duracionMinutos: number().savedAs('DURACION_MINUTOS'),\n    cineId: number().savedAs('CINE_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_CINE = new Entity({",
+            "title": "Campos de Cine",
+            "note": "Esta Entity reúne los dos atributos del ER: identificador y nombre. Table indica que se guardan en CINES."
+          },
+          {
+            "text": "cineId: number().key().savedAs('CINE_ID')",
+            "after": "export const MODELO_CINE",
+            "title": "ID → CINE_ID",
+            "note": "En el ER es ID. En DynamoDB se guarda como CINE_ID. number() define el tipo; key() lo vincula a la partition key de CINES."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_CINE",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto de Cine. savedAs guarda nombre en NOMBRE. Este atributo no es una clave."
+          },
+          {
             "text": "export const MODELO_PROYECCION = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROYECCION en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_PROYECCION en el repository.",
+            "after": "export const MODELO_PROYECCION"
           },
           {
             "text": "name: 'Proyeccion', table: TABLA_PROYECCIONES,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_PROYECCIONES declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_PROYECCIONES declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_PROYECCION"
           },
           {
             "text": "proyeccionId: number().key().savedAs('PROYECCION_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce proyeccionId a PROYECCION_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce proyeccionId a PROYECCION_ID.",
+            "after": "export const MODELO_PROYECCION"
+          },
+          {
+            "text": "pelicula: string().savedAs('PELICULA')",
+            "after": "export const MODELO_PROYECCION",
+            "title": "Texto de Proyeccion → PELICULA",
+            "note": "Esta línea pertenece a MODELO_PROYECCION. Guarda pelicula en PELICULA, dentro del ítem de PROYECCIONES."
           },
           {
             "text": "duracionMinutos: number().savedAs('DURACION_MINUTOS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. duracionMinutos es un número; se guarda como DURACION_MINUTOS y no forma parte de la clave."
+            "title": "DURACION_MINUTOS también se configura",
+            "note": "number() describe duracionMinutos. savedAs lo guarda en DURACION_MINUTOS. Es un dato de Proyeccion; no forma parte de la clave principal.",
+            "after": "export const MODELO_PROYECCION"
           },
           {
             "text": "cineId: number().savedAs('CINE_ID')",
-            "title": "Guardar la referencia",
-            "note": "CINE_ID es un atributo de PROYECCIONES y la clave del índice PorCine. Aquí no lleva .key(): la clave de la tabla sigue siendo PROYECCION_ID."
+            "title": "Referencia a Cine",
+            "note": "cineId se guarda en CINE_ID. Es la referencia a Cine y la partition key del GSI PorCine. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_PROYECCION"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1342,5 +1381,142 @@
     "index": "PorCine",
     "modelFile": "src/models/cine-proyeccion.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Cine",
+        "sql": "CINE",
+        "dynamo": "CINES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "cineId",
+              "column": "CINE_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Cine Alameda",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Proyeccion",
+        "sql": "PROYECCION",
+        "dynamo": "PROYECCIONES",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "proyeccionId",
+              "column": "PROYECCION_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "PELICULA",
+            "role": "data",
+            "example": "Viaje al norte",
+            "nest": {
+              "property": "pelicula",
+              "column": "PELICULA",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "pelicula",
+              "column": "PELICULA",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "DURACION_MINUTOS",
+            "role": "data",
+            "example": 90,
+            "nest": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "duracionMinutos",
+              "column": "DURACION_MINUTOS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_CINE",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "cine.id",
+              "column": "ID_CINE",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "cineId",
+              "column": "CINE_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

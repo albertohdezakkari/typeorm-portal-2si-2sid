@@ -46,19 +46,24 @@ repositories con un cliente DynamoDB simulado. No conecta a servicios remotos.
 Al cambiar el orden o significado de las piezas, actualizar también la versión
 del estado y su restauración para no atribuir aciertos a un ejercicio distinto.
 
-## Piloto de campos CH-22
+## Preparación completa en cada contexto
 
-`scripts/pilotos/campos_ch22.py` vincula los seis campos del ER con sus
-declaraciones TypeORM y Toolbox. El código de las Entities y del YAML se
-conserva; se amplían los focos de lectura. El atributo `after` de una pista
-distingue las dos líneas `nombre` del mismo archivo de modelos.
+`scripts/campos_modelo.py` vincula los seis campos del ER de cada ficha con sus
+propias declaraciones TypeORM y Toolbox. Se conservan las Entities, las rutas
+y los valores del contexto. El atributo `after` distingue líneas iguales de
+entidades diferentes en el mismo archivo de modelos.
+
+Todos los recorridos ofrecen pestañas distribuidas en filas, explicación actual
+resaltada, posición «X de Y» y enlaces de los campos al código. El inventario junto
+a cada tabla del YAML es un comentario; los atributos normales se describen en
+`schema: item(...)`. `NonKeyAttributes` conserva su función de proyección en el
+índice con `INCLUDE`. En Cine, la proyección utiliza PELICULA, igual que su modelo.
 
 `preparationRevision` renueva solo los dos ejercicios de preparación ampliados,
 conservando el resto del progreso. Dos piezas con texto idéntico se consideran
-equivalentes en este piloto. Las claves del YAML se distinguen de los atributos
-normales de `schema: item(...)`; no se añaden columnas normales a
-`AttributeDefinitions`.
+equivalentes. El progreso de Arturo ya utiliza esa revisión y se conserva.
 
-La comprobación puede limitarse con `--case-id CH-22`. Además de compilar,
-verifica todas las columnas de los metadatos TypeORM y todos los atributos
-del ítem que Toolbox prepara para cada Entity, sin conectar a servicios remotos.
+La comprobación técnica puede limitarse con `--case-id CH-22`. Además de compilar,
+verifica YAML, claves, proyección, columnas de los metadatos TypeORM y todos los
+atributos del ítem que Toolbox prepara para cada Entity, sin conectar a servicios
+remotos.
