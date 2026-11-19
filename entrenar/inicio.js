@@ -25,6 +25,7 @@ window.addEventListener('message', async event => {
     const data = await dataResponse.json();
     if (data.context?.id !== init.caseId || data.version !== 5) throw new Error('El contexto no coincide');
     container.innerHTML = await templateResponse.text();
+    container.querySelector('#pdf-taller').dataset.tabsLayout = init.tabsLayout === 'wrap' ? 'wrap' : '';
     status.hidden = true;
     montarTaller(data, {
       estadoInicial: init.state,

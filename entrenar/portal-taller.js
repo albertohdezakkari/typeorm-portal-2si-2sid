@@ -29,8 +29,9 @@
         key,
         binding: `${digest}:${request}`,
         state: readState(key),
+        tabsLayout: document.getElementById('workspace').dataset.tabsLayout,
       };
-      frame.src = 'entrenar/';
+      frame.src = current.tabsLayout === 'wrap' ? 'entrenar/?v=tabs-1' : 'entrenar/';
       // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
       if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {
