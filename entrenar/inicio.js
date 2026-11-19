@@ -1,4 +1,4 @@
-import { montarTaller } from './taller.js';
+import { montarTaller } from './taller.js?v=3';
 
 const status = document.getElementById('estado');
 const container = document.getElementById('taller');

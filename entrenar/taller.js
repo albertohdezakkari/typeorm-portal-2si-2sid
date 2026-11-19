@@ -1,6 +1,7 @@
 export function montarTaller(data, {estadoInicial=null, guardar=()=>{}}={}) {
 
 const root=document.getElementById('pdf-taller'),D=data,C=D.context,P=C.parent,N=C.child,M=C.metric;
+const guidedExplanation=root.dataset.tabsLayout==='wrap';
 const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let track='nest',index=0,frame=0,mode='observe',full=false,playing=false,timer=null,selected=null,modelReturn=null,entityReturn=null,erObserver=null,erRaf=null,dragged=null,touchDrag=null,suppressClickUntil=0;
@@ -89,7 +90,7 @@ function renderCode(){
  $('[data-er-work]').hidden=!isRelation();$('[data-code]').hidden=isRelation();$('[data-full]').hidden=isRelation();
  if(isRelation()){
   $('[data-code]').innerHTML='';
-  renderER();$('[data-dots]').innerHTML=stage().cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-pressed="${i===frame}">${i+1} · ${esc(['Lado uno','Lado muchos','La clave foránea'][i])}</button>`).join('');
+  renderER();$('[data-dots]').innerHTML=stage().cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-pressed="${i===frame}"${guidedExplanation&&i===frame?' aria-current="step"':''}>${i+1} · ${esc(['Lado uno','Lado muchos','La clave foránea'][i])}</button>`).join('');
   $$('[data-cue-index]').forEach(b=>b.onclick=()=>{stop();frame=+b.dataset.cueIndex;renderCode();renderScene();controls();persist();});bindSlots();renderBank();return;
  }
  $('[data-er-work]').innerHTML='';
@@ -99,7 +100,7 @@ function renderCode(){
   for(const r of matches){out+=syntax(line.slice(last,r.start-base));if(mode==='build'){const v=answers[key()]?.[r.i],piece=pieces().find(p=>p.id===v);out+=`<button type="button" class="p-slot cursor-interaction" data-slot="${r.i}" data-filled="${!!piece}" aria-label="Hueco ${r.i+1}: ${esc(s.cues[r.i].title)}">${piece?esc(piece.text):'⟦ Pieza '+(r.i+1)+' ⟧'}</button>`;}else out+=syntax(line.slice(r.start-base,r.end-base));last=r.end-base;}
   out+=syntax(line.slice(last));return i>=start&&i<end?`<span class="p-line" data-line="${i+1}" data-active="${mode==='observe'&&i+1===active.line}">${out||'&nbsp;'}</span>`:'';}).join('');
  $('[data-code]').innerHTML=html;$('[data-full]').textContent=full?'Volver al fragmento':'Ver archivo completo';
- $('[data-dots]').innerHTML=`${s.cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-label="Explicación ${i+1}: ${esc(c.title)}" aria-pressed="${i===frame}">${i+1}${answers[key()]?.[i]===String(i)?' ✓':''}</button>`).join('')}<span>${mode==='build'?'Huecos del archivo':`líneas ${start+1}–${end}`}</span>`;
+ $('[data-dots]').innerHTML=`${s.cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-label="Explicación ${i+1}: ${esc(c.title)}" aria-pressed="${i===frame}"${guidedExplanation&&i===frame?' aria-current="step"':''}>${i+1}${answers[key()]?.[i]===String(i)?' ✓':''}</button>`).join('')}<span>${mode==='build'?'Huecos del archivo':`líneas ${start+1}–${end}`}</span>`;
  $$('[data-cue-index]').forEach(b=>b.onclick=()=>{stop();frame=+b.dataset.cueIndex;renderCode();renderScene();controls();persist();});
  bindSlots();
  renderBank();
@@ -144,7 +145,7 @@ if(isRelation()){
 }
 if(isCloud&&c>0&&s.name==='Repository')html+=modelUse();
 if(!isCloud&&c>0&&s.name==='Repository')html+=nestUse();
-$('[data-scene]').innerHTML=html;$('[data-cue]').innerHTML=`<b>${esc(cue.title)}</b><p>${esc(cue.note)}</p>${mode==='observe'?`<code>${esc(cue.text)}</code>`:''}`;
+$('[data-scene]').innerHTML=html;$('[data-cue]').innerHTML=`${guidedExplanation&&mode==='observe'?`<span class="p-explanation-label">Explicación ${frame+1} de ${s.cues.length}</span>`:''}<b>${esc(cue.title)}</b><p>${esc(cue.note)}</p>${mode==='observe'?`<code>${esc(cue.text)}</code>`:''}`;
 $$('[data-model-step]').forEach(b=>b.onclick=()=>go(+b.dataset.modelStep));
 const review=$('[data-model-review]');if(review)review.onclick=()=>{modelReturn=index;go(2);};
 const back=$('[data-model-return]');if(back)back.onclick=()=>{const target=modelReturn;modelReturn=null;go(target);};
@@ -168,7 +169,22 @@ function renderBank(){
  $('[data-bank]').innerHTML=available.length?available.map(p=>`<button type="button" class="p-piece" draggable="true" data-piece="${p.id}" aria-pressed="${selected===p.id}">${esc(p.text)}</button>`).join(''):`<span class="p-bank-status">${remaining?'Continúa con los números bajo el código para colocar las siguientes.':'Puedes mover una pieza colocada si quieres cambiarla.'}</span>`;
  $$('[data-piece]').forEach(b=>b.onclick=()=>{selected=b.dataset.piece;renderBank();feedback('Pieza seleccionada. Pulsa el hueco donde debe ir.');});
 }
-function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.exact?'modelo de la ficha':'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;}
+function syncExplanationProgress(){
+ if(!guidedExplanation)return;
+ const s=stage(),total=s.cues.length;
+ $$('[data-cue-index]').forEach(button=>{
+  if(Number(button.dataset.cueIndex)===frame)button.setAttribute('aria-current','step');
+  else button.removeAttribute('aria-current');
+ });
+ const label=$('[data-mode]');
+ label.setAttribute('role','status');label.setAttribute('aria-live','polite');label.setAttribute('aria-atomic','true');
+ label.toggleAttribute('data-explanation-position',mode==='observe');
+ if(mode==='observe'){
+  label.textContent=`Explicación ${frame+1} de ${total} · ${s.cues[frame].title}`;
+  $('[data-frame]').textContent=frame===total-1?(total===1?'Repetir explicación ↻':'Volver a explicación 1 ↻'):`Siguiente explicación · ${frame+2} de ${total} →`;
+ }
+}
+function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.exact?'modelo de la ficha':'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();}
 function render(){renderNav();renderCode();renderScene();controls();}
 function go(i){stop();index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();}
 function fly(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=$('[data-cue] code'),b=isRelation()?$(`[data-er-focus="${frame}"]`):$('[data-code] .p-line[data-active=true]');if(!a||!b)return;const r=root.getBoundingClientRect(),ar=a.getBoundingClientRect(),br=b.getBoundingClientRect(),el=document.createElement('span');el.className='p-fly';el.textContent=stage().cues[frame].text;el.style.left=(ar.left-r.left)+'px';el.style.top=(ar.top-r.top)+'px';root.appendChild(el);const animation=el.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${br.left-ar.left+(isRelation()?0:32)}px,${br.top-ar.top}px)`,opacity:.25}],{duration:850,easing:'cubic-bezier(.4,0,.2,1)'});animation.onfinish=()=>el.remove();}
