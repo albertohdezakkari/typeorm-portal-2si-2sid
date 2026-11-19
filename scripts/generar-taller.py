@@ -7,6 +7,7 @@ correos ni nombres de archivo personalizados del alumnado.
 from pathlib import Path
 import argparse, copy, hashlib, json, re
 from pypdf import PdfReader
+from pilotos.campos_ch22 import apply as apply_field_pilot
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -150,6 +151,7 @@ def compile_case(case, classic, base, sources, pdf_folder):
         d['source']=dict(kind='pdf',label='Ficha '+cid,sha256=hashlib.sha256(pdf.read_bytes()).hexdigest(),pages=4)
     else:d['source']=dict(kind='teacher',label='Ejemplo docente · '+case['title'])
     d['version']=5
+    apply_field_pilot(d)
     for stages in d['steps'].values():
         assert len(stages)==26
         for step in stages:

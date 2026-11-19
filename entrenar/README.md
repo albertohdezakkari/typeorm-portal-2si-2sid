@@ -45,3 +45,20 @@ repositories con un cliente DynamoDB simulado. No conecta a servicios remotos.
 
 Al cambiar el orden o significado de las piezas, actualizar también la versión
 del estado y su restauración para no atribuir aciertos a un ejercicio distinto.
+
+## Piloto de campos CH-22
+
+`scripts/pilotos/campos_ch22.py` vincula los seis campos del ER con sus
+declaraciones TypeORM y Toolbox. El código de las Entities y del YAML se
+conserva; se amplían los focos de lectura. El atributo `after` de una pista
+distingue las dos líneas `nombre` del mismo archivo de modelos.
+
+`preparationRevision` renueva solo los dos ejercicios de preparación ampliados,
+conservando el resto del progreso. Dos piezas con texto idéntico se consideran
+equivalentes en este piloto. Las claves del YAML se distinguen de los atributos
+normales de `schema: item(...)`; no se añaden columnas normales a
+`AttributeDefinitions`.
+
+La comprobación puede limitarse con `--case-id CH-22`. Además de compilar,
+verifica todas las columnas de los metadatos TypeORM y todos los atributos
+del ítem que Toolbox prepara para cada Entity, sin conectar a servicios remotos.

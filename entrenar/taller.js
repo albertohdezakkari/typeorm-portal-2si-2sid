@@ -2,6 +2,7 @@ export function montarTaller(data, {estadoInicial=null, guardar=()=>{}}={}) {
 
 const root=document.getElementById('pdf-taller'),D=data,C=D.context,P=C.parent,N=C.child,M=C.metric;
 const guidedExplanation=root.dataset.tabsLayout==='wrap';
+const schemaGuide=guidedExplanation&&Boolean(D.fieldGuide);
 const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let track='nest',index=0,frame=0,mode='observe',full=false,playing=false,timer=null,selected=null,modelReturn=null,entityReturn=null,erObserver=null,erRaf=null,dragged=null,touchDrag=null,suppressClickUntil=0;
@@ -10,21 +11,25 @@ const stage=()=>D.steps[track][index],key=()=>track+':'+index;
 function restore(p){
  if(p?.version!==5||p.caseId!==C.id)return;
  track=p.track==='cloud'?'cloud':'nest';index=Number.isInteger(p.index)?Math.max(0,Math.min(p.index,D.steps[track].length-1)):0;
+ const revised=new Set((p.preparationRevision??0)!==(D.preparationRevision??0)?D.revisedSteps||[]:[]);
  for(const [k,value] of Object.entries(p.answers||{})){
+  if(revised.has(k))continue;
   const match=/^(nest|cloud):(\d+)$/.exec(k);if(!match)continue;const step=D.steps[match[1]][Number(match[2])];if(!step||!value||typeof value!=='object')continue;
   const used=new Set(),valid={};for(const [slot,id] of Object.entries(value)){const n=Number(slot),v=Number(id);if(!Number.isInteger(n)||n<0||n>=step.cues.length||typeof id!=='string'||!Number.isInteger(v)||v<0||v>=step.cues.length||used.has(id))continue;used.add(id);valid[n]=id;}answers[k]=valid;
  }
- for(const k of p.solved||[]){const [t,n]=String(k).split(':'),s=D.steps[t]?.[Number(n)];if(s&&s.cues.every((_,i)=>answers[k]?.[i]===String(i)))solved.add(k);}
- for(const k of p.observed||[])if(/^(nest|cloud):\d+$/.test(k))observed.add(k);
+ for(const k of p.solved||[]){const [t,n]=String(k).split(':'),s=D.steps[t]?.[Number(n)];if(s&&s.cues.every((_,i)=>pieceMatches(s,i,answers[k]?.[i])))solved.add(k);}
+ for(const k of p.observed||[])if(/^(nest|cloud):\d+$/.test(k)&&!revised.has(k))observed.add(k);
  mode=p.mode==='build'?'build':'observe';frame=Number.isInteger(p.frame)?Math.max(0,Math.min(p.frame,stage().cues.length-1)):0;full=p.full===true;
+ if(revised.has(key())){mode='observe';frame=0;full=false;}
 }
 restore(estadoInicial);
-const persist=()=>guardar({version:5,caseId:C.id,track,index,frame,mode,full,solved:[...solved],observed:[...observed],answers:structuredClone(answers)});
+const persist=()=>guardar({version:5,caseId:C.id,preparationRevision:D.preparationRevision??0,track,index,frame,mode,full,solved:[...solved],observed:[...observed],answers:structuredClone(answers)});
 function stop(){playing=false;clearTimeout(timer);timer=null;root.querySelectorAll('.p-fly').forEach(x=>x.remove());cancelDrag();}
 function feedback(text,kind=''){ $('[data-feedback]').textContent=text;$('[data-feedback]').dataset.kind=kind; }
 const isRelation=()=>stage().path==='Modelo entidad–relación';
 function pieces(){return stage().cues.map((c,i)=>({id:String(i),text:c.text})).sort((a,b)=>a.text.localeCompare(b.text));}
-function marks(){let code=stage().code;return stage().cues.map((c,i)=>{const start=code.indexOf(c.text);if(start<0)throw new Error('No está la pista: '+c.text);return {i,start,end:start+c.text.length,line:code.slice(0,start).split('\n').length};});}
+function pieceMatches(step,slot,id){return typeof id==='string'&&(id===String(slot)||(schemaGuide&&step.cues[Number(id)]?.text===step.cues[slot]?.text));}
+function marks(){let code=stage().code;return stage().cues.map((c,i)=>{const anchor=c.after?code.indexOf(c.after):0,start=anchor<0?-1:code.indexOf(c.text,anchor);if(start<0)throw new Error('No está la pista: '+c.text);return {i,start,end:start+c.text.length,line:code.slice(0,start).split('\n').length};});}
 function syntax(text){return esc(text).replace(/\b(import|from|export|async|await|return|const|class|new|private|readonly|function)\b/g,'<span class="p-code-key">$1</span>');}
 function bindSlots(){
  $$('[data-slot]').forEach(el=>{el.draggable=el.dataset.filled==='true';if(solved.has(key()))el.dataset.good='true';el.onclick=()=>{if(selected!==null)place(+el.dataset.slot,selected);else if(el.dataset.filled==='true'){selected=answers[key()][el.dataset.slot];renderBank();feedback('Pieza seleccionada. Arrástrala o pulsa otro hueco para moverla.');}else{frame=+el.dataset.slot;renderScene();feedback('Selecciona una pieza y después pulsa este hueco.');}};});
@@ -100,20 +105,39 @@ function renderCode(){
   for(const r of matches){out+=syntax(line.slice(last,r.start-base));if(mode==='build'){const v=answers[key()]?.[r.i],piece=pieces().find(p=>p.id===v);out+=`<button type="button" class="p-slot cursor-interaction" data-slot="${r.i}" data-filled="${!!piece}" aria-label="Hueco ${r.i+1}: ${esc(s.cues[r.i].title)}">${piece?esc(piece.text):'⟦ Pieza '+(r.i+1)+' ⟧'}</button>`;}else out+=syntax(line.slice(r.start-base,r.end-base));last=r.end-base;}
   out+=syntax(line.slice(last));return i>=start&&i<end?`<span class="p-line" data-line="${i+1}" data-active="${mode==='observe'&&i+1===active.line}">${out||'&nbsp;'}</span>`:'';}).join('');
  $('[data-code]').innerHTML=html;$('[data-full]').textContent=full?'Volver al fragmento':'Ver archivo completo';
- $('[data-dots]').innerHTML=`${s.cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-label="Explicación ${i+1}: ${esc(c.title)}" aria-pressed="${i===frame}"${guidedExplanation&&i===frame?' aria-current="step"':''}>${i+1}${answers[key()]?.[i]===String(i)?' ✓':''}</button>`).join('')}<span>${mode==='build'?'Huecos del archivo':`líneas ${start+1}–${end}`}</span>`;
+ $('[data-dots]').innerHTML=`${s.cues.map((c,i)=>`<button type="button" class="p-btn cursor-interaction" data-cue-index="${i}" aria-label="Explicación ${i+1}: ${esc(c.title)}" aria-pressed="${i===frame}"${guidedExplanation&&i===frame?' aria-current="step"':''}>${i+1}${pieceMatches(s,i,answers[key()]?.[i])?' ✓':''}</button>`).join('')}<span>${mode==='build'?'Huecos del archivo':`líneas ${start+1}–${end}`}</span>`;
  $$('[data-cue-index]').forEach(b=>b.onclick=()=>{stop();frame=+b.dataset.cueIndex;renderCode();renderScene();controls();persist();});
  bindSlots();
  renderBank();
 }
 function plotData(after=false){let plots=D.fixtures.map(x=>({...x}));const c=stage().chapter;if((c===1&&after)||(c===2&&!after))plots.push({id:10,name:C.createName,value:M.create,parent:2});if(c>=3&&(c>3||after))plots.find(x=>x.id===7).value=M.after;if(c>=4&&(c>4||after))plots.find(x=>x.id===7).parent=2;return plots;}
 function garden(plots,focus=7){return `<div class="p-gardens">${[1,2].map(h=>`<div class="p-garden"><strong>${esc(P.entity)} ${h}</strong>${plots.filter(p=>p.parent===h).map(p=>`<div class="p-plot" data-focus="${p.id===focus}"><span class="p-record-mark" aria-hidden="true"></span><span>${p.id} · ${esc(p.name)}<br>${esc(p.value)} ${esc(M.unit)}</span></div>`).join('')}</div>`).join('')}</div>`;}
+function fieldInventory(technology){
+ const count=D.fieldGuide.entities.reduce((n,e)=>n+e.fields.length,0);
+ return `<div class="p-schema-inventory" data-field-inventory="${technology}"><div class="p-schema-heading"><b>Todos los campos del ER</b><span>${count} campos · pulsa uno para ver su declaración</span></div><div class="p-schema-tables">${D.fieldGuide.entities.map(entity=>`<section class="p-schema-table" data-field-entity="${esc(entity.name)}"><header><strong>${esc(technology==='cloud'?entity.dynamo:entity.sql)}</strong><small>${entity.fields.length} campos · ${technology==='cloud'?'Entity de Toolbox':'Entity de TypeORM'}</small></header>${entity.fields.map(field=>{
+ const source=field[technology],active=track===technology&&index===source.step&&frame===source.cue,role=field.role==='key'?'PK':field.role==='reference'?(technology==='cloud'?'REF':'FK'):'DATO';
+ return `<button type="button" class="p-schema-field" data-schema-field="${esc(entity.name+':'+field.er)}" data-field-step="${source.step}" data-field-cue="${source.cue}" data-field-role="${field.role}" data-field-active="${active}" title="Ver dónde se declara ${esc(source.column)} · Ejemplo: ${esc(field.example)}" aria-label="${esc(entity.name+': '+field.er+' → '+source.column+'. Ver declaración')}"><span class="p-schema-badge">${role}</span><span class="p-schema-property"><code>${esc(source.property)}</code><small>${esc(source.type)}</small></span><span class="p-schema-arrow" aria-hidden="true">→</span><span class="p-schema-column"><code>${esc(source.column)}</code></span></button>`;
+ }).join('')}</section>`).join('')}</div></div>`;
+}
+function cloudSchemaDiagram(){
+ const scene=stage().scene,keysVisible=scene==='index'||scene==='table';
+ const process=`<nav class="p-schema-process" aria-label="Dónde se define cada parte">${[['1','YAML','Crea tablas',1,'index'],['2','Table','Cliente y claves',2,'table'],['3','Entity','Todos los atributos',3,'entity']].map(([n,title,note,step,role])=>`<button type="button" data-model-step="${step}" data-active="${scene===role}"><b>${n} · ${title}</b><small>${note}</small></button>`).join('<span aria-hidden="true">→</span>')}</nav>`;
+ const keys=`<div class="p-schema-keys"><div><b>${esc(P.table)}</b><code>PK · ${esc(P.sql)}_ID</code><small>Table · sin sort key</small></div><div><b>${esc(N.table)}</b><code>PK · ${esc(N.sql)}_ID</code><small>Table · sin sort key</small></div></div><div class="p-schema-index"><b>GSI ${esc(C.index)}</b><code>PK · ${esc(P.sql)}_ID → SK · ${esc(N.sql)}_ID</code><small>INCLUDE · ${esc(C.text.column)} + ${esc(M.column)}</small></div>`;
+ const where=`<div class="p-schema-explain"><strong>Los datos normales se configuran en Entity</strong><span><code>AttributeDefinitions</code> declara las claves de tabla e índices. <code>NOMBRE</code> y <code>${esc(M.column)}</code> tienen su tipo en <code>schema: item(...)</code> y se guardan con el ítem.</span><a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-dynamodb-table.html#cfn-dynamodb-table-attributedefinitions" target="_blank" rel="noopener">Ver la regla de AWS ↗</a></div>`;
+ return `<div class="p-schema-guide">${process}${keysVisible?keys:''}${fieldInventory('cloud')}${scene==='index'||scene==='entity'?where:''}<div class="p-schema-reference"><code>${esc(C.foreignKey)} en SQL → ${esc(P.sql)}_ID en DynamoDB</code><small>En DynamoDB es una referencia guardada; no una foreign key comprobada entre tablas.</small></div><div class="p-schema-repository"><code>Ref → process.env → Table(documentClient: db)</code><span>Repository → Entity.build(PutItemCommand) → send()</span><button type="button" class="p-btn" data-model-step="4">Usar todos los atributos en Repository →</button></div>${modelReturn!==null?'<button type="button" class="p-btn" data-model-return>Volver al archivo que estabas leyendo →</button>':''}</div>`;
+}
+function nestSchemaDiagram(){
+ return `<div class="p-schema-guide"><div class="p-schema-process p-schema-read"><span>ER · los campos</span><span aria-hidden="true">→</span><span>Entity · decoradores</span><span aria-hidden="true">→</span><span>PostgreSQL · columnas</span></div>${fieldInventory('nest')}<div class="p-nest-fk"><b>La relación también queda declarada</b><code>${esc(N.sql)}.${esc(C.foreignKey)} → ${esc(P.sql)}.ID</code><small>@ManyToOne + @JoinColumn guardan la FK.</small></div><div class="p-schema-explain"><strong><code>${esc(N.inverse)}: ${esc(N.entity)}[]</code> es la colección inversa</strong><span><code>@OneToMany</code> permite recorrer las obras del ayuntamiento. No añade otra columna a AYUNTAMIENTO.</span></div><div class="p-modebar"><button type="button" class="p-btn" data-nest-step="4">Registrar las dos Entities →</button><button type="button" class="p-btn" data-nest-step="5">Usarlas en Repository →</button></div>${entityReturn!==null?'<button type="button" class="p-btn" data-entity-return>Volver al caso de uso que estabas leyendo →</button>':''}</div>`;
+}
 function modelDiagram(){
+ if(schemaGuide)return cloudSchemaDiagram();
  const s=stage(),binding=s.scene==='binding',scan=binding&&frame>=4;
  return `<div class="p-models"><div class="p-model-label">PREPARAR · ${esc(C.modelFile)}</div><div class="p-transport">serverless.yml crea ${esc(N.table)} en AWS<br>Ref → variable ${esc(N.variable)} de Lambda</div><div class="p-model-pair"><div class="p-model-node" data-active="${s.scene==='table'||scan}"><header><button type="button" class="cursor-interaction" data-model-step="2">① Table</button></header><code>${esc(N.variable)}<br>name: tabla real<br>documentClient: db<br>PK: ${esc(N.sql)}_ID<br>GSI: ${esc(C.index)}</code><small>Destino · claves · cliente</small></div><div class="p-model-wire">→</div><div class="p-model-node" data-active="${s.scene==='entity'||binding&&!scan}"><header><button type="button" class="cursor-interaction" data-model-step="3">② Entity</button></header><code>${esc(N.model)}<br>table: ${esc(N.variable)}<br>schema: item(...)</code><small>Tipos · clave · nombres guardados</small></div></div><div class="p-model-node" data-active="${s.scene==='entity'}"><div class="p-model-map"><span>${esc(N.input)}<br>${esc(M.property)}</span><b>→</b><span>${esc(N.sql)}_ID<br>${esc(M.column)}</span></div><small>.savedAs() · traduce al guardar y al leer</small></div><div class="p-model-wire">↓ <span class="p-model-label">import desde el repository</span></div><div class="p-model-node" data-active="${binding}"><header><button type="button" class="cursor-interaction" data-model-step="4">③ Repository</button></header><code>${scan?esc(N.variable)+'.build(ScanCommand)<br>  .entities('+esc(N.model)+')':esc(N.model)+'.build(PutItemCommand)<br>  .item('+esc(N.property)+')'}<br>  .send()</code><small>build prepara · send ejecuta</small></div><div class="p-db">DynamoDB · ${esc(N.table)}</div>${modelReturn!==null?'<button type="button" class="p-btn cursor-interaction" data-model-return>Volver al archivo que estabas leyendo →</button>':''}</div>`;
 }
 function modelUse(){const c=stage().chapter;return `<div class="p-model-use"><span class="p-model-label">EL REPOSITORY REUTILIZA LOS MODELOS</span><code>${c===5?'Get: '+esc(P.model)+' → '+esc(P.variable)+'<br>Query: '+esc(N.variable)+' + '+esc(N.model):c===1?'Put: '+esc(N.model)+' → '+esc(N.variable)+'<br>Scan: '+esc(N.variable)+' + '+esc(N.model):esc(N.model)+' → table: '+esc(N.variable)}</code><button type="button" class="p-btn cursor-interaction" data-model-review>Revisar Table y Entity ↗</button></div>`;}
 function nestDiagram(){
  const s=stage(),relation=s.scene==='nest-relation',module=s.scene==='nest-module',binding=s.scene==='nest-binding';
+ if(schemaGuide&&!module&&!binding)return nestSchemaDiagram();
  const route=`<div class="p-nest-route"><span data-active="${!module&&!binding}">Entities</span>→<span data-active="${module}">forFeature</span>→<span data-active="${binding}">InjectRepository</span>→<span>Consulta / escritura</span></div>`;
  let content='';
  if(!module&&!binding){
@@ -136,7 +160,7 @@ if(isRelation()){
 }else if(isCloud&&['table','entity','binding'].includes(s.scene)){
  html=modelDiagram();
 }else if(s.scene==='index'&&isCloud){
- html=`<div class="p-index-map"><div class="p-index-box"><b>${esc(N.table)} · tabla</b><code>PK: ${esc(N.sql)}_ID</code><code>SK: no tiene</code></div><span class="p-index-arrow">→</span><div class="p-index-box"><b>${esc(C.index)} · GSI</b><code>PK: ${esc(P.sql)}_ID</code><code>SK: ${esc(N.sql)}_ID</code></div></div><div class="p-connection">INCLUDE → ${esc(C.text.column)} + ${esc(M.column)}</div>${garden(plotData(c===5))}`;
+ html=schemaGuide?cloudSchemaDiagram():`<div class="p-index-map"><div class="p-index-box"><b>${esc(N.table)} · tabla</b><code>PK: ${esc(N.sql)}_ID</code><code>SK: no tiene</code></div><span class="p-index-arrow">→</span><div class="p-index-box"><b>${esc(C.index)} · GSI</b><code>PK: ${esc(P.sql)}_ID</code><code>SK: ${esc(N.sql)}_ID</code></div></div><div class="p-connection">INCLUDE → ${esc(C.text.column)} + ${esc(M.column)}</div>${garden(plotData(c===5))}`;
 }else if(s.scene==='result'){
  const rows=plotData(after),op=D.operations[c-1];html=`<div class="p-transport">${esc(op.request)}</div><div>${rows.map(p=>`<div class="p-result-row" data-muted="${c===5&&!(p.parent===2&&p.value>=M.minimum)}" data-hit="${p.id===(c<3?10:7)}"><span>${p.id} · ${esc(p.name)}</span><span>${esc(p.value)} ${esc(M.unit)} · ${esc(P.entity)} ${p.parent}</span></div>`).join('')}</div><div class="p-return">${esc(op.result)}</div>`;
 }else{
@@ -147,6 +171,10 @@ if(isCloud&&c>0&&s.name==='Repository')html+=modelUse();
 if(!isCloud&&c>0&&s.name==='Repository')html+=nestUse();
 $('[data-scene]').innerHTML=html;$('[data-cue]').innerHTML=`${guidedExplanation&&mode==='observe'?`<span class="p-explanation-label">Explicación ${frame+1} de ${s.cues.length}</span>`:''}<b>${esc(cue.title)}</b><p>${esc(cue.note)}</p>${mode==='observe'?`<code>${esc(cue.text)}</code>`:''}`;
 $$('[data-model-step]').forEach(b=>b.onclick=()=>go(+b.dataset.modelStep));
+$$('[data-schema-field]').forEach(button=>button.onclick=()=>{
+ stop();index=Number(button.dataset.fieldStep);frame=Number(button.dataset.fieldCue);mode='observe';full=false;selected=null;render();
+ feedback('La línea resaltada declara este campo. Sigue la explicación o selecciona otro atributo.');persist();
+});
 const review=$('[data-model-review]');if(review)review.onclick=()=>{modelReturn=index;go(2);};
 const back=$('[data-model-return]');if(back)back.onclick=()=>{const target=modelReturn;modelReturn=null;go(target);};
 $$('[data-nest-step]').forEach(b=>b.onclick=()=>go(+b.dataset.nestStep));
@@ -201,7 +229,7 @@ function place(slot,id){
  const target=$(`[data-slot="${slot}"]`);if(target&&!matchMedia('(prefers-reduced-motion: reduce)').matches)target.animate([{transform:'scale(.96)',background:'var(--p-lime)'},{transform:'scale(1)',background:'var(--p-lime)'}],{duration:180,easing:'ease-out'});
  feedback('Pieza encajada. Se ha retirado del banco; puedes moverla o comprobar el montaje.','good');persist();
 }
-$('[data-check]').onclick=()=>{const s=stage(),a=answers[key()]||{},bad=s.cues.findIndex((_,i)=>a[i]!==String(i));if(bad>=0){frame=bad;renderCode();renderScene();const slot=$(`[data-slot="${bad}"]`);if(slot)slot.dataset.bad=true;feedback(`Revisa la pieza ${bad+1}: ${s.cues[bad].note}`,'error');return;}
+$('[data-check]').onclick=()=>{const s=stage(),a=answers[key()]||{},bad=s.cues.findIndex((_,i)=>!pieceMatches(s,i,a[i]));if(bad>=0){frame=bad;renderCode();renderScene();const slot=$(`[data-slot="${bad}"]`);if(slot)slot.dataset.bad=true;feedback(`Revisa la pieza ${bad+1}: ${s.cues[bad].note}`,'error');return;}
 solved.add(key());$$('[data-slot]').forEach(x=>x.dataset.good=true);renderScene();renderNav();controls();$('[data-scene]').classList.remove('p-breathe');void $('[data-scene]').offsetWidth;$('[data-scene]').classList.add('p-breathe');feedback(index===D.steps[track].length-1?'Recorrido completado. Cambia de tecnología y compara el mismo caso.':'Archivo correcto. Sigue con el siguiente y conserva el recorrido.','good');persist();};
 $('[data-next]').onclick=()=>{if(!solved.has(key()))return;if(index<D.steps[track].length-1)go(index+1);};$('[data-back]').onclick=()=>{if(index>0)go(index-1);};
 $$('[data-tech]').forEach(b=>b.onclick=()=>{stop();const chapter=stage().chapter;track=b.dataset.tech;index=D.steps[track].findIndex(s=>s.chapter===chapter);frame=0;mode='observe';full=false;selected=null;render();feedback('Mismo caso y mismos datos. Ahora mira qué archivos cambian.');persist();});

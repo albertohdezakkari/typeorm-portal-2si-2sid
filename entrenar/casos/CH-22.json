@@ -91,12 +91,12 @@
           },
           {
             "text": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
-            "title": "El nombre de el registro asociado",
+            "title": "NOMBRE es una columna de Obra",
             "note": "La propiedad nombre se corresponde con la columna NOMBRE."
           },
           {
             "text": "@Column({ name: 'PRESUPUESTO_EUROS', type: 'integer' })",
-            "title": "Una presupuesto numérica",
+            "title": "PRESUPUESTO_EUROS es una columna numérica",
             "note": "presupuestoEuros se guarda en PRESUPUESTO_EUROS, de tipo entero. El siguiente paso detalla la relación con Ayuntamiento."
           }
         ],
@@ -624,12 +624,12 @@
           {
             "text": "TableName: AYUNTAMIENTOS",
             "title": "Tabla principal",
-            "note": "Serverless entrega esta definición a CloudFormation para crear AYUNTAMIENTOS."
+            "note": "El YAML crea AYUNTAMIENTOS y declara su clave AYUNTAMIENTO_ID. Su atributo NOMBRE se describe con string() en MODELO_AYUNTAMIENTO."
           },
           {
             "text": "TableName: OBRAS",
             "title": "Tabla de obras",
-            "note": "La tabla usa OBRA_ID como partition key. No tiene sort key."
+            "note": "OBRAS tiene OBRA_ID como partition key. Sus ítems guardan además NOMBRE, PRESUPUESTO_EUROS y AYUNTAMIENTO_ID; los cuatro aparecen en MODELO_OBRA."
           },
           {
             "text": "IndexName: PorAyuntamiento",
@@ -657,6 +657,16 @@
         "path": "src/models/ayuntamiento-obra.model.mjs",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AYUNTAMIENTOS = new Table({\n  name: process.env.TABLA_AYUNTAMIENTOS, documentClient: db,\n  partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }\n});\n\nexport const TABLA_OBRAS = new Table({\n  name: process.env.TABLA_OBRAS, documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  indexes: {\n    PorAyuntamiento: {\n      type: 'global',\n      partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AYUNTAMIENTO = new Entity({\n  name: 'Ayuntamiento', table: TABLA_AYUNTAMIENTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_OBRA = new Entity({\n  name: 'Obra', table: TABLA_OBRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS'),\n    ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')\n  })\n});",
         "cues": [
+          {
+            "text": "export const TABLA_AYUNTAMIENTOS = new Table({",
+            "title": "Primero, la tabla Ayuntamiento",
+            "note": "Table describe AYUNTAMIENTOS: su nombre, cliente y clave. Los atributos normales se definen después en Entity."
+          },
+          {
+            "text": "partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }",
+            "title": "La clave del ayuntamiento",
+            "note": "AYUNTAMIENTO_ID identifica cada ayuntamiento. NOMBRE también se guarda, pero su tipo se declara en MODELO_AYUNTAMIENTO."
+          },
           {
             "text": "export const TABLA_OBRAS = new Table({",
             "title": "El mapa de la tabla",
@@ -694,29 +704,57 @@
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AYUNTAMIENTOS = new Table({\n  name: process.env.TABLA_AYUNTAMIENTOS, documentClient: db,\n  partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }\n});\n\nexport const TABLA_OBRAS = new Table({\n  name: process.env.TABLA_OBRAS, documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  indexes: {\n    PorAyuntamiento: {\n      type: 'global',\n      partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AYUNTAMIENTO = new Entity({\n  name: 'Ayuntamiento', table: TABLA_AYUNTAMIENTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_OBRA = new Entity({\n  name: 'Obra', table: TABLA_OBRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS'),\n    ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')\n  })\n});",
         "cues": [
           {
+            "text": "export const MODELO_AYUNTAMIENTO = new Entity({",
+            "title": "Los campos del ayuntamiento",
+            "note": "Esta Entity reúne los dos atributos del ER: el identificador y el nombre. Table indica dónde se guardan."
+          },
+          {
+            "text": "ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID')",
+            "after": "export const MODELO_AYUNTAMIENTO",
+            "title": "ID del ayuntamiento → AYUNTAMIENTO_ID",
+            "note": "En el ER es ID. En DynamoDB lo llamamos AYUNTAMIENTO_ID. number() es el tipo y key() lo vincula a la partition key de AYUNTAMIENTOS."
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_AYUNTAMIENTO",
+            "title": "NOMBRE también se configura",
+            "note": "string() describe el texto del ayuntamiento. savedAs guarda la propiedad nombre con el atributo NOMBRE. No es una clave."
+          },
+          {
             "text": "export const MODELO_OBRA = new Entity({",
             "title": "La ficha de un registro asociado",
-            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_OBRA en el repository."
+            "note": "Entity define la forma de los ítems y cómo se traducen sus atributos. export permite importar MODELO_OBRA en el repository.",
+            "after": "export const MODELO_OBRA"
           },
           {
             "text": "name: 'Obra', table: TABLA_OBRAS,",
             "title": "Unir Entity con Table",
-            "note": "table recibe exactamente la constante TABLA_OBRAS declarada antes. La Entity conoce así el destino y sus claves."
+            "note": "table recibe exactamente la constante TABLA_OBRAS declarada antes. La Entity conoce así el destino y sus claves.",
+            "after": "export const MODELO_OBRA"
           },
           {
             "text": "obraId: number().key().savedAs('OBRA_ID')",
             "title": "Nombre del código → nombre guardado",
-            "note": "number() define un número, .key() marca la clave y .savedAs() traduce obraId a OBRA_ID."
+            "note": "number() define un número, .key() marca la clave y .savedAs() traduce obraId a OBRA_ID.",
+            "after": "export const MODELO_OBRA"
+          },
+          {
+            "text": "nombre: string().savedAs('NOMBRE')",
+            "after": "export const MODELO_OBRA",
+            "title": "El nombre de la obra",
+            "note": "Esta línea pertenece a MODELO_OBRA. Guarda el texto nombre en NOMBRE, dentro del ítem de OBRAS."
           },
           {
             "text": "presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS')",
-            "title": "Atributos de la ficha",
-            "note": "schema: item(...) reúne los atributos. presupuestoEuros es un número; se guarda como PRESUPUESTO_EUROS y no forma parte de la clave."
+            "title": "PRESUPUESTO_EUROS también se configura",
+            "note": "number() describe el presupuesto. savedAs guarda presupuestoEuros en PRESUPUESTO_EUROS. Es un dato de la obra; no forma parte de la clave principal.",
+            "after": "export const MODELO_OBRA"
           },
           {
             "text": "ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')",
-            "title": "Guardar la referencia",
-            "note": "AYUNTAMIENTO_ID es un atributo de OBRAS y la clave del índice PorAyuntamiento. Aquí no lleva .key(): la clave de la tabla sigue siendo OBRA_ID."
+            "title": "La referencia al ayuntamiento",
+            "note": "ayuntamientoId se guarda en AYUNTAMIENTO_ID. Es la referencia al ayuntamiento y la partition key del GSI PorAyuntamiento. DynamoDB no comprueba una foreign key entre tablas.",
+            "after": "export const MODELO_OBRA"
           },
           {
             "text": "entityAttribute: false, timestamps: false",
@@ -1344,5 +1382,142 @@
     "index": "PorAyuntamiento",
     "modelFile": "src/models/ayuntamiento-obra.model.mjs",
     "createName": "Registro de prueba"
-  }
+  },
+  "fieldGuide": {
+    "entities": [
+      {
+        "name": "Ayuntamiento",
+        "sql": "AYUNTAMIENTO",
+        "dynamo": "AYUNTAMIENTOS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 1,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 1,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "ayuntamientoId",
+              "column": "AYUNTAMIENTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 1
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Ayuntamiento del Río",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 1,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 2
+            }
+          }
+        ]
+      },
+      {
+        "name": "Obra",
+        "sql": "OBRA",
+        "dynamo": "OBRAS",
+        "fields": [
+          {
+            "er": "ID",
+            "role": "key",
+            "example": 7,
+            "nest": {
+              "property": "id",
+              "column": "ID",
+              "type": "number",
+              "step": 2,
+              "cue": 1
+            },
+            "cloud": {
+              "property": "obraId",
+              "column": "OBRA_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 5
+            }
+          },
+          {
+            "er": "NOMBRE",
+            "role": "data",
+            "example": "Mejora de acera",
+            "nest": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "varchar(120)",
+              "step": 2,
+              "cue": 2
+            },
+            "cloud": {
+              "property": "nombre",
+              "column": "NOMBRE",
+              "type": "string()",
+              "step": 3,
+              "cue": 6
+            }
+          },
+          {
+            "er": "PRESUPUESTO_EUROS",
+            "role": "data",
+            "example": 3000,
+            "nest": {
+              "property": "presupuestoEuros",
+              "column": "PRESUPUESTO_EUROS",
+              "type": "integer",
+              "step": 2,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "presupuestoEuros",
+              "column": "PRESUPUESTO_EUROS",
+              "type": "number()",
+              "step": 3,
+              "cue": 7
+            }
+          },
+          {
+            "er": "ID_AYUNTAMIENTO",
+            "role": "reference",
+            "example": 1,
+            "nest": {
+              "property": "ayuntamiento.id",
+              "column": "ID_AYUNTAMIENTO",
+              "type": "FK · integer",
+              "step": 3,
+              "cue": 3
+            },
+            "cloud": {
+              "property": "ayuntamientoId",
+              "column": "AYUNTAMIENTO_ID",
+              "type": "number()",
+              "step": 3,
+              "cue": 8
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "preparationRevision": 1,
+  "revisedSteps": [
+    "cloud:2",
+    "cloud:3"
+  ]
 }

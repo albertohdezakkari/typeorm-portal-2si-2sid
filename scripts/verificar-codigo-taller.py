@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--nest-deps', type=Path, required=True)
 parser.add_argument('--toolbox-deps', type=Path, required=True)
+parser.add_argument('--case-id', help='Limita la comprobación a un contexto, por ejemplo CH-22.')
 args = parser.parse_args()
 nest_deps, toolbox_deps = args.nest_deps.resolve(), args.toolbox_deps.resolve()
 
@@ -46,6 +47,17 @@ assert.equal(calls.at(-1).IndexName,c.index);assert.ok(calls.at(-1).FilterExpres
 assert.equal(calls.at(-1).ConsistentRead,undefined);
 assert.equal(JSON.parse(response.body)[p.property][p.input],2);
 assert.ok(calls.every(call=>[p.table,n.table].includes(call.TableName)));
+if(d.fieldGuide){
+ const {PutItemCommand}=await import('dynamodb-toolbox/entity/actions/put');
+ const models=await import('./'+c.modelFile);
+ for(const entity of d.fieldGuide.entities){
+  const model=models[entity.name===p.entity?p.model:n.model];
+  const input=Object.fromEntries(entity.fields.map(f=>[f.cloud.property,f.example]));
+  const expected=Object.fromEntries(entity.fields.map(f=>[f.cloud.column,f.example]));
+  const command=model.build(PutItemCommand).item(input).params();
+  assert.deepEqual(command.Item,expected,'Faltan atributos en '+entity.name);
+ }
+}
 '''
 
 METADATA = r'''
@@ -65,6 +77,10 @@ assert.equal(b.foreignKeys[0].referencedEntityMetadata.tableName,p.sql);
 assert.equal(a.relations[0].relationType,'one-to-many');assert.equal(b.relations[0].relationType,'many-to-one');
 const tokens=Reflect.getMetadata('imports',TallerModule).flatMap(x=>x.providers||[]).map(x=>x.provide);
 assert.ok(tokens.includes(getRepositoryToken(Parent))&&tokens.includes(getRepositoryToken(Child)));
+if(d.fieldGuide)for(const entity of d.fieldGuide.entities){
+ const metadata=ds.getMetadata(entity.name===p.entity?Parent:Child);
+ assert.deepEqual(metadata.columns.map(x=>x.databaseName).sort(),entity.fields.map(f=>f.nest.column).sort());
+}
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''
 
@@ -104,6 +120,9 @@ def verify(path):
     return ctx['id']
 
 paths=sorted((ROOT/'entrenar/casos').glob('CH-*.json'))
+if args.case_id:
+    paths=[p for p in paths if p.stem==args.case_id]
+    assert paths, 'Contexto no encontrado'
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
     results=list(pool.map(verify,paths))
 print(f'{len(results)} contextos: TypeScript estricto, metadatos TypeORM y seis operaciones Toolbox desde handler comprobados. Sin servicios remotos.')
