@@ -10,6 +10,27 @@ def apply(data):
     if data['context']['id'] != 'CH-22':
         return
     cloud = data['steps']['cloud']
+    cloud[1]['code'] = cloud[1]['code'].replace(
+        '        TableName: AYUNTAMIENTOS',
+        '        TableName: AYUNTAMIENTOS\n'
+        '        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n'
+        '        # CAMPOS NO CLAVE de esta tabla:\n'
+        '        #   NOMBRE (S: texto).\n'
+        '        # Sus tipos se describen en MODELO_AYUNTAMIENTO.'
+    ).replace(
+        '        TableName: OBRAS',
+        '        TableName: OBRAS\n'
+        '        # PARTITION KEY: OBRA_ID (N: número).\n'
+        '        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n'
+        '        #   NOMBRE (S: texto).\n'
+        '        #   PRESUPUESTO_EUROS (N: número).\n'
+        '        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n'
+        '        # Sus tipos se describen en MODELO_OBRA.'
+    ).replace(
+        'NonKeyAttributes:        # Campos extra del listado.',
+        'NonKeyAttributes:        # Campos de OBRAS copiados al índice.'
+    )
+    cloud[1]['annotated'] = True
     previous = copy.deepcopy(cloud[2]['cues'])
     cloud[2]['cues'] = [
         dict(text='export const TABLA_AYUNTAMIENTOS = new Table({', title='Primero, la tabla Ayuntamiento', note='Table describe AYUNTAMIENTOS: su nombre, cliente y clave. Los atributos normales se definen después en Entity.'),
