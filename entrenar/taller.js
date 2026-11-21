@@ -238,5 +238,11 @@ $('[data-context-footer]').textContent='Observa y monta el código de tu ficha. 
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();controls();persist();}});
 window.addEventListener('pagehide',()=>{stop();erObserver?.disconnect();persist();});
 render();
-
+return {
+ tecnologia: () => track,
+ ir: (technology, file) => {
+  if (!['nest','cloud'].includes(technology) || !Number.isInteger(file) || !D.steps[technology][file]) return;
+  track=technology; go(file);
+ }
+};
 }

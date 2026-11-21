@@ -152,6 +152,13 @@ def compile_case(case, classic, base, sources, pdf_folder):
     else:d['source']=dict(kind='teacher',label='Ejemplo docente · '+case['title'])
     d['version']=5
     apply_field_guide(d)
+    if cid=='CH-22':
+        # El YAML inline requiere comillas en las rutas que contienen {param}.
+        # Se conserva el orden/identidad de las pistas y los aciertos existentes.
+        routes=d['steps']['cloud'][5]
+        routes['code']=re.sub(r'path: (/[^\s,]+)(?=\s*})',r"path: '\1'",routes['code'])
+        for cue in routes['cues']:
+            cue['text']=re.sub(r'path: (/\S+)',r"path: '\1'",cue['text'])
     for stages in d['steps'].values():
         assert len(stages)==26
         for step in stages:

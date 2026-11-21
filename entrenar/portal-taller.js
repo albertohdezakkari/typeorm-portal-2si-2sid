@@ -30,8 +30,22 @@
         binding: `${digest}:${request}`,
         state: readState(key),
         tabsLayout: document.getElementById('workspace').dataset.tabsLayout,
+        canPrepare: caseData.id === 'CH-22',
+        loaded: false,
+        target: null,
       };
-      frame.src = 'entrenar/?v=aula-1';
+      window.prepararProyectoGuiado?.({
+        caseId: caseData.id,
+        storageKey: key,
+        abrirTaller: target => {
+          document.querySelector('#workspace > nav [data-tab="training"]').click();
+          if (target) {
+            current.target = target;
+            if (current.loaded) frame.contentWindow.postMessage({type:'taller:go', binding:current.binding, ...target}, location.origin);
+          }
+        },
+      });
+      frame.src = 'entrenar/?v=preparacion-1';
       // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
       if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {
@@ -49,6 +63,8 @@
     if (data?.binding !== current.binding) return;
     if (data.type === 'taller:loaded' && data.caseId === current.caseId) {
       frame.hidden = false;
+      current.loaded = true;
+      if (current.target) frame.contentWindow.postMessage({type:'taller:go', binding:current.binding, ...current.target}, location.origin);
       status.textContent = 'Tu avance se guarda en este navegador, separado por correo y contexto.';
     } else if (data.type === 'taller:height' && Number.isFinite(data.height)) {
       frame.style.height = `${Math.max(420, Math.min(18000, data.height + 4))}px`;
@@ -64,6 +80,9 @@
       }
     } else if (data.type === 'taller:error') {
       status.textContent = 'No se ha podido abrir el material. Recarga la página e inténtalo de nuevo.';
+    } else if (data.type === 'taller:prepare' && current.canPrepare) {
+      window.abrirPreparacionGuiada?.(data.track);
     }
   });
+  document.getElementById('training-preparation')?.addEventListener('click', () => window.abrirPreparacionGuiada?.());
 })();

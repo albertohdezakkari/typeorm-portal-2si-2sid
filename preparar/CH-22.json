@@ -1,0 +1,1539 @@
+{
+  "version": 1,
+  "caseId": "CH-22",
+  "title": "Ayuntamiento → Obra",
+  "profile": "default",
+  "team": "equipo01",
+  "tracks": {
+    "nest": [
+      {
+        "id": "repositorio",
+        "title": "Tu carpeta y tu GitHub",
+        "lead": "Prepara una copia tuya. Las bases nuevas contienen solo el arranque; construirás las entidades y los casos en tu práctica.",
+        "where": "Git Bash en Windows o Terminal en macOS · primera vez",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Crea la carpeta y clona",
+            "code": "printf 'Tu carpeta personal: %s\\n' \"$HOME\"\nmkdir -p \"$HOME/proyectos-serverless\"\ncd \"$HOME/proyectos-serverless\"\ngit clone --branch main --single-branch https://github.com/albertohdezakkari/festival-checkin-01.git mi-taller\ncd mi-taller\nls bases/taller-nest bases/taller-serverless\ncode .",
+            "explain": "$HOME existe en Git Bash y macOS: apunta a tu carpeta personal. git clone crea mi-taller. Si ya existe, entra en ella y usa git pull; no clones otra vez encima.",
+            "terms": [
+              [
+                "$HOME",
+                "Tu carpeta de usuario: /c/Users/… en Git Bash; /Users/… en macOS."
+              ],
+              [
+                "git clone",
+                "Descarga el repositorio y crea la carpeta mi-taller."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Conecta tu repositorio vacío",
+            "code": "printf 'Pega la URL HTTPS de tu repositorio GitHub vacío: '\nIFS= read -r MI_REPOSITORIO\ngit remote set-url origin \"$MI_REPOSITORIO\"\ngit remote -v\ngit push -u origin main",
+            "explain": "Crea primero un repositorio vacío en tu cuenta, sin README. En remote -v debe salir tu usuario. El push requiere iniciar sesión en tu propia cuenta de GitHub. El código antiguo de Festival queda en la raíz como ejemplo: aquí trabajarás dentro de mi-practica, no ejecutarás su npm run aula.",
+            "terms": [],
+            "links": [
+              [
+                "Crear tu repositorio vacío",
+                "https://github.com/new"
+              ]
+            ]
+          }
+        ],
+        "expect": "Ves las dos bases y origin apunta a tu cuenta. Si tu copia es anterior a esta preparación, trae las bases con git pull https://github.com/albertohdezakkari/festival-checkin-01.git main y sube el cambio a tu origin.",
+        "scene": "workspace",
+        "nodes": [
+          "Tu ordenador",
+          "Tu repositorio GitHub",
+          "bases/",
+          "mi-practica/"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "base",
+        "title": "Arranca la base Nest",
+        "lead": "Comprueba primero el proceso Nest. Todavía no estás comprobando PostgreSQL.",
+        "where": "$HOME/proyectos-serverless/mi-taller · Git Bash / Terminal",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Copia la base · solo la primera vez",
+            "code": "cd \"$HOME/proyectos-serverless/mi-taller\"\nmkdir -p mi-practica/nest\ncp -R -n bases/taller-nest/. mi-practica/nest/\ncd mi-practica/nest\npwd\nnode --version\nnpm --version\nnpm ci --include=dev\ncp -n .env.example .env\ncode .env",
+            "explain": "Necesitas Node 20.19.4 o superior. cp -n conserva los archivos que ya existan. Si ya existe mi-practica/nest, entra en ella; no repitas cp -R ni sobrescribas tu .env.",
+            "terms": [
+              [
+                "npm ci",
+                "Instala las versiones exactas de package-lock.json."
+              ],
+              [
+                ".env.example",
+                "Plantilla que sí se guarda en Git."
+              ],
+              [
+                ".env",
+                "Tu configuración real, excluida de Git."
+              ]
+            ]
+          },
+          {
+            "kind": "file",
+            "title": ".env",
+            "path": ".env",
+            "create": "touch .env\ncode .env",
+            "code": "DB_HOST=localhost\nDB_PORT=5432\nDB_USER=postgres\nDB_PASSWORD=123456\nDB_NAME=control_databridge\nPORT=3000",
+            "explain": "El script start usa node --env-file=.env: carga este archivo. No carga automáticamente .env.example.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · compila y deja Nest abierto",
+            "code": "npm run build\nnpm run start",
+            "explain": "Cada vez que cambies TypeScript: Ctrl+C, npm run build y npm run start.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 2 · comprueba el proceso",
+            "code": "cd \"$HOME/proyectos-serverless/mi-taller\"/mi-practica/nest\ncurl -i http://localhost:3000/salud",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "HTTP 200 y {\"estado\":\"ok\",\"etapa\":\"base-neutral\"}. Esto confirma que Nest escucha en el puerto 3000; no confirma conexión a la base de datos.",
+        "scene": "process",
+        "nodes": [
+          "Terminal 1",
+          "main.ts",
+          "AppModule",
+          "GET /salud"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "postgres",
+        "title": "Prepara PostgreSQL",
+        "lead": "PostgreSQL es otro proceso: debe estar instalado y arrancado antes de conectar Nest.",
+        "where": "Otra terminal Git Bash / Terminal · PostgreSQL local",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Comprueba herramientas y abre psql",
+            "code": "psql --version\npsql -h localhost -p 5432 -U postgres -d postgres -W",
+            "explain": "En Windows instala PostgreSQL con usuario postgres y contraseña 123456. Instala también Command Line Tools y añade su carpeta bin al PATH de Git Bash; reinicia la terminal. En macOS usa tu instalación PostgreSQL y arráncala. La contraseña se configura en el servidor, no al escribir .env.",
+            "terms": [],
+            "links": [
+              [
+                "Instalar PostgreSQL en Windows",
+                "https://www.postgresql.org/download/windows/"
+              ],
+              [
+                "Instalar PostgreSQL en macOS",
+                "https://www.postgresql.org/download/macosx/"
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Dentro de psql · crea la base",
+            "code": "CREATE DATABASE control_databridge;\n\\q",
+            "explain": "Este bloque es SQL dentro de psql, no Bash. Si la base ya existe, continúa sin borrarla.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Desde Git Bash · verifica la base",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT current_database();'",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "SELECT current_database() devuelve control_databridge. Si psql no existe, instala sus herramientas; si connection refused, inicia PostgreSQL. No cambies al siguiente paso hasta poder conectar.",
+        "scene": "database",
+        "nodes": [
+          "Nest :3000",
+          "PostgreSQL :5432",
+          "postgres / 123456",
+          "control_databridge"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "conexion",
+        "title": "Conecta Nest con PostgreSQL",
+        "lead": "Ahora sí, /salud hará una consulta SQL. No necesita todavía las entidades del caso.",
+        "where": "mi-practica/nest · Terminal 1 detenida con Ctrl+C",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "explain": "forRoot abre la conexión usando .env; autoLoadEntities recogerá las entidades registradas después. synchronize se usa solo en esta base de práctica.",
+            "terms": [
+              [
+                "TypeOrmModule.forRoot",
+                "Configura la conexión de esta aplicación con PostgreSQL."
+              ],
+              [
+                "process.env.DB_NAME",
+                "Lee DB_NAME de .env, cargado por npm run start."
+              ],
+              [
+                "SELECT current_database()",
+                "La respuesta prueba una consulta real a PostgreSQL."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Compila y arranca",
+            "code": "npm run build\nnpm run start",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 2 · prueba la conexión",
+            "code": "curl -i http://localhost:3000/salud",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "HTTP 200 y {\"estado\":\"ok\",\"base\":\"control_databridge\"}. Ahora la respuesta confirma conexión SQL real.",
+        "scene": "connection",
+        "nodes": [
+          ".env",
+          "forRoot",
+          "DataSource",
+          "SELECT → /salud"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "modelos",
+        "title": "Lleva tu modelo al proyecto",
+        "lead": "Estudia las Entities en Entrenar. Después crea estos mismos archivos y registra solo las entidades: aún no importes los cinco casos.",
+        "where": "mi-practica/nest · Terminal 1 detenida",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/entities/ayuntamiento.entity.ts",
+            "path": "src/ayuntamientos/entities/ayuntamiento.entity.ts",
+            "create": "mkdir -p src/ayuntamientos/entities\nls -d src/ayuntamientos/entities\ntouch src/ayuntamientos/entities/ayuntamiento.entity.ts\ncode src/ayuntamientos/entities/ayuntamiento.entity.ts",
+            "code": "import {\n  Column, Entity, OneToMany, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Obra } from '../../obras/entities/obra.entity';\n\n@Entity({ name: 'AYUNTAMIENTO' })\nexport class Ayuntamiento {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @OneToMany(() => Obra, obra => obra.ayuntamiento)\n  obras!: Obra[];\n}",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/entities/obra.entity.ts",
+            "path": "src/obras/entities/obra.entity.ts",
+            "create": "mkdir -p src/obras/entities\nls -d src/obras/entities\ntouch src/obras/entities/obra.entity.ts\ncode src/obras/entities/obra.entity.ts",
+            "code": "import {\n  Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Ayuntamiento } from '../../ayuntamientos/entities/ayuntamiento.entity';\n\n@Entity({ name: 'OBRA' })\nexport class Obra {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PRESUPUESTO_EUROS', type: 'integer' })\n  presupuestoEuros!: number;\n\n  @ManyToOne(() => Ayuntamiento, ayuntamiento => ayuntamiento.obras, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_AYUNTAMIENTO' })\n  ayuntamiento!: Ayuntamiento;\n}",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
+            "explain": "Esta es la versión inicial. El módulo completo de la ficha representa el resultado final; iremos añadiendo sus imports a medida que existan los archivos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\nimport { TallerModule } from './taller.module';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    }),\n    TallerModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "explain": "AppModule importa TallerModule; este registra Ayuntamiento y Obra con forFeature. Así autoLoadEntities puede encontrarlas.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Compila y arranca",
+            "code": "npm run build\nnpm run start",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 2 · mira las tablas",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c '\\dt'",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "Nest arranca sin imports inexistentes. PostgreSQL contiene AYUNTAMIENTO y OBRA, con la referencia ID_AYUNTAMIENTO.",
+        "scene": "model",
+        "nodes": [
+          "AppModule",
+          "TallerModule",
+          "Ayuntamiento 1",
+          "Obra 0..N"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 1
+        }
+      },
+      {
+        "id": "datos",
+        "title": "Carga los datos de tu ficha",
+        "lead": "Los casos empiezan con dos ayuntamientos y las obras 7, 8 y 9. Carga esos datos después de crear las tablas.",
+        "where": "mi-practica/nest · Terminal 2",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "datos-iniciales.sql",
+            "path": "datos-iniciales.sql",
+            "create": "touch datos-iniciales.sql\ncode datos-iniciales.sql",
+            "code": "INSERT INTO \"AYUNTAMIENTO\" (\"ID\", \"NOMBRE\") VALUES\n  (1, 'Ayuntamiento del Río'),\n  (2, 'Ayuntamiento del Valle')\nON CONFLICT (\"ID\") DO NOTHING;\n\nINSERT INTO \"OBRA\" (\"ID\", \"NOMBRE\", \"PRESUPUESTO_EUROS\", \"ID_AYUNTAMIENTO\") VALUES\n  (7, 'Mejora de acera', 3000, 1),\n  (8, 'Zona de sombra', 12000, 2),\n  (9, 'Mejora de acera · nuevo', 18000, 1)\nON CONFLICT (\"ID\") DO NOTHING;\n\nSELECT setval(pg_get_serial_sequence('\"AYUNTAMIENTO\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"AYUNTAMIENTO\"), true);\nSELECT setval(pg_get_serial_sequence('\"OBRA\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"OBRA\"), true);\n\nSELECT * FROM \"AYUNTAMIENTO\" ORDER BY \"ID\";\nSELECT * FROM \"OBRA\" ORDER BY \"ID\";",
+            "explain": "Las comillas dobles conservan los nombres en mayúsculas. setval coloca las secuencias detrás del ID mayor ya cargado: la siguiente obra será la 10.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ejecuta el archivo SQL",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -f datos-iniciales.sql",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "Ves 2 ayuntamientos y 3 obras: 7→1, 8→2, 9→1; presupuestos 3000, 12000 y 18000. No hay que ejecutar npm run aula de Festival.",
+        "scene": "records",
+        "nodes": [
+          "Ayuntamiento 1",
+          "Obras 7 y 9",
+          "Ayuntamiento 2",
+          "Obra 8"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "caso-1",
+        "title": "Crear y listar obras",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/nest · dos terminales",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/controller.ts",
+            "path": "src/obras/crear-listar/controller.ts",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/controller.ts\ncode src/obras/crear-listar/controller.ts",
+            "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('obras')\n  async ejecutar(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObraService(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObrasService();\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/service.ts",
+            "path": "src/obras/crear-listar/service.ts",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/service.ts\ncode src/obras/crear-listar/service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearObraService(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    return this.repository.crearObraRepository(nombre, presupuestoEuros, ayuntamientoId);\n  }\n\n  listarObrasService() {\n    return this.repository.listarObrasRepository();\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/repository.ts",
+            "path": "src/obras/crear-listar/repository.ts",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/repository.ts\ncode src/obras/crear-listar/repository.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  crearObraRepository(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre, presupuestoEuros, ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObrasRepository() {\n    return this.obras.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [CrearListarController],\n  providers: [CrearListarService, CrearListarRepository]\n})\nexport class TallerModule {}",
+            "explain": "Versión acumulativa: solo importa los casos cuyos archivos ya has creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · reinicia después de guardar",
+            "code": "npm run build\nnpm run start",
+            "explain": "Detén antes el proceso con Ctrl+C. Espera el mensaje de arranque de Nest; ejecuta curl desde la Terminal 2.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Consulta antes de crear",
+            "code": "curl -i \"http://localhost:3000/obras\"",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Crea y conserva el ID que devuelve",
+            "code": "curl -fsS -X POST \"http://localhost:3000/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}' \\\n  -o obra-creada.json\ncat obra-creada.json\nOBRA_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"obra-creada.json\", \"utf8\")).id')\"\nexport OBRA_PRUEBA_ID\nprintf 'Obra creada: %s\\n' \"$OBRA_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/obras\"",
+            "explain": "Conserva el ID real en esta terminal. Nest lo obtiene de PostgreSQL; Serverless usa el Date.now del service de la ficha. No presupongas que el ID será 10 en ambos. El listado Scan de DynamoDB no garantiza orden.",
+            "terms": []
+          }
+        ],
+        "expect": "GET devuelve 3 obras antes del alta y 4 después. POST devuelve la obra creada; conserva su ID real para eliminarla en el caso 2.",
+        "scene": "trace",
+        "nodes": [
+          "curl",
+          "controller",
+          "service",
+          "repository → PostgreSQL"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 6
+        }
+      },
+      {
+        "id": "caso-2",
+        "title": "Eliminar la obra de prueba",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/nest · dos terminales",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/controller.ts",
+            "path": "src/obras/eliminar/controller.ts",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/controller.ts\ncode src/obras/eliminar/controller.ts",
+            "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number) {\n    return this.service.eliminarObraService(obraId);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/service.ts",
+            "path": "src/obras/eliminar/service.ts",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/service.ts\ncode src/obras/eliminar/service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarObraService(obraId: number) {\n    return this.repository.eliminarObraRepository(obraId);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/repository.ts",
+            "path": "src/obras/eliminar/repository.ts",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/repository.ts\ncode src/obras/eliminar/repository.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async eliminarObraRepository(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [CrearListarController, EliminarController],\n  providers: [CrearListarService, EliminarService, CrearListarRepository, EliminarRepository]\n})\nexport class TallerModule {}",
+            "explain": "Versión acumulativa: solo importa los casos cuyos archivos ya has creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · reinicia después de guardar",
+            "code": "npm run build\nnpm run start",
+            "explain": "Detén antes el proceso con Ctrl+C. Espera el mensaje de arranque de Nest; ejecuta curl desde la Terminal 2.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Elimina solo la obra que acabas de crear",
+            "code": "printf 'Se va a eliminar la obra de prueba: %s\\n' \"$OBRA_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/obras/$OBRA_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/obras\"",
+            "explain": "Si has abierto otra terminal, recupera el ID real desde obra-creada.json como en el caso anterior. No elimines las obras 7, 8 o 9 de la ficha.",
+            "terms": []
+          }
+        ],
+        "expect": "DELETE devuelve HTTP 204; el listado vuelve a tener las obras 7, 8 y 9.",
+        "scene": "trace",
+        "nodes": [
+          "curl",
+          "controller",
+          "service",
+          "repository → PostgreSQL"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 10
+        }
+      },
+      {
+        "id": "caso-3",
+        "title": "Modificar el presupuesto",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/nest · dos terminales",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/controller.ts",
+            "path": "src/obras/modificar-presupuesto-euros/controller.ts",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/controller.ts\ncode src/obras/modificar-presupuesto-euros/controller.ts",
+            "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarPresupuestoEurosService } from './service';\n\n@Controller()\nexport class ModificarPresupuestoEurosController {\n  constructor(private readonly service: ModificarPresupuestoEurosService) {}\n\n  @Patch('obras/:obraId')\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number,\n    @Body() datos: { presupuestoEuros: number }) {\n    return this.service.modificarPresupuestoEurosService(obraId, datos.presupuestoEuros);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/service.ts",
+            "path": "src/obras/modificar-presupuesto-euros/service.ts",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/service.ts\ncode src/obras/modificar-presupuesto-euros/service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarPresupuestoEurosRepository } from './repository';\n\n@Injectable()\nexport class ModificarPresupuestoEurosService {\n  constructor(private readonly repository: ModificarPresupuestoEurosRepository) {}\n\n  modificarPresupuestoEurosService(obraId: number, presupuestoEuros: number) {\n    return this.repository.modificarPresupuestoEurosRepository(obraId, presupuestoEuros);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/repository.ts",
+            "path": "src/obras/modificar-presupuesto-euros/repository.ts",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/repository.ts\ncode src/obras/modificar-presupuesto-euros/repository.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class ModificarPresupuestoEurosRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async modificarPresupuestoEurosRepository(obraId: number, presupuestoEuros: number) {\n    await this.obras.update(obraId, { presupuestoEuros });\n    return this.obras.createQueryBuilder('p')\n      .where('p.id = :obraId', { obraId }).getOne();\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [CrearListarController, EliminarController, ModificarPresupuestoEurosController],\n  providers: [CrearListarService, EliminarService, ModificarPresupuestoEurosService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository]\n})\nexport class TallerModule {}",
+            "explain": "Versión acumulativa: solo importa los casos cuyos archivos ya has creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · reinicia después de guardar",
+            "code": "npm run build\nnpm run start",
+            "explain": "Detén antes el proceso con Ctrl+C. Espera el mensaje de arranque de Nest; ejecuta curl desde la Terminal 2.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Cambia solo el presupuesto",
+            "code": "curl -i -X PATCH \"http://localhost:3000/obras/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"presupuestoEuros\":15000}'\ncurl -i \"http://localhost:3000/obras\"",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Confirma presupuesto y FK en SQL",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"PRESUPUESTO_EUROS\", \"ID_AYUNTAMIENTO\" FROM \"OBRA\" WHERE \"ID\" = 7;'",
+            "explain": "El listado TypeORM no carga la relación automáticamente. Esta consulta muestra la FK real guardada en PostgreSQL.",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 tiene presupuesto 15000 y sigue en el ayuntamiento 1.",
+        "scene": "trace",
+        "nodes": [
+          "curl",
+          "controller",
+          "service",
+          "repository → PostgreSQL"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 14
+        }
+      },
+      {
+        "id": "caso-4",
+        "title": "Cambiar de ayuntamiento",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/nest · dos terminales",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/controller.ts",
+            "path": "src/obras/trasladar/controller.ts",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/controller.ts\ncode src/obras/trasladar/controller.ts",
+            "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('obras/:obraId/ayuntamiento')\n  async ejecutar(@Param('obraId', ParseIntPipe) obraId: number,\n    @Body() datos: { ayuntamientoId: number }) {\n    return this.service.trasladarObraService(obraId, datos.ayuntamientoId);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/service.ts",
+            "path": "src/obras/trasladar/service.ts",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/service.ts\ncode src/obras/trasladar/service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarObraService(obraId: number, ayuntamientoId: number) {\n    return this.repository.trasladarObraRepository(obraId, ayuntamientoId);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/repository.ts",
+            "path": "src/obras/trasladar/repository.ts",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/repository.ts\ncode src/obras/trasladar/repository.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../entities/obra.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>\n  ) {}\n\n  async trasladarObraRepository(obraId: number, ayuntamientoId: number) {\n    await this.obras.update(obraId, { ayuntamiento: { id: ayuntamientoId } });\n    return this.obras.createQueryBuilder('p')\n      .where('p.id = :obraId', { obraId }).getOne();\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController],\n  providers: [CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository]\n})\nexport class TallerModule {}",
+            "explain": "Versión acumulativa: solo importa los casos cuyos archivos ya has creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · reinicia después de guardar",
+            "code": "npm run build\nnpm run start",
+            "explain": "Detén antes el proceso con Ctrl+C. Espera el mensaje de arranque de Nest; ejecuta curl desde la Terminal 2.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Traslada la obra 7 al ayuntamiento 2",
+            "code": "curl -i -X PATCH \"http://localhost:3000/obras/7/ayuntamiento\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"ayuntamientoId\":2}'\ncurl -i \"http://localhost:3000/obras\"",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Confirma presupuesto y FK en SQL",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"PRESUPUESTO_EUROS\", \"ID_AYUNTAMIENTO\" FROM \"OBRA\" WHERE \"ID\" = 7;'",
+            "explain": "El listado TypeORM no carga la relación automáticamente. Esta consulta muestra la FK real guardada en PostgreSQL.",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 mantiene presupuesto 15000 y ahora referencia al ayuntamiento 2.",
+        "scene": "trace",
+        "nodes": [
+          "curl",
+          "controller",
+          "service",
+          "repository → PostgreSQL"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 18
+        }
+      },
+      {
+        "id": "caso-5",
+        "title": "Consultar por ayuntamiento",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/nest · dos terminales",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/controller.ts",
+            "path": "src/ayuntamientos/consultar/controller.ts",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/controller.ts\ncode src/ayuntamientos/consultar/controller.ts",
+            "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarAyuntamientoService } from './service';\n\n@Controller()\nexport class ConsultarAyuntamientoController {\n  constructor(private readonly service: ConsultarAyuntamientoService) {}\n\n  @Get('ayuntamientos/:ayuntamientoId/obras')\n  async ejecutar(@Param('ayuntamientoId', ParseIntPipe) ayuntamientoId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarAyuntamientoService(ayuntamientoId, minimo);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/service.ts",
+            "path": "src/ayuntamientos/consultar/service.ts",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/service.ts\ncode src/ayuntamientos/consultar/service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarAyuntamientoRepository } from './repository';\n\n@Injectable()\nexport class ConsultarAyuntamientoService {\n  constructor(private readonly repository: ConsultarAyuntamientoRepository) {}\n\n  consultarAyuntamientoService(ayuntamientoId: number, minimo: number) {\n    return this.repository.consultarAyuntamientoRepository(ayuntamientoId, minimo);\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/repository.ts",
+            "path": "src/ayuntamientos/consultar/repository.ts",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/repository.ts\ncode src/ayuntamientos/consultar/repository.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from '../../obras/entities/obra.entity';\nimport { Ayuntamiento } from '../entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ConsultarAyuntamientoRepository {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  async consultarAyuntamientoRepository(ayuntamientoId: number, minimo: number) {\n    const ayuntamiento = await this.ayuntamientos.createQueryBuilder('h')\n      .where('h.id = :ayuntamientoId', { ayuntamientoId }).getOne();\n    const obras = await this.obras.createQueryBuilder('p')\n      .innerJoin('p.ayuntamiento', 'h')\n      .where('h.id = :ayuntamientoId', { ayuntamientoId })\n      .andWhere('p.presupuestoEuros >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { ayuntamiento, obras };\n  }\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/taller.module.ts",
+            "path": "src/taller.module.ts",
+            "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  controllers: [CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}",
+            "explain": "Versión acumulativa: solo importa los casos cuyos archivos ya has creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Terminal 1 · reinicia después de guardar",
+            "code": "npm run build\nnpm run start",
+            "explain": "Detén antes el proceso con Ctrl+C. Espera el mensaje de arranque de Nest; ejecuta curl desde la Terminal 2.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Filtra por ayuntamiento y presupuesto",
+            "code": "curl -i \"http://localhost:3000/ayuntamientos/2/obras?minimo=12001\"",
+            "explain": "Debe aparecer la obra 7, con 15000. La 8 tiene 12000; la 9 pertenece al ayuntamiento 1. En DynamoDB el GSI se actualiza de forma eventual: si acabas de trasladar, repite la consulta cuando el índice se haya actualizado.",
+            "terms": []
+          }
+        ],
+        "expect": "La respuesta contiene Ayuntamiento del Valle y únicamente la obra 7 (15000).",
+        "scene": "trace",
+        "nodes": [
+          "curl",
+          "controller",
+          "service",
+          "repository → PostgreSQL"
+        ],
+        "workshop": {
+          "track": "nest",
+          "index": 22
+        }
+      },
+      {
+        "id": "guardar",
+        "title": "Comprueba y guarda tu trabajo",
+        "lead": "La respuesta HTTP y lo guardado deben coincidir. Después sube solo los archivos del proyecto a tu GitHub.",
+        "where": "Desde tu práctica; los cambios se guardan en el mismo repositorio",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Confirma la persistencia en SQL",
+            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W \\\n  -c 'SELECT \"ID\", \"NOMBRE\", \"PRESUPUESTO_EUROS\", \"ID_AYUNTAMIENTO\" FROM \"OBRA\" ORDER BY \"ID\";' ",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Revisa antes de subir",
+            "code": "git status --short\ngit add .\ngit diff --cached --stat\ngit commit -m \"Construye el taller de Ayuntamiento y Obra\"\ngit push origin main",
+            "explain": "Revisa que .env y ~/.aws/credentials no aparecen en lo preparado para subir. Si no hay cambios, no necesitas otro commit.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Retoma mañana",
+            "code": "git pull\npwd",
+            "explain": "En Nest, inicia PostgreSQL y ejecuta build/start. En Codespaces, recupera el Codespace guardado, renueva las tres credenciales de Academy y exporta de nuevo perfil, región, equipo, rol y API_URL con los pasos anteriores. Detener el Codespace no elimina los recursos AWS.",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 conserva presupuesto 15000 y ayuntamiento 2. El repositorio propio contiene tus archivos, sin credenciales. El progreso del cuaderno permanece solo en este navegador.",
+        "scene": "persist",
+        "nodes": [
+          "Petición",
+          "Dato guardado",
+          "Tu GitHub",
+          "Continuar mañana"
+        ],
+        "workshop": null
+      }
+    ],
+    "cloud": [
+      {
+        "id": "repositorio",
+        "title": "Tu carpeta y tu GitHub",
+        "lead": "Prepara una copia tuya. Las bases nuevas contienen solo el arranque; construirás las entidades y los casos en tu práctica.",
+        "where": "Git Bash en Windows o Terminal en macOS · primera vez",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Crea la carpeta y clona",
+            "code": "printf 'Tu carpeta personal: %s\\n' \"$HOME\"\nmkdir -p \"$HOME/proyectos-serverless\"\ncd \"$HOME/proyectos-serverless\"\ngit clone --branch main --single-branch https://github.com/albertohdezakkari/festival-checkin-01.git mi-taller\ncd mi-taller\nls bases/taller-nest bases/taller-serverless\ncode .",
+            "explain": "$HOME existe en Git Bash y macOS: apunta a tu carpeta personal. git clone crea mi-taller. Si ya existe, entra en ella y usa git pull; no clones otra vez encima.",
+            "terms": [
+              [
+                "$HOME",
+                "Tu carpeta de usuario: /c/Users/… en Git Bash; /Users/… en macOS."
+              ],
+              [
+                "git clone",
+                "Descarga el repositorio y crea la carpeta mi-taller."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Conecta tu repositorio vacío",
+            "code": "printf 'Pega la URL HTTPS de tu repositorio GitHub vacío: '\nIFS= read -r MI_REPOSITORIO\ngit remote set-url origin \"$MI_REPOSITORIO\"\ngit remote -v\ngit push -u origin main",
+            "explain": "Crea primero un repositorio vacío en tu cuenta, sin README. En remote -v debe salir tu usuario. El push requiere iniciar sesión en tu propia cuenta de GitHub. El código antiguo de Festival queda en la raíz como ejemplo: aquí trabajarás dentro de mi-practica, no ejecutarás su npm run aula.",
+            "terms": [],
+            "links": [
+              [
+                "Crear tu repositorio vacío",
+                "https://github.com/new"
+              ]
+            ]
+          }
+        ],
+        "expect": "Ves las dos bases y origin apunta a tu cuenta. Si tu copia es anterior a esta preparación, trae las bases con git pull https://github.com/albertohdezakkari/festival-checkin-01.git main y sube el cambio a tu origin.",
+        "scene": "workspace",
+        "nodes": [
+          "Tu ordenador",
+          "Tu repositorio GitHub",
+          "bases/",
+          "mi-practica/"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "codespace",
+        "title": "Abre tu Codespace",
+        "lead": "Abre GitHub en tu repositorio propio: Code → Codespaces → Create codespace on main. El nombre real de /workspaces puede variar; usa el Explorer para abrir la raíz de tu copia.",
+        "where": "Terminal Bash de tu Codespace · raíz de tu repositorio",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Reconoce la copia y crea tu proyecto",
+            "code": "pwd\ngit remote get-url origin\ngit branch --show-current\nls bases/taller-serverless\nmkdir -p mi-practica/serverless\ncp -R -n bases/taller-serverless/. mi-practica/serverless/\ncd mi-practica/serverless\npwd\nnode --version\nnpm ci --include=dev\nnpm ls serverless --depth=0",
+            "explain": "Si mi-practica/serverless ya existe, entra en ella sin repetir cp. Node 20 o superior; si tu Codespace no tiene una versión compatible: nvm install 22 y nvm use 22, cada orden en su línea. Serverless debe mostrar 3.40.0 local; no pide login de Serverless.",
+            "terms": [
+              [
+                "npm ls serverless --depth=0",
+                "Muestra la versión de Serverless instalada en este proyecto."
+              ],
+              [
+                "mi-practica/serverless",
+                "Este package.json y este serverless.yml son independientes del Festival de la raíz."
+              ]
+            ],
+            "links": [
+              [
+                "Abrir Codespaces en tu repositorio",
+                "https://github.com/codespaces/new"
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Si faltan las bases en una copia antigua",
+            "code": "git pull https://github.com/albertohdezakkari/festival-checkin-01.git main\ngit push origin main",
+            "explain": "Solo desde la raíz del repositorio y con tus cambios guardados. Después vuelve al primer bloque.",
+            "terms": []
+          }
+        ],
+        "expect": "Estás dentro de mi-practica/serverless; origin es tu cuenta y npm ls muestra serverless@3.40.0. Las funciones del contexto aún no están creadas.",
+        "scene": "workspace",
+        "nodes": [
+          "Tu GitHub",
+          "Codespace",
+          "mi-practica/serverless",
+          "Serverless 3.40.0"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "aws",
+        "title": "Instala AWS CLI y prepara tu sesión",
+        "lead": "Serverless usa AWS para desplegar. Necesitas las tres credenciales temporales de tu Learner Lab, fuera del repositorio.",
+        "where": "Terminal del Codespace · mi-practica/serverless",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Comprueba AWS CLI",
+            "code": "aws --version",
+            "explain": "Si aparece aws-cli/2…, continúa sin instalarlo.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Solo si aws no existe",
+            "code": "curl -fsSL https://awscli.amazonaws.com/v2/install.sh -o /tmp/instalar-aws.sh\nsudo bash /tmp/instalar-aws.sh --system\nhash -r\naws --version",
+            "explain": "La instalación se realiza en el Codespace. Este archivo no forma parte de tu proyecto.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Abre el archivo de credenciales",
+            "code": "mkdir -p \"$HOME/.aws\"\ntouch \"$HOME/.aws/credentials\"\nchmod 600 \"$HOME/.aws/credentials\"\ncode \"$HOME/.aws/credentials\"",
+            "explain": "En Academy: Start Lab → AWS Details → AWS CLI. Copia las tres líneas reales con la cabecera [default]. Si ya utilizas [academy], conserva esa cabecera y elige academy aquí. Nunca copies credenciales a GitHub.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Selecciona tu sesión y comprueba acceso",
+            "code": "export AWS_PROFILE={{PROFILE}}\nexport AWS_REGION=us-east-1\nexport TALLER_EQUIPO={{TEAM}}\naws sts get-caller-identity",
+            "explain": "Elige el perfil y tu código de equipo arriba. AWS CLI lee AWS_PROFILE y AWS_REGION: no tienes que repetirlos en cada consulta.",
+            "terms": [
+              [
+                "AWS_PROFILE",
+                "Nombre de la sección [default] o [academy] en ~/.aws/credentials."
+              ],
+              [
+                "AWS_REGION",
+                "Región donde crearás tus recursos: us-east-1."
+              ],
+              [
+                "TALLER_EQUIPO",
+                "Identifica tu stack y tus tablas en una cuenta compartida. No genera IDs de registros."
+              ]
+            ]
+          }
+        ],
+        "expect": "STS devuelve tu Account y Arn. Si devuelve ExpiredToken, renueva las tres credenciales del laboratorio y repite STS.",
+        "scene": "credentials",
+        "nodes": [
+          "Learner Lab",
+          "~/.aws/credentials",
+          "AWS_PROFILE",
+          "STS: sesión válida"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "rol",
+        "title": "Obtén el rol y lee tu YAML",
+        "lead": "LabRole es el rol que Lambda utiliza al ejecutarse. Tu perfil de terminal y el rol de la función cumplen tareas distintas.",
+        "where": "La misma terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Lee el ARN de LabRole",
+            "code": "LAMBDA_ROLE_ARN=\"$(aws iam get-role --role-name LabRole --query 'Role.Arn' --output text)\"\nexport LAMBDA_ROLE_ARN\nprintf 'Rol de Lambda: %s\\n' \"$LAMBDA_ROLE_ARN\"",
+            "explain": "aws iam get-role consulta un rol existente. --query extrae Role.Arn; $(...) guarda la salida. export permite que Serverless lea la variable. printf solo la muestra.",
+            "terms": [
+              [
+                "--role-name LabRole",
+                "Nombre del rol ya creado por el laboratorio."
+              ],
+              [
+                "--query 'Role.Arn'",
+                "Selecciona el ARN del rol en la respuesta."
+              ],
+              [
+                "export",
+                "Hace visible esta variable a los procesos que arrancas desde la terminal."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Solo si el laboratorio deniega iam:GetRole",
+            "code": "printf 'Pega el ARN completo de LabRole que te facilite el profesor: '\nIFS= read -r LAMBDA_ROLE_ARN\nexport LAMBDA_ROLE_ARN",
+            "explain": "Usa este bloque como alternativa al anterior. No inventes un ARN ni un número de cuenta.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n",
+            "explain": "Este primer archivo solo tiene salud. ${env:…} lee tu terminal. Más adelante ${self:provider.stage} lee el stage definido en este mismo YAML.",
+            "terms": [
+              [
+                "${env:TALLER_EQUIPO}",
+                "Lee el valor exportado en la terminal."
+              ],
+              [
+                "role: ${env:LAMBDA_ROLE_ARN}",
+                "Asigna a Lambda el rol que ya autorizó el laboratorio."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Revisa los valores antes de desplegar",
+            "code": "printf 'Perfil: %s\\nRegión: %s\\nEquipo: %s\\nRol: %s\\n' \"$AWS_PROFILE\" \"$AWS_REGION\" \"$TALLER_EQUIPO\" \"$LAMBDA_ROLE_ARN\"",
+            "explain": "printf no crea ni valida recursos; muestra qué valores usará el YAML. Si falta alguno, vuelve al paso que lo define.",
+            "terms": []
+          }
+        ],
+        "expect": "Perfil, región, equipo y rol tienen valor. Tu YAML solo apunta al handler de salud que ya existe en la base.",
+        "scene": "role",
+        "nodes": [
+          "Tu perfil AWS",
+          "Serverless",
+          "LabRole",
+          "Lambda"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "desplegar",
+        "title": "Despliega y comprueba salud",
+        "lead": "Prueba primero que puedes desplegar una función pequeña antes de añadir las tablas y los casos.",
+        "where": "mi-practica/serverless · terminal con las variables exportadas",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Empaqueta, despliega y consulta",
+            "code": "npm run package\nnpm run deploy\nnpm run info",
+            "explain": "package prepara CloudFormation y el código sin crear recursos. deploy los crea en AWS. Serverless 3 puede avisar que no reconoce nodejs22.x en su esquema antiguo: el resultado que cuenta es el final del despliegue.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Obtén la URL del stack",
+            "code": "API_URL=\"$(aws cloudformation describe-stacks --stack-name \"taller-ch22-${TALLER_EQUIPO}\" --query 'Stacks[0].Outputs[?OutputKey==`HttpApiUrl`].OutputValue | [0]' --output text)\"\nexport API_URL\nprintf 'URL de tu API: %s\\n' \"$API_URL\"\ncurl -i \"$API_URL/salud\"",
+            "explain": "Outputs contiene los valores que CloudFormation devuelve después del despliegue. API_URL es la dirección real de tu API; todavía no existía al preparar el YAML.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Invoca la misma Lambda sin API Gateway",
+            "code": "npm run invoke -- --function salud --data '{}'",
+            "explain": "invoke llama directamente a Lambda. curl entra por HTTP API. Ambos llegan al mismo handler de salud.",
+            "terms": []
+          }
+        ],
+        "expect": "Despliegue terminado y curl devuelve HTTP 200, estado ok y etapa base-neutral. Invoke devuelve statusCode 200 y el body con esos mismos datos.",
+        "scene": "deploy",
+        "nodes": [
+          "serverless.yml",
+          "CloudFormation",
+          "HTTP API /salud",
+          "Lambda salud"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "modelos",
+        "title": "Crea las tablas, Table y Entity",
+        "lead": "Las dos tablas del contexto pertenecen a tu stack. Table describe cómo acceder a ellas; Entity relaciona los nombres del código con los atributos guardados.",
+        "where": "mi-practica/serverless · antes del primer caso",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión completa: incluye proveedor, rol, variables, salud y recursos. La ficha usa AYUNTAMIENTOS/OBRAS; aquí el nombre físico añade tu equipo para compartir cuenta sin colisiones. Las claves, campos y el índice son los mismos.",
+            "terms": [
+              [
+                "${self:provider.stage}",
+                "Lee provider.stage de este mismo YAML."
+              ],
+              [
+                "Ref: TablaObras",
+                "CloudFormation devuelve el nombre real y lo entrega a la variable TABLA_OBRAS de Lambda."
+              ],
+              [
+                "ProjectionType: INCLUDE",
+                "El índice copia sus claves y los campos de NonKeyAttributes; no define todas las columnas de la tabla."
+              ]
+            ]
+          },
+          {
+            "kind": "file",
+            "title": "src/datos/dynamo.mjs",
+            "path": "src/datos/dynamo.mjs",
+            "create": "mkdir -p src/datos\nls -d src/datos\ntouch src/datos/dynamo.mjs\ncode src/datos/dynamo.mjs",
+            "code": "import { DynamoDBClient } from '@aws-sdk/client-dynamodb';\nimport { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';\n\nexport const db = DynamoDBDocumentClient.from(new DynamoDBClient({}), {\n  marshallOptions: { removeUndefinedValues: true }\n});",
+            "explain": "El cliente se crea una vez al cargar el módulo. En Lambda usa región y permisos del entorno de ejecución: no contiene claves AWS.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/models/ayuntamiento-obra.model.mjs",
+            "path": "src/models/ayuntamiento-obra.model.mjs",
+            "create": "mkdir -p src/models\nls -d src/models\ntouch src/models/ayuntamiento-obra.model.mjs\ncode src/models/ayuntamiento-obra.model.mjs",
+            "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_AYUNTAMIENTOS = new Table({\n  name: process.env.TABLA_AYUNTAMIENTOS, documentClient: db,\n  partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' }\n});\n\nexport const TABLA_OBRAS = new Table({\n  name: process.env.TABLA_OBRAS, documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  indexes: {\n    PorAyuntamiento: {\n      type: 'global',\n      partitionKey: { name: 'AYUNTAMIENTO_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_AYUNTAMIENTO = new Entity({\n  name: 'Ayuntamiento', table: TABLA_AYUNTAMIENTOS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    ayuntamientoId: number().key().savedAs('AYUNTAMIENTO_ID'),\n    nombre: string().savedAs('NOMBRE')\n  })\n});\n\nexport const MODELO_OBRA = new Entity({\n  name: 'Obra', table: TABLA_OBRAS,\n  entityAttribute: false, timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    presupuestoEuros: number().savedAs('PRESUPUESTO_EUROS'),\n    ayuntamientoId: number().savedAs('AYUNTAMIENTO_ID')\n  })\n});",
+            "explain": "Estos son exactamente los modelos de tu ficha. process.env.TABLA_OBRAS recibe el Ref del YAML. Table y Entity no crean la tabla.",
+            "terms": [
+              [
+                "entityAttribute: false",
+                "Toolbox no añade su etiqueta interna de tipo de entidad."
+              ],
+              [
+                "timestamps: false",
+                "Toolbox no añade fechas automáticas. Los campos de tu ficha se conservan."
+              ],
+              [
+                "savedAs('OBRA_ID')",
+                "obraId en JavaScript se guarda como OBRA_ID en DynamoDB."
+              ]
+            ]
+          },
+          {
+            "kind": "command",
+            "title": "Crea los recursos",
+            "code": "npm run deploy\naws dynamodb describe-table --table-name \"OBRAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "Existen AYUNTAMIENTOS_tuEquipo y OBRAS_tuEquipo. OBRAS tiene PK OBRA_ID e índice PorAyuntamiento. Aún no hay filas.",
+        "scene": "model",
+        "nodes": [
+          "YAML: tablas + Ref",
+          "dynamo.mjs: cliente",
+          "Table: claves + índice",
+          "Entity: todos los campos"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 2
+        }
+      },
+      {
+        "id": "datos",
+        "title": "Carga los mismos datos",
+        "lead": "Utiliza las mismas dos entidades y los mismos registros que en Nest: cambia cómo los guardas y consultas.",
+        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Ayuntamiento 1",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AYUNTAMIENTOS_${TALLER_EQUIPO}\\\" VALUE {'AYUNTAMIENTO_ID':1,'NOMBRE':'Ayuntamiento del Río'}\"",
+            "explain": "PartiQL INSERT guarda un ítem. Ejecuta este alta una vez; DuplicateItem indica que ya existe. No borres ni sobrescribas los datos de tu práctica.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ayuntamiento 2",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AYUNTAMIENTOS_${TALLER_EQUIPO}\\\" VALUE {'AYUNTAMIENTO_ID':2,'NOMBRE':'Ayuntamiento del Valle'}\"",
+            "explain": "PartiQL INSERT guarda un ítem. Ejecuta este alta una vez; DuplicateItem indica que ya existe. No borres ni sobrescribas los datos de tu práctica.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Obra 7",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"OBRAS_${TALLER_EQUIPO}\\\" VALUE {'OBRA_ID':7,'NOMBRE':'Mejora de acera','PRESUPUESTO_EUROS':3000,'AYUNTAMIENTO_ID':1}\"",
+            "explain": "PartiQL INSERT guarda un ítem. Ejecuta este alta una vez; DuplicateItem indica que ya existe. No borres ni sobrescribas los datos de tu práctica.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Obra 8",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"OBRAS_${TALLER_EQUIPO}\\\" VALUE {'OBRA_ID':8,'NOMBRE':'Zona de sombra','PRESUPUESTO_EUROS':12000,'AYUNTAMIENTO_ID':2}\"",
+            "explain": "PartiQL INSERT guarda un ítem. Ejecuta este alta una vez; DuplicateItem indica que ya existe. No borres ni sobrescribas los datos de tu práctica.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Obra 9",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"OBRAS_${TALLER_EQUIPO}\\\" VALUE {'OBRA_ID':9,'NOMBRE':'Mejora de acera · nuevo','PRESUPUESTO_EUROS':18000,'AYUNTAMIENTO_ID':1}\"",
+            "explain": "PartiQL INSERT guarda un ítem. Ejecuta este alta una vez; DuplicateItem indica que ya existe. No borres ni sobrescribas los datos de tu práctica.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba los dos listados",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"AYUNTAMIENTOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"OBRAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
+            "explain": "Aquí se muestran los datos reales. En la salida de AWS CLI, N significa Number y S significa String: por eso los números aparecen con una etiqueta de tipo.",
+            "terms": []
+          }
+        ],
+        "expect": "Dos ayuntamientos y obras 7, 8, 9 con los mismos nombres, presupuestos y referencias que en la ficha.",
+        "scene": "records",
+        "nodes": [
+          "Ayuntamiento 1",
+          "Obras 7 y 9",
+          "Ayuntamiento 2",
+          "Obra 8"
+        ],
+        "workshop": null
+      },
+      {
+        "id": "caso-1",
+        "title": "Crear y listar obras",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/serverless · terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/handler.mjs",
+            "path": "src/obras/crear-listar/handler.mjs",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/handler.mjs\ncode src/obras/crear-listar/handler.mjs",
+            "code": "import { crearObraService, listarObrasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, presupuestoEuros, ayuntamientoId } = JSON.parse(event.body);\n  const obra = await crearObraService(nombre, presupuestoEuros, ayuntamientoId);\n  return { statusCode: 201, body: JSON.stringify(obra) };\n}\n\nexport async function listarHandler() {\n  const obras = await listarObrasService();\n  return { statusCode: 200, body: JSON.stringify(obras) };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/service.mjs",
+            "path": "src/obras/crear-listar/service.mjs",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/service.mjs\ncode src/obras/crear-listar/service.mjs",
+            "code": "import { crearObraRepository, listarObrasRepository } from './repository.mjs';\n\nexport async function crearObraService(nombre, presupuestoEuros, ayuntamientoId) {\n  const obraId = Date.now();\n  const obra = { obraId, nombre, presupuestoEuros, ayuntamientoId };\n  await crearObraRepository(obra);\n  return obra;\n}\n\nexport function listarObrasService() {\n  return listarObrasRepository();\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/crear-listar/repository.mjs",
+            "path": "src/obras/crear-listar/repository.mjs",
+            "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/repository.mjs\ncode src/obras/crear-listar/repository.mjs",
+            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearObraRepository(obra) {\n  await MODELO_OBRA.build(PutItemCommand)\n    .item(obra)\n    .options({ condition: { attr: 'obraId', exists: false } })\n    .send();\n}\n\nexport async function listarObrasRepository() {\n  const { Items = [] } = await TABLA_OBRAS.build(ScanCommand)\n    .entities(MODELO_OBRA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión acumulativa: rutas y handlers que ya existen. Mantiene las tablas y el equipo del paso de preparación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba sintaxis y despliega",
+            "code": "node --check src/obras/crear-listar/handler.mjs\nnode --check src/obras/crear-listar/service.mjs\nnode --check src/obras/crear-listar/repository.mjs\nnpm run deploy",
+            "explain": "node --check revisa sintaxis; no ejecuta la función ni prueba la base de datos. deploy publica esta fase.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Consulta antes de crear",
+            "code": "curl -i \"$API_URL/obras\"",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Crea y conserva el ID que devuelve",
+            "code": "curl -fsS -X POST \"$API_URL/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}' \\\n  -o obra-creada.json\ncat obra-creada.json\nOBRA_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"obra-creada.json\", \"utf8\")).obraId')\"\nexport OBRA_PRUEBA_ID\nprintf 'Obra creada: %s\\n' \"$OBRA_PRUEBA_ID\"\ncurl -i \"$API_URL/obras\"",
+            "explain": "Conserva el ID real en esta terminal. Nest lo obtiene de PostgreSQL; Serverless usa el Date.now del service de la ficha. No presupongas que el ID será 10 en ambos. El listado Scan de DynamoDB no garantiza orden.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Invoke · listar sin HTTP",
+            "code": "npm run invoke -- --function listarObras --data '{}'",
+            "explain": "El resultado de Invoke contiene statusCode y body; body es el JSON de la lista dentro de una cadena. No envíes un body a listarHandler: no lo utiliza.",
+            "terms": []
+          }
+        ],
+        "expect": "GET devuelve 3 obras antes del alta y 4 después. POST devuelve la obra creada; conserva su ID real para eliminarla en el caso 2.",
+        "scene": "trace",
+        "nodes": [
+          "curl / Invoke",
+          "handler",
+          "service",
+          "repository → Entity"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 6
+        }
+      },
+      {
+        "id": "caso-2",
+        "title": "Eliminar la obra de prueba",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/serverless · terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/handler.mjs",
+            "path": "src/obras/eliminar/handler.mjs",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/handler.mjs\ncode src/obras/eliminar/handler.mjs",
+            "code": "import { eliminarObraService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  await eliminarObraService(obraId);\n  return { statusCode: 204 };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/service.mjs",
+            "path": "src/obras/eliminar/service.mjs",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/service.mjs\ncode src/obras/eliminar/service.mjs",
+            "code": "import { eliminarObraRepository } from './repository.mjs';\n\nexport async function eliminarObraService(obraId) {\n  await eliminarObraRepository(obraId);\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/eliminar/repository.mjs",
+            "path": "src/obras/eliminar/repository.mjs",
+            "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/repository.mjs\ncode src/obras/eliminar/repository.mjs",
+            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function eliminarObraRepository(obraId) {\n  await MODELO_OBRA.build(DeleteItemCommand)\n    .key({ obraId })\n    .send();\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión acumulativa: rutas y handlers que ya existen. Mantiene las tablas y el equipo del paso de preparación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba sintaxis y despliega",
+            "code": "node --check src/obras/eliminar/handler.mjs\nnode --check src/obras/eliminar/service.mjs\nnode --check src/obras/eliminar/repository.mjs\nnpm run deploy",
+            "explain": "node --check revisa sintaxis; no ejecuta la función ni prueba la base de datos. deploy publica esta fase.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Elimina solo la obra que acabas de crear",
+            "code": "printf 'Se va a eliminar la obra de prueba: %s\\n' \"$OBRA_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/obras/$OBRA_PRUEBA_ID\"\ncurl -i \"$API_URL/obras\"",
+            "explain": "Si has abierto otra terminal, recupera el ID real desde obra-creada.json como en el caso anterior. No elimines las obras 7, 8 o 9 de la ficha.",
+            "terms": []
+          }
+        ],
+        "expect": "DELETE devuelve HTTP 204; el listado vuelve a tener las obras 7, 8 y 9.",
+        "scene": "trace",
+        "nodes": [
+          "curl / Invoke",
+          "handler",
+          "service",
+          "repository → Entity"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 10
+        }
+      },
+      {
+        "id": "caso-3",
+        "title": "Modificar el presupuesto",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/serverless · terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/handler.mjs",
+            "path": "src/obras/modificar-presupuesto-euros/handler.mjs",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/handler.mjs\ncode src/obras/modificar-presupuesto-euros/handler.mjs",
+            "code": "import { modificarPresupuestoEurosService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const { presupuestoEuros } = JSON.parse(event.body);\n  const resultado = await modificarPresupuestoEurosService(obraId, presupuestoEuros);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/service.mjs",
+            "path": "src/obras/modificar-presupuesto-euros/service.mjs",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/service.mjs\ncode src/obras/modificar-presupuesto-euros/service.mjs",
+            "code": "import { modificarPresupuestoEurosRepository } from './repository.mjs';\n\nexport function modificarPresupuestoEurosService(obraId, presupuestoEuros) {\n  return modificarPresupuestoEurosRepository(obraId, presupuestoEuros);\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/modificar-presupuesto-euros/repository.mjs",
+            "path": "src/obras/modificar-presupuesto-euros/repository.mjs",
+            "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/repository.mjs\ncode src/obras/modificar-presupuesto-euros/repository.mjs",
+            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function modificarPresupuestoEurosRepository(obraId, presupuestoEuros) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, presupuestoEuros })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}' }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión acumulativa: rutas y handlers que ya existen. Mantiene las tablas y el equipo del paso de preparación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba sintaxis y despliega",
+            "code": "node --check src/obras/modificar-presupuesto-euros/handler.mjs\nnode --check src/obras/modificar-presupuesto-euros/service.mjs\nnode --check src/obras/modificar-presupuesto-euros/repository.mjs\nnpm run deploy",
+            "explain": "node --check revisa sintaxis; no ejecuta la función ni prueba la base de datos. deploy publica esta fase.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Cambia solo el presupuesto",
+            "code": "curl -i -X PATCH \"$API_URL/obras/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"presupuestoEuros\":15000}'\ncurl -i \"$API_URL/obras\"",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 tiene presupuesto 15000 y sigue en el ayuntamiento 1.",
+        "scene": "trace",
+        "nodes": [
+          "curl / Invoke",
+          "handler",
+          "service",
+          "repository → Entity"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 14
+        }
+      },
+      {
+        "id": "caso-4",
+        "title": "Cambiar de ayuntamiento",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/serverless · terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/repository.mjs",
+            "path": "src/ayuntamientos/consultar/repository.mjs",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/repository.mjs\ncode src/ayuntamientos/consultar/repository.mjs",
+            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(GetItemCommand)\n    .key({ ayuntamientoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await TABLA_OBRAS.build(QueryCommand)\n    .entities(MODELO_OBRA)\n    .query({ index: 'PorAyuntamiento', partition: ayuntamientoId })\n    .options({ filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "explain": "Créalo antes del service de Trasladar: este importa buscarAyuntamientoRepository. El handler de consultar se añadirá en el siguiente caso.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/handler.mjs",
+            "path": "src/obras/trasladar/handler.mjs",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/handler.mjs\ncode src/obras/trasladar/handler.mjs",
+            "code": "import { trasladarObraService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const { ayuntamientoId } = JSON.parse(event.body);\n  const resultado = await trasladarObraService(obraId, ayuntamientoId);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/service.mjs",
+            "path": "src/obras/trasladar/service.mjs",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/service.mjs\ncode src/obras/trasladar/service.mjs",
+            "code": "import { trasladarObraRepository } from './repository.mjs';\nimport { buscarAyuntamientoRepository } from '../../ayuntamientos/consultar/repository.mjs';\n\nexport async function trasladarObraService(obraId, ayuntamientoId) {\n  const ayuntamiento = await buscarAyuntamientoRepository(ayuntamientoId);\n  if (!ayuntamiento) throw new Error('Ayuntamiento no encontrado');\n  return trasladarObraRepository(obraId, ayuntamientoId);\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/obras/trasladar/repository.mjs",
+            "path": "src/obras/trasladar/repository.mjs",
+            "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/repository.mjs\ncode src/obras/trasladar/repository.mjs",
+            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function trasladarObraRepository(obraId, ayuntamientoId) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, ayuntamientoId })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}' }\n  trasladarObra:\n    handler: src/obras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}/ayuntamiento' }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión acumulativa: rutas y handlers que ya existen. Mantiene las tablas y el equipo del paso de preparación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba sintaxis y despliega",
+            "code": "node --check src/obras/trasladar/handler.mjs\nnode --check src/obras/trasladar/service.mjs\nnode --check src/obras/trasladar/repository.mjs\nnpm run deploy",
+            "explain": "node --check revisa sintaxis; no ejecuta la función ni prueba la base de datos. deploy publica esta fase.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Traslada la obra 7 al ayuntamiento 2",
+            "code": "curl -i -X PATCH \"$API_URL/obras/7/ayuntamiento\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"ayuntamientoId\":2}'\ncurl -i \"$API_URL/obras\"",
+            "explain": "",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 mantiene presupuesto 15000 y ahora referencia al ayuntamiento 2.",
+        "scene": "trace",
+        "nodes": [
+          "curl / Invoke",
+          "handler",
+          "service",
+          "repository → Entity"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 18
+        }
+      },
+      {
+        "id": "caso-5",
+        "title": "Consultar por ayuntamiento",
+        "lead": "Observa y monta este caso en Entrenar. Aplica aquí los archivos completos, la configuración de esta fase y su prueba real.",
+        "where": "mi-practica/serverless · terminal del Codespace",
+        "blocks": [
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/handler.mjs",
+            "path": "src/ayuntamientos/consultar/handler.mjs",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/handler.mjs\ncode src/ayuntamientos/consultar/handler.mjs",
+            "code": "import { consultarAyuntamientoService } from './service.mjs';\n\nexport async function handler(event) {\n  const ayuntamientoId = Number(event.pathParameters.ayuntamientoId);\n  const minimo = Number(event.queryStringParameters?.minimo ?? 0);\n  const resultado = await consultarAyuntamientoService(ayuntamientoId, minimo);\n  return { statusCode: 200, body: JSON.stringify(resultado) };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/service.mjs",
+            "path": "src/ayuntamientos/consultar/service.mjs",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/service.mjs\ncode src/ayuntamientos/consultar/service.mjs",
+            "code": "import { buscarAyuntamientoRepository, consultarAyuntamientoRepository } from './repository.mjs';\n\nexport async function consultarAyuntamientoService(ayuntamientoId, minimo) {\n  const ayuntamiento = await buscarAyuntamientoRepository(ayuntamientoId);\n  if (!ayuntamiento) throw new Error('Ayuntamiento no encontrado');\n  const obras = await consultarAyuntamientoRepository(ayuntamientoId, minimo);\n  return { ayuntamiento, obras };\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/ayuntamientos/consultar/repository.mjs",
+            "path": "src/ayuntamientos/consultar/repository.mjs",
+            "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/repository.mjs\ncode src/ayuntamientos/consultar/repository.mjs",
+            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(GetItemCommand)\n    .key({ ayuntamientoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await TABLA_OBRAS.build(QueryCommand)\n    .entities(MODELO_OBRA)\n    .query({ index: 'PorAyuntamiento', partition: ayuntamientoId })\n    .options({ filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "explain": "Mismo archivo que estudias en Entrenar. Guarda imports y cierres completos.",
+            "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "serverless.yml",
+            "path": "serverless.yml",
+            "create": "touch serverless.yml\ncode serverless.yml",
+            "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}' }\n  trasladarObra:\n    handler: src/obras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}/ayuntamiento' }\n  consultarAyuntamiento:\n    handler: src/ayuntamientos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/ayuntamientos/{ayuntamientoId}/obras' }\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${self:provider.stage}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${self:provider.stage}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS\n",
+            "explain": "Versión acumulativa: rutas y handlers que ya existen. Mantiene las tablas y el equipo del paso de preparación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Comprueba sintaxis y despliega",
+            "code": "node --check src/ayuntamientos/consultar/handler.mjs\nnode --check src/ayuntamientos/consultar/service.mjs\nnode --check src/ayuntamientos/consultar/repository.mjs\nnpm run deploy",
+            "explain": "node --check revisa sintaxis; no ejecuta la función ni prueba la base de datos. deploy publica esta fase.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Filtra por ayuntamiento y presupuesto",
+            "code": "curl -i \"$API_URL/ayuntamientos/2/obras?minimo=12001\"",
+            "explain": "Debe aparecer la obra 7, con 15000. La 8 tiene 12000; la 9 pertenece al ayuntamiento 1. En DynamoDB el GSI se actualiza de forma eventual: si acabas de trasladar, repite la consulta cuando el índice se haya actualizado.",
+            "terms": []
+          }
+        ],
+        "expect": "La respuesta contiene Ayuntamiento del Valle y únicamente la obra 7 (15000).",
+        "scene": "trace",
+        "nodes": [
+          "curl / Invoke",
+          "handler",
+          "service",
+          "repository → Entity"
+        ],
+        "workshop": {
+          "track": "cloud",
+          "index": 22
+        }
+      },
+      {
+        "id": "guardar",
+        "title": "Comprueba y guarda tu trabajo",
+        "lead": "La respuesta HTTP y lo guardado deben coincidir. Después sube solo los archivos del proyecto a tu GitHub.",
+        "where": "Desde tu práctica; los cambios se guardan en el mismo repositorio",
+        "blocks": [
+          {
+            "kind": "command",
+            "title": "Lee lo guardado con PartiQL",
+            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"OBRAS_${TALLER_EQUIPO}\\\" WHERE OBRA_ID = 7\" \\\n  --consistent-read --output json",
+            "explain": "",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Revisa antes de subir",
+            "code": "git status --short\ngit add .\ngit diff --cached --stat\ngit commit -m \"Construye el taller de Ayuntamiento y Obra\"\ngit push origin main",
+            "explain": "Revisa que .env y ~/.aws/credentials no aparecen en lo preparado para subir. Si no hay cambios, no necesitas otro commit.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Retoma mañana",
+            "code": "git pull\npwd",
+            "explain": "En Nest, inicia PostgreSQL y ejecuta build/start. En Codespaces, recupera el Codespace guardado, renueva las tres credenciales de Academy y exporta de nuevo perfil, región, equipo, rol y API_URL con los pasos anteriores. Detener el Codespace no elimina los recursos AWS.",
+            "terms": []
+          }
+        ],
+        "expect": "La obra 7 conserva presupuesto 15000 y ayuntamiento 2. El repositorio propio contiene tus archivos, sin credenciales. El progreso del cuaderno permanece solo en este navegador.",
+        "scene": "persist",
+        "nodes": [
+          "Petición",
+          "Dato guardado",
+          "Tu GitHub",
+          "Continuar mañana"
+        ],
+        "workshop": null
+      }
+    ]
+  }
+}

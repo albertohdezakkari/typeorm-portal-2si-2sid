@@ -1,9 +1,16 @@
-import { montarTaller } from './taller.js?v=6';
+import { montarTaller } from './taller.js?v=preparacion-1';
 
 const status = document.getElementById('estado');
 const container = document.getElementById('taller');
 let binding = null;
 let loading = false;
+let controller = null;
+
+window.addEventListener('message', event => {
+  const data = event.data;
+  if (event.origin !== location.origin || event.source !== parent || data?.binding !== binding || data.type !== 'taller:go') return;
+  controller?.ir(data.track, data.index);
+});
 
 function message(type, payload = {}) {
   if (parent !== window) parent.postMessage({ type, binding, ...payload }, location.origin);
@@ -18,10 +25,10 @@ window.addEventListener('message', async event => {
   status.textContent = 'Preparando tu taller…';
   try {
     const caseUrl = new URL(`casos/${init.caseId}.json`, location.href);
-    if (init.tabsLayout === 'wrap') caseUrl.searchParams.set('v', 'aula-1');
+    if (init.tabsLayout === 'wrap') caseUrl.searchParams.set('v', init.canPrepare ? 'preparacion-1' : 'aula-1');
     const [dataResponse, templateResponse] = await Promise.all([
       fetch(caseUrl),
-      fetch(new URL('plantilla.html', location.href)),
+      fetch(new URL('plantilla.html?v=preparacion-1', location.href)),
     ]);
     if (!dataResponse.ok || !templateResponse.ok) throw new Error('Material no disponible');
     const data = await dataResponse.json();
@@ -29,10 +36,13 @@ window.addEventListener('message', async event => {
     container.innerHTML = await templateResponse.text();
     container.querySelector('#pdf-taller').dataset.tabsLayout = init.tabsLayout === 'wrap' ? 'wrap' : '';
     status.hidden = true;
-    montarTaller(data, {
+    controller = montarTaller(data, {
       estadoInicial: init.state,
       guardar: state => message('taller:progress', { state }),
     });
+    const prepare = container.querySelector('[data-prepare-project]');
+    prepare.hidden = !init.canPrepare;
+    prepare.onclick = () => message('taller:prepare', {track:controller.tecnologia()});
     const resize = () => message('taller:height', { height: Math.ceil(document.body.getBoundingClientRect().height) });
     const observer = new ResizeObserver(resize);
     observer.observe(container);
