@@ -47,6 +47,11 @@
         if (!Number.isInteger(state.positions[tech]) || !data.tracks[tech][state.positions[tech]]) state.positions[tech] = 0;
       }
       let announcement = '';
+      let menuCollapsed = false;
+      let scrollFrame = 0;
+      let previousScroll = Math.max(0, window.scrollY);
+      let scrollDirection = 0;
+      let scrollDistance = 0;
       const steps = () => data.tracks[state.track];
       const step = () => steps()[state.positions[state.track]];
       const block = () => step().blocks[state.block];
@@ -118,9 +123,12 @@
         const scroll = {x:window.scrollX, y:window.scrollY};
         const markup = `<div class="pg-preparation" data-preparation-context="CH-22">
           <div class="pg-sticky-menu" data-menu-track="${state.track}">
+          <div class="pg-menu-content" id="pg-navigation-controls">
           <header class="pg-header"><div><span class="pg-eyebrow">TU PROYECTO · AYUNTAMIENTO Y OBRA</span><h3>Del cuaderno al proyecto que funciona</h3></div><div class="pg-tech" aria-label="Tecnología de preparación">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([tech,label]) => `<button type="button" data-action="track" data-track="${tech}" aria-pressed="${state.track === tech}">${label}</button>`).join('')}</div></header>
           <nav class="pg-journey" aria-label="Orden de trabajo">${['Preparar el entorno','Entender el modelo','Construir los casos','Comprobar los datos'].map((label,i)=>`<button type="button" data-action="phase" data-phase="${i}" data-current="${phase()===i}" aria-pressed="${phase()===i}">${i+1} · ${label}</button>`).join('')}</nav>
           <nav class="pg-steps" aria-label="Pasos de preparación">${steps().map((x,i) => `<button type="button" data-action="step" data-step="${i}" ${i === state.positions[state.track] ? 'aria-current="step"' : ''}><span>${String(i+1).padStart(2,'0')}</span>${esc(x.title)}${state.done.includes(state.track+':'+x.id) ? '<b aria-label="Resultado comprobado">✓</b>' : ''}</button>`).join('')}</nav>
+          </div>
+          <div class="pg-menu-summary" hidden><button type="button" data-action="expand-menu" aria-controls="pg-navigation-controls" aria-expanded="false"><strong data-summary-count>Paso ${state.positions[state.track]+1} de ${steps().length}</strong><span data-summary-title>${esc(s.title)}</span><span class="pg-expand-label">Mostrar menú <span aria-hidden="true">⌄</span></span></button></div>
           </div>
           <div class="pg-compact-status" hidden><strong>Paso ${state.positions[state.track]+1} de ${steps().length}</strong><span>${esc(s.title)}</span></div>
           <div class="pg-config-slot">${state.track === 'cloud' ? `<div class="pg-settings"><label>Perfil AWS<select data-config="profile"><option ${state.profile === 'default' ? 'selected' : ''}>default</option><option ${state.profile === 'academy' ? 'selected' : ''}>academy</option></select></label><label>Tu equipo<input data-config="team" type="text" value="${esc(state.team)}" pattern="[a-z][a-z0-9-]{0,19}" maxlength="20" spellcheck="false"></label><p>Región: <b>us-east-1</b>. Estos valores actualizan los comandos; expórtalos en tu terminal. Las credenciales se pegan únicamente en tu Codespace.</p></div>` : ''}</div>
@@ -154,6 +162,8 @@
             current.querySelector('.pg-config-slot').innerHTML = next.querySelector('.pg-config-slot').innerHTML;
           }
           menu.dataset.menuTrack = state.track;
+          menu.querySelector('[data-summary-count]').textContent = `Paso ${state.positions[state.track]+1} de ${steps().length}`;
+          menu.querySelector('[data-summary-title]').textContent = s.title;
           for (const button of menu.querySelectorAll('[data-action]')) {
             const type = button.dataset.action;
             const key = type === 'track' ? 'track' : type === 'phase' ? 'phase' : 'step';
@@ -181,7 +191,63 @@
         const fits = menu.getBoundingClientRect().height <= Math.max(120, window.innerHeight - 160);
         menu.dataset.pinned = String(fits);
         host.querySelector('.pg-compact-status').hidden = fits;
-        host.querySelector('.pg-preparation').style.setProperty('--pg-menu-height', `${fits ? menu.offsetHeight : host.querySelector('.pg-compact-status').offsetHeight}px`);
+        if (!fits) menuCollapsed = false;
+        applyMenuVisibility();
+      }
+      function applyMenuVisibility() {
+        const menu = host.querySelector('.pg-sticky-menu');
+        if (!menu) return;
+        const collapsed = menuCollapsed && menu.dataset.pinned === 'true';
+        menu.dataset.collapsed = String(collapsed);
+        const controls = menu.querySelector('.pg-menu-content');
+        controls.inert = collapsed;
+        controls.setAttribute('aria-hidden', String(collapsed));
+        const summary = menu.querySelector('.pg-menu-summary');
+        summary.hidden = !collapsed;
+        summary.querySelector('button').setAttribute('aria-expanded', String(!collapsed));
+        const height = menu.dataset.pinned === 'true' ? (collapsed ? summary.offsetHeight : menu.offsetHeight) : host.querySelector('.pg-compact-status').offsetHeight;
+        host.querySelector('.pg-preparation').style.setProperty('--pg-menu-height', `${height}px`);
+      }
+      function resetScrollDirection() {
+        previousScroll = Math.max(0, window.scrollY);
+        scrollDirection = 0;
+        scrollDistance = 0;
+      }
+      function setMenuCollapsed(value) {
+        if (menuCollapsed === value) return;
+        menuCollapsed = value;
+        applyMenuVisibility();
+      }
+      function followScrollDirection() {
+        scrollFrame = 0;
+        const menu = host.querySelector('.pg-sticky-menu');
+        if (!menu || !menu.getClientRects().length) { resetScrollDirection(); return; }
+        const y = Math.max(0, Math.min(window.scrollY, document.documentElement.scrollHeight - window.innerHeight));
+        const delta = y - previousScroll;
+        previousScroll = y;
+        if (menu.dataset.pinned !== 'true' || menu.getBoundingClientRect().top > 1) {
+          setMenuCollapsed(false); scrollDirection = 0; scrollDistance = 0; return;
+        }
+        if (Math.abs(delta) < .5) return;
+        const direction = Math.sign(delta);
+        if (direction !== scrollDirection) scrollDistance = 0;
+        scrollDirection = direction;
+        scrollDistance += Math.abs(delta);
+        // Un margen corto evita abrir/cerrar con el temblor del trackpad.
+        if (scrollDistance < 12) return;
+        const controls = menu.querySelector('.pg-menu-content');
+        const keyboardInMenu = controls.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
+        if (direction < 0 || keyboardInMenu) setMenuCollapsed(false);
+        else setMenuCollapsed(true);
+      }
+      function onWindowScroll() {
+        if (!scrollFrame) scrollFrame = requestAnimationFrame(followScrollDirection);
+      }
+      function onMenuFocus(event) {
+        if (event.target.closest('.pg-menu-content')) {
+          setMenuCollapsed(false);
+          resetScrollDirection();
+        }
       }
       function go(index) {
         state.positions[state.track] = Math.max(0, Math.min(steps().length-1, index));
@@ -235,6 +301,12 @@
         const button = event.target.closest('[data-action],[data-node]');
         if (!button || !host.contains(button)) return;
         const action = button.dataset.action;
+        if (action === 'expand-menu') {
+          setMenuCollapsed(false);
+          resetScrollDirection();
+          host.querySelector('.pg-steps [aria-current="step"]').focus({preventScroll:true});
+          return;
+        }
         if (button.dataset.node !== undefined) { selectNode(+button.dataset.node); return; }
         if (action === 'track') { state.track = button.dataset.track; state.block=0; state.page=0; state.full=false; state.focus=0; save(); render(); }
         if (action === 'step') go(+button.dataset.step);
@@ -283,6 +355,8 @@
       };
       active = {
         open: track => {
+          setMenuCollapsed(false);
+          resetScrollDirection();
           if (track && ['nest','cloud'].includes(track) && state.track!==track) { state.track=track; state.block=0; state.page=0; state.full=false; save(); render(); }
           document.querySelector('#workspace > nav [data-tab=preparation]').click();
         }
@@ -291,7 +365,15 @@
       const observer = new ResizeObserver(syncPinnedMenu);
       observer.observe(host.querySelector('.pg-sticky-menu'));
       window.addEventListener('resize',syncPinnedMenu);
-      release = () => { observer.disconnect(); window.removeEventListener('resize',syncPinnedMenu); };
+      window.addEventListener('scroll',onWindowScroll,{passive:true});
+      host.addEventListener('focusin',onMenuFocus);
+      resetScrollDirection();
+      release = () => {
+        observer.disconnect(); cancelAnimationFrame(scrollFrame);
+        window.removeEventListener('resize',syncPinnedMenu);
+        window.removeEventListener('scroll',onWindowScroll);
+        host.removeEventListener('focusin',onMenuFocus);
+      };
     } catch {
       if (request !== generation) return;
       host.innerHTML = '<p role="status">No se ha podido cargar la preparación. Recarga el cuaderno y vuelve a seleccionar tu correo.</p>';
