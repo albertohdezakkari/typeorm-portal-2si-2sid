@@ -1,0 +1,470 @@
+{
+  "nest": [
+    {
+      "id": "repositorio",
+      "title": "Tu carpeta y tu GitHub",
+      "lead": "Prepara una copia tuya. Las bases nuevas contienen solo el arranque; construirás las entidades y los casos en tu práctica.",
+      "where": "Git Bash en Windows o Terminal en macOS · primera vez",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Crea la carpeta y clona",
+          "code": "printf 'Tu carpeta personal: %s\\n' \"$HOME\"\nmkdir -p \"$HOME/proyectos-serverless\"\ncd \"$HOME/proyectos-serverless\"\ngit clone --branch main --single-branch https://github.com/albertohdezakkari/festival-checkin-01.git mi-taller\ncd mi-taller\nls bases/taller-nest bases/taller-serverless\ncode .",
+          "explain": "$HOME existe en Git Bash y macOS: apunta a tu carpeta personal. git clone crea mi-taller. Si ya existe, entra en ella y usa git pull; no clones otra vez encima.",
+          "terms": [
+            [
+              "$HOME",
+              "Tu carpeta de usuario: /c/Users/… en Git Bash; /Users/… en macOS."
+            ],
+            [
+              "git clone",
+              "Descarga el repositorio y crea la carpeta mi-taller."
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Conecta tu repositorio vacío",
+          "code": "printf 'Pega la URL HTTPS de tu repositorio GitHub vacío: '\nIFS= read -r MI_REPOSITORIO\ngit remote set-url origin \"$MI_REPOSITORIO\"\ngit remote -v\ngit push -u origin main",
+          "explain": "Crea primero un repositorio vacío en tu cuenta, sin README. En remote -v debe salir tu usuario. El push requiere iniciar sesión en tu propia cuenta de GitHub. El código antiguo de Festival queda en la raíz como ejemplo: aquí trabajarás dentro de mi-practica, no ejecutarás su npm run aula.",
+          "terms": [],
+          "links": [
+            [
+              "Crear tu repositorio vacío",
+              "https://github.com/new"
+            ]
+          ]
+        }
+      ],
+      "expect": "Ves las dos bases y origin apunta a tu cuenta. Si tu copia es anterior a esta preparación, trae las bases con git pull https://github.com/albertohdezakkari/festival-checkin-01.git main y sube el cambio a tu origin.",
+      "scene": "workspace",
+      "nodes": [
+        "Tu ordenador",
+        "Tu repositorio GitHub",
+        "bases/",
+        "mi-practica/"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "base",
+      "title": "Arranca la base Nest",
+      "lead": "Comprueba primero el proceso Nest. Todavía no estás comprobando PostgreSQL.",
+      "where": "$HOME/proyectos-serverless/mi-taller · Git Bash / Terminal",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Copia la base · solo la primera vez",
+          "code": "cd \"$HOME/proyectos-serverless/mi-taller\"\nmkdir -p mi-practica/nest\ncp -R -n bases/taller-nest/. mi-practica/nest/\ncd mi-practica/nest\npwd\nnode --version\nnpm --version\nnpm ci --include=dev\ncp -n .env.example .env\ncode .env",
+          "explain": "Necesitas Node 20.19.4 o superior. cp -n conserva los archivos que ya existan. Si ya existe mi-practica/nest, entra en ella; no repitas cp -R ni sobrescribas tu .env.",
+          "terms": [
+            [
+              "npm ci",
+              "Instala las versiones exactas de package-lock.json."
+            ],
+            [
+              ".env.example",
+              "Plantilla que sí se guarda en Git."
+            ],
+            [
+              ".env",
+              "Tu configuración real, excluida de Git."
+            ]
+          ]
+        },
+        {
+          "kind": "file",
+          "title": ".env",
+          "path": ".env",
+          "create": "touch .env\ncode .env",
+          "code": "DB_HOST=localhost\nDB_PORT=5432\nDB_USER=postgres\nDB_PASSWORD=123456\nDB_NAME=control_databridge\nPORT=3000",
+          "explain": "El script start usa node --env-file=.env: carga este archivo. No carga automáticamente .env.example.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Terminal 1 · compila y deja Nest abierto",
+          "code": "npm run build\nnpm run start",
+          "explain": "Cada vez que cambies TypeScript: Ctrl+C, npm run build y npm run start.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Terminal 2 · comprueba el proceso",
+          "code": "cd \"$HOME/proyectos-serverless/mi-taller\"/mi-practica/nest\ncurl -i http://localhost:3000/salud",
+          "explain": "",
+          "terms": []
+        }
+      ],
+      "expect": "HTTP 200 y {\"estado\":\"ok\",\"etapa\":\"base-neutral\"}. Esto confirma que Nest escucha en el puerto 3000; no confirma conexión a la base de datos.",
+      "scene": "process",
+      "nodes": [
+        "Terminal 1",
+        "main.ts",
+        "AppModule",
+        "GET /salud"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "postgres",
+      "title": "Prepara PostgreSQL",
+      "lead": "PostgreSQL es otro proceso: debe estar instalado y arrancado antes de conectar Nest.",
+      "where": "Otra terminal Git Bash / Terminal · PostgreSQL local",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Comprueba herramientas y abre psql",
+          "code": "psql --version\npsql -h localhost -p 5432 -U postgres -d postgres -W",
+          "explain": "En Windows instala PostgreSQL con usuario postgres y contraseña 123456. Instala también Command Line Tools y añade su carpeta bin al PATH de Git Bash; reinicia la terminal. En macOS usa tu instalación PostgreSQL y arráncala. La contraseña se configura en el servidor, no al escribir .env.",
+          "terms": [],
+          "links": [
+            [
+              "Instalar PostgreSQL en Windows",
+              "https://www.postgresql.org/download/windows/"
+            ],
+            [
+              "Instalar PostgreSQL en macOS",
+              "https://www.postgresql.org/download/macosx/"
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Dentro de psql · crea la base",
+          "code": "CREATE DATABASE control_databridge;\n\\q",
+          "explain": "Este bloque es SQL dentro de psql, no Bash. Si la base ya existe, continúa sin borrarla.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Desde Git Bash · verifica la base",
+          "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT current_database();'",
+          "explain": "",
+          "terms": []
+        }
+      ],
+      "expect": "SELECT current_database() devuelve control_databridge. Si psql no existe, instala sus herramientas; si connection refused, inicia PostgreSQL. No cambies al siguiente paso hasta poder conectar.",
+      "scene": "database",
+      "nodes": [
+        "Nest :3000",
+        "PostgreSQL :5432",
+        "postgres / 123456",
+        "control_databridge"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "conexion",
+      "title": "Conecta Nest con PostgreSQL",
+      "lead": "Ahora sí, /salud hará una consulta SQL. No necesita todavía las entidades del caso.",
+      "where": "mi-practica/nest · Terminal 1 detenida con Ctrl+C",
+      "blocks": [
+        {
+          "kind": "file",
+          "title": "src/app.module.ts",
+          "path": "src/app.module.ts",
+          "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
+          "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+          "explain": "forRoot abre la conexión usando .env; autoLoadEntities recogerá las entidades registradas después. synchronize se usa solo en esta base de práctica.",
+          "terms": [
+            [
+              "TypeOrmModule.forRoot",
+              "Configura la conexión de esta aplicación con PostgreSQL."
+            ],
+            [
+              "process.env.DB_NAME",
+              "Lee DB_NAME de .env, cargado por npm run start."
+            ],
+            [
+              "SELECT current_database()",
+              "La respuesta prueba una consulta real a PostgreSQL."
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Compila y arranca",
+          "code": "npm run build\nnpm run start",
+          "explain": "",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Terminal 2 · prueba la conexión",
+          "code": "curl -i http://localhost:3000/salud",
+          "explain": "",
+          "terms": []
+        }
+      ],
+      "expect": "HTTP 200 y {\"estado\":\"ok\",\"base\":\"control_databridge\"}. Ahora la respuesta confirma conexión SQL real.",
+      "scene": "connection",
+      "nodes": [
+        ".env",
+        "forRoot",
+        "DataSource",
+        "SELECT → /salud"
+      ],
+      "workshop": null
+    }
+  ],
+  "cloud": [
+    {
+      "id": "repositorio",
+      "title": "Tu carpeta y tu GitHub",
+      "lead": "Prepara una copia tuya. Las bases nuevas contienen solo el arranque; construirás las entidades y los casos en tu práctica.",
+      "where": "Git Bash en Windows o Terminal en macOS · primera vez",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Crea la carpeta y clona",
+          "code": "printf 'Tu carpeta personal: %s\\n' \"$HOME\"\nmkdir -p \"$HOME/proyectos-serverless\"\ncd \"$HOME/proyectos-serverless\"\ngit clone --branch main --single-branch https://github.com/albertohdezakkari/festival-checkin-01.git mi-taller\ncd mi-taller\nls bases/taller-nest bases/taller-serverless\ncode .",
+          "explain": "$HOME existe en Git Bash y macOS: apunta a tu carpeta personal. git clone crea mi-taller. Si ya existe, entra en ella y usa git pull; no clones otra vez encima.",
+          "terms": [
+            [
+              "$HOME",
+              "Tu carpeta de usuario: /c/Users/… en Git Bash; /Users/… en macOS."
+            ],
+            [
+              "git clone",
+              "Descarga el repositorio y crea la carpeta mi-taller."
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Conecta tu repositorio vacío",
+          "code": "printf 'Pega la URL HTTPS de tu repositorio GitHub vacío: '\nIFS= read -r MI_REPOSITORIO\ngit remote set-url origin \"$MI_REPOSITORIO\"\ngit remote -v\ngit push -u origin main",
+          "explain": "Crea primero un repositorio vacío en tu cuenta, sin README. En remote -v debe salir tu usuario. El push requiere iniciar sesión en tu propia cuenta de GitHub. El código antiguo de Festival queda en la raíz como ejemplo: aquí trabajarás dentro de mi-practica, no ejecutarás su npm run aula.",
+          "terms": [],
+          "links": [
+            [
+              "Crear tu repositorio vacío",
+              "https://github.com/new"
+            ]
+          ]
+        }
+      ],
+      "expect": "Ves las dos bases y origin apunta a tu cuenta. Si tu copia es anterior a esta preparación, trae las bases con git pull https://github.com/albertohdezakkari/festival-checkin-01.git main y sube el cambio a tu origin.",
+      "scene": "workspace",
+      "nodes": [
+        "Tu ordenador",
+        "Tu repositorio GitHub",
+        "bases/",
+        "mi-practica/"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "codespace",
+      "title": "Abre tu Codespace",
+      "lead": "Abre GitHub en tu repositorio propio: Code → Codespaces → Create codespace on main. El nombre real de /workspaces puede variar; usa el Explorer para abrir la raíz de tu copia.",
+      "where": "Terminal Bash de tu Codespace · raíz de tu repositorio",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Reconoce la copia y crea tu proyecto",
+          "code": "pwd\ngit remote get-url origin\ngit branch --show-current\nls bases/taller-serverless\nmkdir -p mi-practica/serverless\ncp -R -n bases/taller-serverless/. mi-practica/serverless/\ncd mi-practica/serverless\npwd\nnode --version\nnpm ci --include=dev\nnpm ls serverless --depth=0",
+          "explain": "Si mi-practica/serverless ya existe, entra en ella sin repetir cp. Node 20 o superior; si tu Codespace no tiene una versión compatible: nvm install 22 y nvm use 22, cada orden en su línea. Serverless debe mostrar 3.40.0 local; no pide login de Serverless.",
+          "terms": [
+            [
+              "npm ls serverless --depth=0",
+              "Muestra la versión de Serverless instalada en este proyecto."
+            ],
+            [
+              "mi-practica/serverless",
+              "Este package.json y este serverless.yml son independientes del Festival de la raíz."
+            ]
+          ],
+          "links": [
+            [
+              "Abrir Codespaces en tu repositorio",
+              "https://github.com/codespaces/new"
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Si faltan las bases en una copia antigua",
+          "code": "git pull https://github.com/albertohdezakkari/festival-checkin-01.git main\ngit push origin main",
+          "explain": "Solo desde la raíz del repositorio y con tus cambios guardados. Después vuelve al primer bloque.",
+          "terms": []
+        }
+      ],
+      "expect": "Estás dentro de mi-practica/serverless; origin es tu cuenta y npm ls muestra serverless@3.40.0. Las funciones del contexto aún no están creadas.",
+      "scene": "workspace",
+      "nodes": [
+        "Tu GitHub",
+        "Codespace",
+        "mi-practica/serverless",
+        "Serverless 3.40.0"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "aws",
+      "title": "Instala AWS CLI y prepara tu sesión",
+      "lead": "Serverless usa AWS para desplegar. Necesitas las tres credenciales temporales de tu Learner Lab, fuera del repositorio.",
+      "where": "Terminal del Codespace · mi-practica/serverless",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Comprueba AWS CLI",
+          "code": "aws --version",
+          "explain": "Si aparece aws-cli/2…, continúa sin instalarlo.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Solo si aws no existe",
+          "code": "curl -fsSL https://awscli.amazonaws.com/v2/install.sh -o /tmp/instalar-aws.sh\nsudo bash /tmp/instalar-aws.sh --system\nhash -r\naws --version",
+          "explain": "La instalación se realiza en el Codespace. Este archivo no forma parte de tu proyecto.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Abre el archivo de credenciales",
+          "code": "mkdir -p \"$HOME/.aws\"\ntouch \"$HOME/.aws/credentials\"\nchmod 600 \"$HOME/.aws/credentials\"\ncode \"$HOME/.aws/credentials\"",
+          "explain": "En Academy: Start Lab → AWS Details → AWS CLI. Copia las tres líneas reales con la cabecera [default]. Si ya utilizas [academy], conserva esa cabecera y elige academy aquí. Nunca copies credenciales a GitHub.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Selecciona tu sesión y comprueba acceso",
+          "code": "export AWS_PROFILE={{PROFILE}}\nexport AWS_REGION=us-east-1\nexport TALLER_EQUIPO={{TEAM}}\naws sts get-caller-identity",
+          "explain": "Elige el perfil y tu código de equipo arriba. AWS CLI lee AWS_PROFILE y AWS_REGION: no tienes que repetirlos en cada consulta.",
+          "terms": [
+            [
+              "AWS_PROFILE",
+              "Nombre de la sección [default] o [academy] en ~/.aws/credentials."
+            ],
+            [
+              "AWS_REGION",
+              "Región donde crearás tus recursos: us-east-1."
+            ],
+            [
+              "TALLER_EQUIPO",
+              "Identifica tu stack y tus tablas en una cuenta compartida. No genera IDs de registros."
+            ]
+          ]
+        }
+      ],
+      "expect": "STS devuelve tu Account y Arn. Si devuelve ExpiredToken, renueva las tres credenciales del laboratorio y repite STS.",
+      "scene": "credentials",
+      "nodes": [
+        "Learner Lab",
+        "~/.aws/credentials",
+        "AWS_PROFILE",
+        "STS: sesión válida"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "rol",
+      "title": "Obtén el rol y lee tu YAML",
+      "lead": "LabRole es el rol que Lambda utiliza al ejecutarse. Tu perfil de terminal y el rol de la función cumplen tareas distintas.",
+      "where": "La misma terminal del Codespace",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Lee el ARN de LabRole",
+          "code": "LAMBDA_ROLE_ARN=\"$(aws iam get-role --role-name LabRole --query 'Role.Arn' --output text)\"\nexport LAMBDA_ROLE_ARN\nprintf 'Rol de Lambda: %s\\n' \"$LAMBDA_ROLE_ARN\"",
+          "explain": "aws iam get-role consulta un rol existente. --query extrae Role.Arn; $(...) guarda la salida. export permite que Serverless lea la variable. printf solo la muestra.",
+          "terms": [
+            [
+              "--role-name LabRole",
+              "Nombre del rol ya creado por el laboratorio."
+            ],
+            [
+              "--query 'Role.Arn'",
+              "Selecciona el ARN del rol en la respuesta."
+            ],
+            [
+              "export",
+              "Hace visible esta variable a los procesos que arrancas desde la terminal."
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Solo si el laboratorio deniega iam:GetRole",
+          "code": "printf 'Pega el ARN completo de LabRole que te facilite el profesor: '\nIFS= read -r LAMBDA_ROLE_ARN\nexport LAMBDA_ROLE_ARN",
+          "explain": "Usa este bloque como alternativa al anterior. No inventes un ARN ni un número de cuenta.",
+          "terms": []
+        },
+        {
+          "kind": "file",
+          "title": "serverless.yml",
+          "path": "serverless.yml",
+          "create": "touch serverless.yml\ncode serverless.yml",
+          "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n",
+          "explain": "Este primer archivo solo tiene salud. ${env:…} lee tu terminal. Más adelante ${self:provider.stage} lee el stage definido en este mismo YAML.",
+          "terms": [
+            [
+              "${env:TALLER_EQUIPO}",
+              "Lee el valor exportado en la terminal."
+            ],
+            [
+              "role: ${env:LAMBDA_ROLE_ARN}",
+              "Asigna a Lambda el rol que ya autorizó el laboratorio."
+            ]
+          ]
+        },
+        {
+          "kind": "command",
+          "title": "Revisa los valores antes de desplegar",
+          "code": "printf 'Perfil: %s\\nRegión: %s\\nEquipo: %s\\nRol: %s\\n' \"$AWS_PROFILE\" \"$AWS_REGION\" \"$TALLER_EQUIPO\" \"$LAMBDA_ROLE_ARN\"",
+          "explain": "printf no crea ni valida recursos; muestra qué valores usará el YAML. Si falta alguno, vuelve al paso que lo define.",
+          "terms": []
+        }
+      ],
+      "expect": "Perfil, región, equipo y rol tienen valor. Tu YAML solo apunta al handler de salud que ya existe en la base.",
+      "scene": "role",
+      "nodes": [
+        "Tu perfil AWS",
+        "Serverless",
+        "LabRole",
+        "Lambda"
+      ],
+      "workshop": null
+    },
+    {
+      "id": "desplegar",
+      "title": "Despliega y comprueba salud",
+      "lead": "Prueba primero que puedes desplegar una función pequeña antes de añadir las tablas y los casos.",
+      "where": "mi-practica/serverless · terminal con las variables exportadas",
+      "blocks": [
+        {
+          "kind": "command",
+          "title": "Empaqueta, despliega y consulta",
+          "code": "npm run package\nnpm run deploy\nnpm run info",
+          "explain": "package prepara CloudFormation y el código sin crear recursos. deploy los crea en AWS. Serverless 3 puede avisar que no reconoce nodejs22.x en su esquema antiguo: el resultado que cuenta es el final del despliegue.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Obtén la URL del stack",
+          "code": "API_URL=\"$(aws cloudformation describe-stacks --stack-name \"taller-ch22-${TALLER_EQUIPO}\" --query 'Stacks[0].Outputs[?OutputKey==`HttpApiUrl`].OutputValue | [0]' --output text)\"\nexport API_URL\nprintf 'URL de tu API: %s\\n' \"$API_URL\"\ncurl -i \"$API_URL/salud\"",
+          "explain": "Outputs contiene los valores que CloudFormation devuelve después del despliegue. API_URL es la dirección real de tu API; todavía no existía al preparar el YAML.",
+          "terms": []
+        },
+        {
+          "kind": "command",
+          "title": "Invoca la misma Lambda sin API Gateway",
+          "code": "npm run invoke -- --function salud --data '{}'",
+          "explain": "invoke llama directamente a Lambda. curl entra por HTTP API. Ambos llegan al mismo handler de salud.",
+          "terms": []
+        }
+      ],
+      "expect": "Despliegue terminado y curl devuelve HTTP 200, estado ok y etapa base-neutral. Invoke devuelve statusCode 200 y el body con esos mismos datos.",
+      "scene": "deploy",
+      "nodes": [
+        "serverless.yml",
+        "CloudFormation",
+        "HTTP API /salud",
+        "Lambda salud"
+      ],
+      "workshop": null
+    }
+  ]
+}

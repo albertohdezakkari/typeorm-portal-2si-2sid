@@ -1,4 +1,4 @@
-// Piloto de organización CH-22. No altera los archivos ni el estado de Entrenar.
+// Cuaderno dual por contexto. Conserva los archivos y el estado de Entrenar.
 (() => {
   const workspace = document.getElementById('workspace');
   const mainNav = workspace.querySelector(':scope > nav.tabs');
@@ -7,7 +7,7 @@
   const originalBrand = pageBrand.textContent;
   const labels = new Map(originalButtons.map(b => [b, b.textContent]));
   const legacyNames = ['animation', 'case', 'er', 'crud', 'sheets', 'queries', 'functional', 'delivery'];
-  const originalPanels = [...workspace.querySelectorAll(':scope > .tab-panel')];
+  const panelSlots = new Map();
   const newNames = ['bases', 'fichas-duales', 'consultas-duales', 'pruebas-duales', 'anteriores', 'simulacion'];
   const titles = [
     ['bases', '1 · Preparar proyecto base'], ['training', '2 · Entrenar con mis fichas'],
@@ -17,6 +17,7 @@
   ];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let mounted = false;
+  let mountedContext = null;
   let revision = 0;
   let data;
   let preparation;
@@ -25,7 +26,6 @@
   let activeZone = 'bases';
   let archiveChoice = 'animation';
   const panel = name => document.getElementById('panel-' + name);
-  const techName = () => track === 'nest' ? 'Nest + TypeORM' : 'Serverless + DynamoDB Toolbox';
   const head = (eyebrow, title, lead) => `<div class="mq-heading"><span class="mq-eyebrow">${esc(eyebrow)}</span><h2>${esc(title)}</h2><p>${esc(lead)}</p></div>`;
   const action = (to, label) => `<button type="button" class="mq-button" data-mq-go="${to}">${esc(label)} <span aria-hidden="true">↗</span></button>`;
   const techTabs = () => `<nav class="mq-tech" aria-label="Tecnología de esta referencia">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([key,label]) => `<button type="button" data-mq-track="${key}" aria-pressed="${track === key}">${label}</button>`).join('')}</nav>`;
@@ -33,10 +33,10 @@
   const flow = (nodes, caption = '') => `<div class="mq-flow" aria-label="${esc(caption)}">${nodes.map((n,i) => `<div class="mq-node"><span class="mq-node-number">${i+1}</span><i class="mq-glyph" aria-hidden="true">${['⌘','{ }','↳','▤'][i%4]}</i><strong>${esc(n[0])}</strong><small>${esc(n[1])}</small></div>${i<nodes.length-1?'<span class="mq-arrow" aria-hidden="true">→</span>':''}`).join('')}</div>`;
 
   function renderBases() {
-    panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', 'Elige la base que vas a preparar. Después vuelve al taller de Ayuntamiento → Obra para construir tus entidades y tus cinco casos.') +
+    panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', `Elige la base que vas a preparar. Después vuelve al taller de ${data.context.title} para construir tus entidades y tus cinco casos.`) +
       `<div class="mq-repositories">
         <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/typeorm-base" target="_blank" rel="noopener">albertohdezakkari / typeorm-base ↗</a>
-        ${flow([['backend/','Tu proyecto Nest'],['Entities','Ayuntamiento · Obra'],['Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
+        ${flow([['backend/','Tu proyecto Nest'],['Entities',data.context.parent.entity+' · '+data.context.child.entity],['Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
         <ul class="mq-facts"><li><b>Carpeta de trabajo</b><code>backend/</code></li><li><b>Configuración que carga esta base</b><code>backend/.env.example</code></li><li><b>Comprobación de conexión</b><code>GET /salud</code></li></ul>
         <a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a></div></article>
         <article class="mq-repo mq-cloud"><div class="mq-repo-label"><span>02 / NoSQL</span><b>Ejemplo funcional</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">λ</i><h3>Serverless + Toolbox</h3><p>AWS · Lambda · DynamoDB</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/festival-checkin-01" target="_blank" rel="noopener">albertohdezakkari / festival-checkin-01 ↗</a>
@@ -44,8 +44,8 @@
         <ul class="mq-facts"><li><b>Guía de arranque</b><code>0-codespaces.md</code></li><li><b>Framework local</b><code>Serverless 3.40.0</code></li><li><b>Ejemplo que ya funciona</b><span>Festival: 3 tablas · 6 Lambdas</span></li></ul>
         <a class="mq-button" href="https://github.com/albertohdezakkari/festival-checkin-01/blob/main/0-codespaces.md" target="_blank" rel="noopener">Abrir la guía de Codespaces ↗</a></div></article>
       </div>
-      <div class="mq-bridge"><span class="mq-bridge-symbol" aria-hidden="true">⇄</span><div><strong>Del proyecto base a tu contexto</strong><p>TypeORM parte del arranque Nest. Festival muestra una aplicación completa. En tu taller prepararás AYUNTAMIENTO / OBRA en SQL y AYUNTAMIENTOS / OBRAS en DynamoDB: dos entidades relacionadas en ambas tecnologías.</p></div>${action('training','Continuar en mi taller')}</div>
-      <p class="mq-note">Maqueta de organización: las guías conservan su configuración y sus pasos actuales. La unificación del arranque con tu contexto será la siguiente adaptación.</p>`;
+      <div class="mq-bridge"><span class="mq-bridge-symbol" aria-hidden="true">⇄</span><div><strong>Del proyecto base a tu contexto</strong><p>TypeORM parte del arranque Nest. Festival muestra una aplicación completa. En tu taller prepararás ${esc(data.context.parent.sql)} / ${esc(data.context.child.sql)} en SQL y ${esc(data.context.parent.table)} / ${esc(data.context.child.table)} en DynamoDB: dos entidades relacionadas en ambas tecnologías.</p></div>${action('training','Continuar en mi taller')}</div>
+      <div class="mq-footlink"><span>Las guías presentan las bases; la preparación guiada reúne los archivos y las pruebas de tu contexto.</span>${action('preparation','Preparar y ejecutar mi contexto')}</div>`;
   }
 
   function operationNav() {
@@ -54,9 +54,9 @@
 
   function renderSheets() {
     const models = data.steps[track].filter(s => s.chapter === 0 && /Entity|Table/.test(s.name));
-    const shown = models.find(s => s.name.includes(track === 'nest' ? 'Obra' : 'Entity')) || models[0];
+    const shown = models.find(s => s.name.includes(track === 'nest' ? data.context.child.entity : 'Entity')) || models[0];
     panel('fichas-duales').innerHTML = head('Fichas · lectura y papel', 'El modelo, las capas y los cinco casos', 'Compara las dos tecnologías con el mismo contexto. Conservas también las cuatro fichas TypeORM anteriores, con su impresión original.') + techTabs() +
-      `<div class="mq-split"><div><div class="mq-paper-stack" aria-label="Organización propuesta del material impreso">${['01 · Relación y tablas','02 · Configuración y modelos','03 · Traza entre capas','04 · Cinco casos de uso'].map((x,i)=>`<div class="mq-paper"><b>${esc(x)}</b><span>${i===0?'AYUNTAMIENTO 1 → N OBRA':i===1?(track==='nest'?'Entities · relaciones · módulo':'YAML · Table · Entity'):i===2?(track==='nest'?'Controller → Service → Repository':'Handler → Service → Repository'):'Crear · listar · modificar · trasladar · consultar'}</span></div>`).join('')}</div><p class="mq-note">Vista previa de la organización. Este esquema no genera ni sustituye un PDF.</p>${action('sheets','Abrir fichas TypeORM originales')} ${action('training','Estudiar las dos tecnologías')}</div><div>${shown ? sourceCode(shown.path, shown.code, 'Código completo del modelo que ya estudias en Entrenar. Se muestra desde la misma fuente, sin reescribirlo.') : ''}</div></div>`;
+      `<div class="mq-split"><div><div class="mq-paper-stack" aria-label="Organización propuesta del material impreso">${['01 · Relación y tablas','02 · Configuración y modelos','03 · Traza entre capas','04 · Cinco casos de uso'].map((x,i)=>`<div class="mq-paper"><b>${esc(x)}</b><span>${i===0?esc(data.context.parent.sql+' 1 → N '+data.context.child.sql):i===1?(track==='nest'?'Entities · relaciones · módulo':'YAML · Table · Entity'):i===2?(track==='nest'?'Controller → Service → Repository':'Handler → Service → Repository'):'Crear · listar · modificar · trasladar · consultar'}</span></div>`).join('')}</div><p class="mq-note">Vista previa de la organización. Este esquema no genera ni sustituye un PDF.</p>${action('sheets','Abrir fichas TypeORM originales')} ${action('training','Estudiar las dos tecnologías')}</div><div>${shown ? sourceCode(shown.path, shown.code, 'Código completo del modelo que ya estudias en Entrenar. Se muestra desde la misma fuente, sin reescribirlo.') : ''}</div></div>`;
   }
 
   function renderQueries() {
@@ -71,7 +71,7 @@
     const s = preparation.tracks[track].find(s => s.id === 'caso-' + operation);
     const commands = s.blocks.filter(b => b.kind === 'command' && !/reinicia|despliega|sintaxis/i.test(b.title));
     panel('pruebas-duales').innerHTML = head('Comprobación · secuencia del taller', 'Prueba los mismos cinco casos', 'Ejecuta las pruebas en orden sobre tu proyecto ya preparado. Compara las respuestas reales con el resultado esperado; esta pantalla no ejecuta peticiones.') + techTabs() + operationNav() +
-      `<div class="mq-check-prereq"><strong>${track === 'nest' ? 'Nest arrancado · Terminal 2' : 'AWS desplegado · terminal del Codespace'}</strong><span>${track === 'nest' ? 'Las peticiones apuntan a http://localhost:3000.' : 'API_URL debe contener la URL real de tu HTTP API.'}</span></div><div class="mq-split"><div>${commands.map(b => sourceCode(b.title,b.code,b.explain)).join('')}</div><div class="mq-scene mq-check-scene"><span class="mq-eyebrow">Caso 0${operation}</span><h3>${esc(data.chapters[operation])}</h3><div class="mq-request"><b>${esc(op.verb)}</b><code>${esc(op.route)}</code></div>${flow([['Petición','Terminal'],[track === 'nest' ? 'Controller' : 'Handler','Recibe los datos'],['Respuesta','JSON']],'Recorrido de la prueba')}<div class="mq-result"><span>Qué debes observar</span><p>${esc(operation < 3 ? 'Conserva el ID real devuelto al crear la obra. Tras crear hay cuatro obras; al eliminar solo la de prueba vuelven a quedar 7, 8 y 9.' : op.result)}</p></div><p>Los números de las fichas explican la traza. El alta real devuelve su propio ID; las pruebas lo conservan en <code>OBRA_PRUEBA_ID</code>.</p></div></div><p class="mq-note">El comprobador anterior pertenece al entrenamiento anterior y mantiene sus rutas originales. No se reutiliza como comprobador de estos cinco casos.</p>${action('functional','Abrir comprobador anterior')}`;
+      `<div class="mq-check-prereq"><strong>${track === 'nest' ? 'Nest arrancado · Terminal 2' : 'AWS desplegado · terminal del Codespace'}</strong><span>${track === 'nest' ? 'Las peticiones apuntan a http://localhost:3000.' : 'API_URL debe contener la URL real de tu HTTP API.'}</span></div><div class="mq-split"><div>${commands.map(b => sourceCode(b.title,b.code,b.explain)).join('')}</div><div class="mq-scene mq-check-scene"><span class="mq-eyebrow">Caso 0${operation}</span><h3>${esc(data.chapters[operation])}</h3><div class="mq-request"><b>${esc(op.verb)}</b><code>${esc(op.route)}</code></div>${flow([['Petición','Terminal'],[track === 'nest' ? 'Controller' : 'Handler','Recibe los datos'],['Respuesta','JSON']],'Recorrido de la prueba')}<div class="mq-result"><span>Qué debes observar</span><p>${esc(operation < 3 ? 'Conserva el ID real devuelto al crear el registro. Tras crear hay cuatro registros; al eliminar solo el de prueba vuelven a quedar 7, 8 y 9.' : op.result)}</p></div><p>Los números de las fichas explican la traza. El alta real devuelve su propio ID; las pruebas lo conservan en la variable del registro de prueba.</p></div></div><p class="mq-note">El comprobador anterior pertenece al entrenamiento anterior y mantiene sus rutas originales. No se reutiliza como comprobador de estos cinco casos.</p>${action('functional','Abrir comprobador anterior')}`;
   }
 
   function renderReferences() {
@@ -87,11 +87,14 @@
     if (!mounted) return;
     for (const b of originalButtons) { b.hidden = false; b.textContent = labels.get(b); }
     mainNav.replaceChildren(...originalButtons);
-    for (const p of originalPanels) workspace.append(p);
+    // Restaurar solo los paneles movidos. Reinsertar Entrenar recargaría su iframe.
+    for (const [name,slot] of panelSlots) slot.replaceWith(panel(name));
+    panelSlots.clear();
     newNames.forEach(name => panel(name)?.remove());
     workspace.querySelector('.mq-pilot-banner')?.remove();
     pageBrand.textContent = originalBrand;
-    delete workspace.dataset.mockup;
+    delete workspace.dataset.cuaderno;
+    mountedContext = null;
     mounted = false;
   }
 
@@ -109,22 +112,25 @@
     }
   }
 
-  window.activarNavegacionArturo = b => {
-    if (!mounted || workspace.dataset.currentCase !== 'CH-22' || !workspace.contains(b) || b.closest('#teacher-workspace')) return false;
+  window.activarNavegacionCuaderno = b => {
+    if (!mounted || workspace.dataset.currentCase !== mountedContext || !workspace.contains(b) || b.closest('#teacher-workspace')) return false;
     show(b.dataset.tab);
     return true;
   };
 
-  window.montarMaquetaArturo = async (_student, context) => {
+  window.montarCuadernoDual = async (_student, context) => {
     const request = ++revision;
-    if (context.id !== 'CH-22') { restore(); return; }
+    restore();
+    data = null; preparation = null;
+    track = 'nest'; operation = 1; archiveChoice = 'animation';
+    mountedContext = context.id;
     if (!mounted) {
       mounted = true;
-      workspace.dataset.mockup = 'CH-22';
+      workspace.dataset.cuaderno = context.id;
       pageBrand.textContent = 'Cuaderno de aula · Nest y Serverless';
       const banner = document.createElement('div');
       banner.className = 'mq-pilot-banner';
-      banner.innerHTML = '<span>MAQUETA · CH-22</span><p>Ayuntamiento → Obra <b>·</b> Un recorrido con Nest y Serverless</p>';
+      banner.innerHTML = `<span>TU RECORRIDO · ${esc(context.id)}</span><p>${esc(context.title)} <b>·</b> Un recorrido con Nest y Serverless</p>`;
       mainNav.before(banner);
       for (const name of newNames) {
         const section = document.createElement('section'); section.id = 'panel-' + name; section.className = 'tab-panel mq-panel';
@@ -135,7 +141,11 @@
       for (const name of legacyNames) {
         const b = originalButtons.find(b => b.dataset.tab === name);
         archive.querySelector('nav').append(b);
-        archive.append(panel(name));
+        const currentPanel = panel(name);
+        const slot = document.createComment('ubicacion-panel-' + name);
+        currentPanel.before(slot);
+        panelSlots.set(name, slot);
+        archive.append(currentPanel);
       }
       const training = originalButtons.find(b => b.dataset.tab === 'training');
       // El taller y su iframe se mantienen intactos; solo cambia su posición en el índice exterior.
@@ -147,20 +157,22 @@
       const preparationButton = originalButtons.find(b => b.dataset.tab === 'preparation');
       preparationButton.hidden = true; // Puente existente desde Entrenar a la preparación guiada.
       mainNav.replaceChildren(...visibleButtons, preparationButton);
-      renderBases(); renderSimulation();
+      panel('bases').innerHTML = '<p role="status">Preparando las bases de tu contexto…</p>';
+      renderSimulation();
       for (const name of ['fichas-duales','consultas-duales','pruebas-duales']) panel(name).innerHTML = '<p role="status">Cargando las referencias del taller…</p>';
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all(['entrenar/casos/CH-22.json', 'preparar/CH-22.json'].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json`, `preparar/${encodeURIComponent(context.id)}.json?v=aula-2`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;
       [data,preparation] = results;
+      renderBases();
       renderReferences();
     } catch {
       if (request !== revision || !mounted) return;
-      for (const name of ['fichas-duales','consultas-duales','pruebas-duales']) panel(name).innerHTML = '<p role="alert">No se pudieron cargar las referencias. Puedes continuar en Entrenar con mis fichas y volver a intentarlo al recargar.</p>';
+      for (const name of ['bases','fichas-duales','consultas-duales','pruebas-duales']) panel(name).innerHTML = '<p role="alert">No se pudieron cargar las referencias. Puedes continuar en Entrenar con mis fichas y volver a intentarlo al recargar.</p>';
     }
   };
 

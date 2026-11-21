@@ -1,4 +1,4 @@
-// Preparación separada de los aciertos del taller. El piloto conserva CH-22.
+// Preparación por contexto, separada de los aciertos del taller aprobado.
 (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let generation = 0;
@@ -13,25 +13,22 @@
     const header = document.querySelector('#panel-preparation > h2');
     const intro = document.querySelector('#panel-preparation > p');
     const entry = document.getElementById('training-preparation');
-    if (entry) entry.hidden = caseId !== 'CH-22';
-    if (caseId !== 'CH-22') {
-      header.hidden = false;
-      intro.hidden = false;
-      header.textContent = '01 · Preparar el proyecto base antes de crear Entities';
-      intro.textContent = 'Seguimos estos pasos juntos. El proyecto común debe compilar y conectar con PostgreSQL antes de añadir las Entities del caso.';
-      return;
-    }
+    if (entry) entry.hidden = false;
     const host = document.getElementById('project-preparation');
     header.hidden = true;
     intro.hidden = true;
     host.innerHTML = '<p role="status">Preparando tu recorrido de arranque…</p>';
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
-    intro.textContent = 'Ayuntamiento → Obra. Prepara el entorno, estudia el modelo y aplica cada caso sobre tu propia copia.';
+    intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch('preparar/CH-22.json?v=integracion-1');
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=aula-2`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;
+      const context = data.context;
+      const parent = context.parent;
+      const child = context.child;
+      const modelFields = data.fieldGuide.entities;
       const key = storageKey.replace('sv:taller-fichas:', 'sv:preparacion:');
       let saved = {};
       try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch { /* Sin estado anterior. */ }
@@ -70,8 +67,8 @@
           credentials: ['Academy proporciona tres credenciales temporales al iniciar el laboratorio.', 'El archivo queda en tu carpeta personal, fuera del repositorio.', 'AWS_PROFILE elige una sección de ese archivo.', 'STS comprueba la identidad de esa sesión; todavía no crea recursos.'],
           role: ['Tu perfil autoriza los comandos que ejecutas en la terminal.', 'Serverless usa ese perfil para desplegar lo que describe el YAML.', 'LabRole ya existe en el laboratorio y tiene los permisos autorizados.', 'La función utiliza LabRole cuando se ejecuta. No hereda tus claves de terminal.'],
           model: cloud ? ['El YAML crea las tablas y Ref entrega sus nombres a Lambda.', 'db es el cliente que enviará las operaciones a DynamoDB.', 'Table describe el nombre real, las claves y el índice que ya creó el YAML.', 'Entity declara los campos y traduce sus etiquetas con savedAs.']
-            : ['forRoot conecta PostgreSQL; AppModule también importa TallerModule.', 'forFeature registra las dos Entities en TallerModule.', 'Ayuntamiento tiene su PK y una colección inversa de obras.', 'Obra guarda su PK, sus datos y la FK hacia Ayuntamiento.'],
-          records: ['El ID 1 identifica al Ayuntamiento del Río.', 'Las obras 7 y 9 guardan la referencia al ayuntamiento 1.', 'El ID 2 identifica al Ayuntamiento del Valle.', 'La obra 8 guarda la referencia al ayuntamiento 2.'],
+            : ['forRoot conecta PostgreSQL; AppModule también importa TallerModule.', 'forFeature registra las dos Entities en TallerModule.', `${parent.entity} tiene su PK y una colección inversa de ${child.route}.`, `${child.entity} guarda su PK, sus datos y la FK hacia ${parent.entity}.`],
+          records: [`El ID 1 identifica ${parent.examples[0]}.`, `Los registros 7 y 9 de ${child.entity} guardan la referencia al ID 1.`, `El ID 2 identifica ${parent.examples[1]}.`, `El registro 8 de ${child.entity} guarda la referencia al ID 2.`],
           trace: ['La llamada transporta los datos de la operación.', cloud ? 'El handler recibe body, pathParameters o queryStringParameters.' : 'El controller recibe body, parámetros de ruta o filtros de consulta.', 'El service organiza el caso y llama al repository.', cloud ? 'El repository usa el modelo y envía el comando de Toolbox.' : 'El repository usa la Entity y ejecuta la lectura o escritura SQL.']
         };
         return (meanings[step().scene] || [step().lead, block().explain, step().lead, step().expect])[state.focus];
@@ -94,12 +91,12 @@
         const titles = s.nodes;
         const model = s.scene === 'model' || s.scene === 'records';
         return `<div class="pg-canvas" data-scene="${esc(s.scene)}">
-          <div class="pg-canvas-top"><span>${state.track === 'cloud' ? 'AWS · SERVERLESS' : 'TU ORDENADOR · NEST'}</span><span class="pg-context">CH-22</span></div>
+          <div class="pg-canvas-top"><span>${state.track === 'cloud' ? 'AWS · SERVERLESS' : 'TU ORDENADOR · NEST'}</span><span class="pg-context">${esc(caseId)}</span></div>
           <div class="pg-flow-board">
             <svg class="pg-wires" viewBox="0 0 600 300" preserveAspectRatio="none" aria-hidden="true"><path d="M145 70 H455 V230 H145 V70"/><path class="pg-signal" d="M145 70 H455 V230 H145 V70"/></svg>
             ${titles.map((title,i) => `<button type="button" class="pg-node" data-node="${i}" data-active="${state.focus === i}" aria-pressed="${state.focus === i}">${icon(types[i])}<span class="pg-node-index">${i+1}</span><strong>${esc(title)}</strong></button>`).join('')}
           </div>
-          ${model ? `<div class="pg-model-cards"><section><strong>${state.track === 'cloud' ? 'AYUNTAMIENTOS' : 'AYUNTAMIENTO'}</strong><div><b>PK</b><code>${state.track === 'cloud' ? 'AYUNTAMIENTO_ID' : 'ID'}</code></div><div><span>DATO</span><code>NOMBRE</code></div></section><span class="pg-relation">1<span></span>0..N</span><section><strong>${state.track === 'cloud' ? 'OBRAS' : 'OBRA'}</strong><div><b>PK</b><code>${state.track === 'cloud' ? 'OBRA_ID' : 'ID'}</code></div><div><span>DATO</span><code>NOMBRE</code></div><div><span>DATO</span><code>PRESUPUESTO_EUROS</code></div><div><b>${state.track === 'cloud' ? 'REF' : 'FK'}</b><code>${state.track === 'cloud' ? 'AYUNTAMIENTO_ID' : 'ID_AYUNTAMIENTO'}</code></div></section></div>` : ''}
+          ${model ? `<div class="pg-model-cards">${modelFields.map((entity, i) => `${i ? '<span class="pg-relation">1<span></span>0..N</span>' : ''}<section><strong>${esc(state.track === 'cloud' ? entity.dynamo : entity.sql)}</strong>${entity.fields.map(field => `<div><${field.role === 'data' ? 'span' : 'b'}>${field.role === 'key' ? 'PK' : field.role === 'reference' ? (state.track === 'cloud' ? 'REF' : 'FK') : 'DATO'}</${field.role === 'data' ? 'span' : 'b'}><code>${esc(field[state.track].column)}</code></div>`).join('')}</section>`).join('')}</div>` : ''}
           <div class="pg-diagram-note"><span class="pg-beacon" aria-hidden="true"></span><strong>${esc(titles[state.focus])}</strong><span>Elemento ${state.focus+1} de ${titles.length}</span><p>${esc(nodeMeaning())}</p></div>
         </div>`;
       }
@@ -121,10 +118,10 @@
         const focusKeys = ['action','node','copy','block','step','track','phase','term','config'];
         const focused = before && host.contains(before) ? focusKeys.filter(key => before.dataset[key] !== undefined).map(key => `[data-${key}="${CSS.escape(before.dataset[key])}"]`).join('') : '';
         const scroll = {x:window.scrollX, y:window.scrollY};
-        const markup = `<div class="pg-preparation" data-preparation-context="CH-22">
+        const markup = `<div class="pg-preparation" data-preparation-context="${esc(caseId)}">
           <div class="pg-sticky-menu" data-menu-track="${state.track}">
           <div class="pg-menu-content" id="pg-navigation-controls">
-          <header class="pg-header"><div><span class="pg-eyebrow">TU PROYECTO · AYUNTAMIENTO Y OBRA</span><h3>Del cuaderno al proyecto que funciona</h3></div><div class="pg-tech" aria-label="Tecnología de preparación">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([tech,label]) => `<button type="button" data-action="track" data-track="${tech}" aria-pressed="${state.track === tech}">${label}</button>`).join('')}</div></header>
+          <header class="pg-header"><div><span class="pg-eyebrow">TU PROYECTO · ${esc(context.title.toUpperCase())}</span><h3>Del cuaderno al proyecto que funciona</h3></div><div class="pg-tech" aria-label="Tecnología de preparación">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([tech,label]) => `<button type="button" data-action="track" data-track="${tech}" aria-pressed="${state.track === tech}">${label}</button>`).join('')}</div></header>
           <nav class="pg-journey" aria-label="Orden de trabajo">${['Preparar el entorno','Entender el modelo','Construir los casos','Comprobar los datos'].map((label,i)=>`<button type="button" data-action="phase" data-phase="${i}" data-current="${phase()===i}" aria-pressed="${phase()===i}">${i+1} · ${label}</button>`).join('')}</nav>
           <nav class="pg-steps" aria-label="Pasos de preparación">${steps().map((x,i) => `<button type="button" data-action="step" data-step="${i}" ${i === state.positions[state.track] ? 'aria-current="step"' : ''}><span>${String(i+1).padStart(2,'0')}</span>${esc(x.title)}${state.done.includes(state.track+':'+x.id) ? '<b aria-label="Resultado comprobado">✓</b>' : ''}</button>`).join('')}</nav>
           </div>
@@ -259,8 +256,8 @@
           if (state.track === 'nest') {
             if (b.path?.includes('app.module')) return 0;
             if (b.path?.includes('taller.module')) return 1;
-            if (b.path?.includes('ayuntamiento.entity')) return 2;
-            if (b.path?.includes('obra.entity')) return 3;
+            if (b.path === parent.file) return 2;
+            if (b.path === child.file) return 3;
           } else {
             if (b.path === 'serverless.yml') return 0;
             if (b.path?.includes('dynamo.mjs')) return 1;
@@ -279,8 +276,8 @@
         state.focus=index;
         let path=null;
         if (step().scene==='model') {
-          path=state.track==='cloud' ? ['serverless.yml','src/datos/dynamo.mjs','src/models/ayuntamiento-obra.model.mjs','src/models/ayuntamiento-obra.model.mjs'][index]
-            : ['src/app.module.ts','src/taller.module.ts','src/ayuntamientos/entities/ayuntamiento.entity.ts','src/obras/entities/obra.entity.ts'][index];
+          path=state.track==='cloud' ? ['serverless.yml','src/datos/dynamo.mjs',context.modelFile,context.modelFile][index]
+            : ['src/app.module.ts','src/taller.module.ts',parent.file,child.file][index];
         }
         let found=path ? step().blocks.findIndex(b=>b.path===path) : -1;
         if (step().scene==='trace') {
@@ -292,7 +289,7 @@
         }
         if (found>=0) {state.block=found;state.page=0;state.full=false;}
         if (step().scene==='model' && state.track==='cloud' && index===3) {
-          const line=block().code.split('\n').findIndex(line=>line.includes('export const MODELO_OBRA'));
+          const line=block().code.split('\n').findIndex(line=>line.includes('export const '+child.model));
           if(line>=0)state.page=Math.floor(line/14);
         }
         render();
