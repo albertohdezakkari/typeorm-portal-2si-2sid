@@ -3,9 +3,12 @@
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let generation = 0;
   let active = null;
+  let release = () => {};
 
   window.prepararProyectoGuiado = async ({caseId, storageKey, abrirTaller}) => {
     const request = ++generation;
+    release();
+    release = () => {};
     active = null;
     const header = document.querySelector('#panel-preparation > h2');
     const intro = document.querySelector('#panel-preparation > p');
@@ -109,11 +112,19 @@
       function render() {
         const s = step();
         const b = block();
-        host.innerHTML = `<div class="pg-preparation" data-preparation-context="CH-22">
+        const before = document.activeElement;
+        const focusKeys = ['action','node','copy','block','step','track','phase','term','config'];
+        const focused = before && host.contains(before) ? focusKeys.filter(key => before.dataset[key] !== undefined).map(key => `[data-${key}="${CSS.escape(before.dataset[key])}"]`).join('') : '';
+        const scroll = {x:window.scrollX, y:window.scrollY};
+        const markup = `<div class="pg-preparation" data-preparation-context="CH-22">
+          <div class="pg-sticky-menu" data-menu-track="${state.track}">
           <header class="pg-header"><div><span class="pg-eyebrow">TU PROYECTO · AYUNTAMIENTO Y OBRA</span><h3>Del cuaderno al proyecto que funciona</h3></div><div class="pg-tech" aria-label="Tecnología de preparación">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([tech,label]) => `<button type="button" data-action="track" data-track="${tech}" aria-pressed="${state.track === tech}">${label}</button>`).join('')}</div></header>
           <nav class="pg-journey" aria-label="Orden de trabajo">${['Preparar el entorno','Entender el modelo','Construir los casos','Comprobar los datos'].map((label,i)=>`<button type="button" data-action="phase" data-phase="${i}" data-current="${phase()===i}" aria-pressed="${phase()===i}">${i+1} · ${label}</button>`).join('')}</nav>
-          ${state.track === 'cloud' ? `<div class="pg-settings"><label>Perfil AWS<select data-config="profile"><option ${state.profile === 'default' ? 'selected' : ''}>default</option><option ${state.profile === 'academy' ? 'selected' : ''}>academy</option></select></label><label>Tu equipo<input data-config="team" type="text" value="${esc(state.team)}" pattern="[a-z][a-z0-9-]{0,19}" maxlength="20" spellcheck="false"></label><p>Región: <b>us-east-1</b>. Estos valores actualizan los comandos; expórtalos en tu terminal. Las credenciales se pegan únicamente en tu Codespace.</p></div>` : ''}
           <nav class="pg-steps" aria-label="Pasos de preparación">${steps().map((x,i) => `<button type="button" data-action="step" data-step="${i}" ${i === state.positions[state.track] ? 'aria-current="step"' : ''}><span>${String(i+1).padStart(2,'0')}</span>${esc(x.title)}${state.done.includes(state.track+':'+x.id) ? '<b aria-label="Resultado comprobado">✓</b>' : ''}</button>`).join('')}</nav>
+          </div>
+          <div class="pg-compact-status" hidden><strong>Paso ${state.positions[state.track]+1} de ${steps().length}</strong><span>${esc(s.title)}</span></div>
+          <div class="pg-config-slot">${state.track === 'cloud' ? `<div class="pg-settings"><label>Perfil AWS<select data-config="profile"><option ${state.profile === 'default' ? 'selected' : ''}>default</option><option ${state.profile === 'academy' ? 'selected' : ''}>academy</option></select></label><label>Tu equipo<input data-config="team" type="text" value="${esc(state.team)}" pattern="[a-z][a-z0-9-]{0,19}" maxlength="20" spellcheck="false"></label><p>Región: <b>us-east-1</b>. Estos valores actualizan los comandos; expórtalos en tu terminal. Las credenciales se pegan únicamente en tu Codespace.</p></div>` : ''}</div>
+          <div class="pg-step-content">
           <div class="pg-step-heading"><div><p class="pg-eyebrow">PASO ${state.positions[state.track]+1} DE ${steps().length}</p><h3>${esc(s.title)}</h3><p>${esc(s.lead)}</p></div><button type="button" class="pg-return" data-action="resume">Volver a mi taller</button></div>
           <div class="pg-location"><span aria-hidden="true">⌁</span><strong>Dónde trabajas</strong><span>${esc(s.where)}</span></div>
           <div class="pg-layout"><section class="pg-work" aria-label="Qué haces en tu proyecto"><nav class="pg-files" aria-label="Acciones y archivos del paso">${s.blocks.map((x,i) => `<button type="button" data-action="block" data-block="${i}" aria-pressed="${state.block === i}"><span>${i+1}</span>${esc(x.title)}</button>`).join('')}</nav>
@@ -127,13 +138,55 @@
           </aside></div>
           <section class="pg-checkpoint"><div><span class="pg-check-icon" aria-hidden="true">✓</span><div><h4>Antes de avanzar</h4><p>${esc(s.expect)}</p></div></div><label><input type="checkbox" data-action="checked" ${state.done.includes(token()) ? 'checked' : ''}>He realizado esta comprobación en mi proyecto</label><p class="pg-local-note">Esta marca es tu recordatorio. El cuaderno no ejecuta los comandos ni comprueba tu servidor.</p></section>
           <footer class="pg-bottom"><button type="button" data-action="previous" ${state.positions[state.track] === 0 ? 'disabled' : ''}>Paso anterior</button>${s.workshop ? `<button type="button" class="pg-primary" data-action="study">Estudiar este código en Entrenar</button>` : ''}<button type="button" class="pg-primary" data-action="next" ${state.positions[state.track] === steps().length-1 ? 'disabled' : ''}>Siguiente paso</button></footer><p class="pg-announcement" role="status" aria-live="polite">${esc(announcement || `Paso ${state.positions[state.track]+1} de ${steps().length}. ${state.done.filter(x => x.startsWith(state.track+':')).length} resultados marcados por ti. Tu avance se conserva en este navegador.`)}</p>
+          </div>
         </div>`;
+        const current = host.querySelector('.pg-preparation');
+        if (!current) host.innerHTML = markup;
+        else {
+          const template = document.createElement('template');
+          template.innerHTML = markup;
+          const next = template.content.querySelector('.pg-preparation');
+          const menu = current.querySelector('.pg-sticky-menu');
+          const updatedMenu = next.querySelector('.pg-sticky-menu');
+          // Conservar los controles que el alumno está usando, especialmente el foco.
+          if (menu.dataset.menuTrack !== state.track) {
+            menu.querySelector('.pg-steps').innerHTML = updatedMenu.querySelector('.pg-steps').innerHTML;
+            current.querySelector('.pg-config-slot').innerHTML = next.querySelector('.pg-config-slot').innerHTML;
+          }
+          menu.dataset.menuTrack = state.track;
+          for (const button of menu.querySelectorAll('[data-action]')) {
+            const type = button.dataset.action;
+            const key = type === 'track' ? 'track' : type === 'phase' ? 'phase' : 'step';
+            const fresh = updatedMenu.querySelector(`[data-action="${type}"][data-${key}="${button.dataset[key]}"]`);
+            if (!fresh) continue;
+            for (const attr of ['aria-current','aria-pressed','data-current']) {
+              if (fresh.hasAttribute(attr)) button.setAttribute(attr,fresh.getAttribute(attr));
+              else button.removeAttribute(attr);
+            }
+            if (type === 'step' && button.innerHTML !== fresh.innerHTML) button.innerHTML = fresh.innerHTML;
+          }
+          current.querySelector('.pg-compact-status').innerHTML = next.querySelector('.pg-compact-status').innerHTML;
+          current.querySelector('.pg-step-content').innerHTML = next.querySelector('.pg-step-content').innerHTML;
+        }
+        syncPinnedMenu();
+        if (focused && !before.isConnected) {
+          const target = host.querySelector(focused);
+          if (target && !target.disabled) target.focus({preventScroll:true});
+        }
+        if (window.scrollX !== scroll.x || window.scrollY !== scroll.y) window.scrollTo({left:scroll.x,top:scroll.y,behavior:'instant'});
+      }
+      function syncPinnedMenu() {
+        const menu = host.querySelector('.pg-sticky-menu');
+        if (!menu) return;
+        const fits = menu.getBoundingClientRect().height <= Math.max(120, window.innerHeight - 160);
+        menu.dataset.pinned = String(fits);
+        host.querySelector('.pg-compact-status').hidden = fits;
+        host.querySelector('.pg-preparation').style.setProperty('--pg-menu-height', `${fits ? menu.offsetHeight : host.querySelector('.pg-compact-status').offsetHeight}px`);
       }
       function go(index) {
         state.positions[state.track] = Math.max(0, Math.min(steps().length-1, index));
         state.block = 0; state.page = 0; state.focus = 0; state.full = false; announcement = '';
         save(); render();
-        host.querySelector('.pg-step-heading').scrollIntoView({block: 'start', behavior:'instant'});
       }
       function focusFor(b) {
         if (step().scene === 'model') {
@@ -212,7 +265,11 @@
           if (number >= 0) {
             state.page=Math.floor(number/14); render();
             const line=host.querySelector(`.pg-line[data-line="${number+1}"]`);
-            if (line) { line.dataset.highlight='true'; line.scrollIntoView({block:'nearest'}); }
+            if (line) {
+              line.dataset.highlight='true';
+              const source=line.closest('.pg-source'), r=line.getBoundingClientRect(), box=source.getBoundingClientRect();
+              if (r.top < box.top || r.bottom > box.bottom) source.scrollTop += r.top - box.top;
+            }
           }
         }
       };
@@ -231,6 +288,10 @@
         }
       };
       render();
+      const observer = new ResizeObserver(syncPinnedMenu);
+      observer.observe(host.querySelector('.pg-sticky-menu'));
+      window.addEventListener('resize',syncPinnedMenu);
+      release = () => { observer.disconnect(); window.removeEventListener('resize',syncPinnedMenu); };
     } catch {
       if (request !== generation) return;
       host.innerHTML = '<p role="status">No se ha podido cargar la preparación. Recarga el cuaderno y vuelve a seleccionar tu correo.</p>';
