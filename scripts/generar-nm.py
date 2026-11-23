@@ -583,7 +583,7 @@ def module(through):
 NEW_RESOURCES='''    TablaProfesionales:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: PROFESIONALES_${self:provider.stage}
+        TableName: PROFESIONALES_${env:TALLER_EQUIPO}
         # PK: PROFESIONAL_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
@@ -595,7 +595,7 @@ NEW_RESOURCES='''    TablaProfesionales:
     TablaAsignaciones:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: ASIGNACIONES_${self:provider.stage}
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
         # PK compuesta: OBRA_ID + PROFESIONAL_ID. Dato no clave: ROL.
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
@@ -618,7 +618,7 @@ NEW_RESOURCES='''    TablaProfesionales:
               NonKeyAttributes:
                 - ROL # Copia ROL al índice; ambas claves ya se incluyen.
 '''
-BASE_YAML=CLOUD['serverless.yml']
+BASE_YAML=CLOUD['serverless.yml'].replace('${self:provider.stage}', '${env:TALLER_EQUIPO}')
 def yaml_file(through):
  text=BASE_YAML.replace('    TABLA_OBRAS: { Ref: TablaObras }','    TABLA_OBRAS: { Ref: TablaObras }\n    TABLA_PROFESIONALES: { Ref: TablaProfesionales }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }')
  functions=''
@@ -722,7 +722,7 @@ for t in tracks:
 psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM "ASIGNACION" WHERE "ID_OBRA" = 7 ORDER BY "ID_PROFESIONAL";'
 psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM "ASIGNACION" WHERE "ID_PROFESIONAL" = 1 ORDER BY "ID_OBRA";' '''),expect='Cada consulta devuelve dos filas; son distintas agrupaciones de los mismos tres vínculos.')
  else:
-  add(t,1,'infra','Añade las dos tablas sin reemplazar las anteriores','yaml',yaml_file(0),'serverless.yml',note='Archivo acumulativo completo. Los campos NOMBRE, APELLIDOS, EMAIL y ROL se declaran en Entity; AttributeDefinitions solo contiene claves. NonKeyAttributes copia ROL al índice.',expect='Cuatro tablas, las rutas 1:N originales y ninguna función N:M todavía.')
+  add(t,1,'infra','Añade las dos tablas sin reemplazar las anteriores','yaml',yaml_file(0),'serverless.yml',note='Archivo acumulativo completo. env:TALLER_EQUIPO lee directamente la variable que has exportado en la terminal; si vale equipo01, ASIGNACIONES_${env:TALLER_EQUIPO} se convierte en ASIGNACIONES_equipo01. Los campos NOMBRE, APELLIDOS, EMAIL y ROL se declaran en Entity; AttributeDefinitions solo contiene claves. NonKeyAttributes copia ROL al índice.',expect='Cuatro tablas, las rutas 1:N originales y ninguna función N:M todavía.')
   add(t,1,'table','Describe Table y el índice PorProfesional','table',TABLES,'src/models/profesional-asignacion.model.mjs',expect='La tabla agrupa por obra; el índice agrupa por profesional. Ninguna Table crea recursos AWS.')
   add(t,1,'entity','Completa las dos Entities de Toolbox','entity',MODELS,'src/models/profesional-asignacion.model.mjs',note='En los repositories partirás siempre de MODELO.build(EntityRepository). Cada método get, put, scan, query, update o delete envía su operación y devuelve la respuesta; no añadas .send(). Table permanece dentro del modelo.',expect='Todos los campos del esquema están presentes. Los dos .key() de Asignacion corresponden a PK y SK de Table.')
   add(t,1,'desplegar','Crea los recursos con Serverless','command','npm run package\nnpm run deploy\nnpm run info',note='Misma terminal y sesión de Academy que en 1:N. Conserva AWS_PROFILE, AWS_REGION, TALLER_EQUIPO y LAMBDA_ROLE_ARN. Serverless 3.40.0 local; no hay nuevo login ni rol.',expect='Despliegue terminado. Las cuatro tablas existen y la API 1:N sigue respondiendo.')

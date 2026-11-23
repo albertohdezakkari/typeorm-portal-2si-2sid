@@ -20,6 +20,8 @@ Los directorios `codigo/nest` y `codigo/cloud` contienen el resultado completo d
 
 Para una base vacía de referencia, `datos-iniciales.sql` (Nest) y `cargar-datos-1n.sh` (Serverless) preparan las obras anteriores; después `datos-nm.sql` y `cargar-datos-nm.sh` añaden los nuevos datos. En tu práctica existente utiliza solo la carga N:M. No repitas las altas PartiQL sobre claves que ya existen.
 
+Los nombres de las tablas leen directamente `TALLER_EQUIPO` con `${env:TALLER_EQUIPO}`. Por ejemplo, `ASIGNACIONES_${env:TALLER_EQUIPO}` pasa a ser `ASIGNACIONES_equipo01` si has ejecutado `export TALLER_EQUIPO=equipo01`. No necesitas pasar por otra clave del YAML.
+
 ## Un único acceso desde la Entity
 
 Los repositories de esta ampliación y el código completo de referencia usan la acción oficial `EntityRepository` de Toolbox 2.11.1:
