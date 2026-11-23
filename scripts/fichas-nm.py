@@ -86,6 +86,7 @@ Y=start('Traza Serverless · Handler, Service y Repository','HTTP API e Invoke l
 y=block(M,Y,'handler.mjs · archivo completo',file('cloud','src/asignaciones/asignar-profesional/handler.mjs'),font=8)
 block(M,y,'service.mjs · archivo completo',file('cloud','src/asignaciones/asignar-profesional/service.mjs'),font=8)
 y=block(M+CW+G,Y,'repository.mjs · archivo completo',file('cloud','src/asignaciones/asignar-profesional/repository.mjs'),font=8)
+y=text(M+CW+G,y,'EntityRepository vincula todas las operaciones al modelo. get, put, scan, query, update y delete envían la operación y devuelven la respuesta; no añadas .send().',font=10)
 text(M+CW+G,y,'La condición se comprueba sobre el ítem identificado por AMBAS claves. Rechaza (8,2) si ya existe; permite (8,1) o (7,2).',font=10);end()
 
 Y=start('Practica los seis casos en orden','Usa API_URL=http://localhost:3000 en Nest; en AWS conserva la URL real obtenida al desplegar.')

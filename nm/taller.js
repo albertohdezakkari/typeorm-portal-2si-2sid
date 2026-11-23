@@ -11,18 +11,18 @@ const stop=()=>{clearTimeout(timer);timer=null;if(ready&&$('[data-action=play]')
 const hasCode=s=>Boolean(s.code)&&!['logical','mapping'].includes(s.kind);
 function resize(){send('nm:height',{height:Math.ceil(document.documentElement.getBoundingClientRect().height)});}
 function defaults(saved){
- const s={version:1,unit:'nm',caseId:'CH-22',track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
+ const s={version:1,unit:'nm',caseId:'CH-22',modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
  if(saved?.version===1&&saved.unit==='nm'&&saved.caseId==='CH-22'){
   s.track=saved.track==='cloud'?'cloud':'nest';
   for(const t of ['nest','cloud'])if(Number.isInteger(saved.positions?.[t])&&D.tracks[t][saved.positions[t]])s.positions[t]=saved.positions[t];
   for(const [k,v] of Object.entries(saved.answers||{})){
    const [t,...parts]=k.split(':');const item=D.tracks[t]?.find(x=>x.id===parts.join(':'));
-   if(!item||!v||typeof v!=='object')continue;
+   if(!item||!v||typeof v!=='object'||(saved.modelAccess!==2&&t==='cloud'&&item.kind==='repository'))continue;
    const used=new Set();s.answers[k]={};
    for(const [slot,piece] of Object.entries(v))if(item.cues[+slot]&&item.cues[+piece]&&typeof piece==='string'&&!used.has(piece)){s.answers[k][slot]=piece;used.add(piece);}
   }
   s.solved=(saved.solved||[]).filter(k=>{const [t,...p]=k.split(':');const item=D.tracks[t]?.find(x=>x.id===p.join(':'));return item?.cues.length&&item.cues.every((cue,i)=>cue.token===item.cues[+s.answers[k]?.[i]]?.token);});
-  s.checked=(saved.checked||[]).filter(k=>typeof k==='string'&&k.length<100);
+  s.checked=(saved.checked||[]).filter(k=>typeof k==='string'&&k.length<100&&!(saved.modelAccess!==2&&k.startsWith('cloud:')&&D.tracks.cloud.some(x=>x.id===k.slice(6)&&x.kind==='repository')));
   if(saved.returnTo&&D.tracks[saved.returnTo.track]?.some(x=>x.id===saved.returnTo.id))s.returnTo={track:saved.returnTo.track,id:saved.returnTo.id};
   s.mode=saved.mode==='build'?'build':'observe';s.full=saved.full===true;
   s.cue=Number.isInteger(saved.cue)?Math.max(0,Math.min(saved.cue,D.tracks[s.track][s.positions[s.track]].cues.length-1)):0;
@@ -56,7 +56,7 @@ function scene(){
  if(s.kind==='logical')return `<div class="nm-scene-header"><span>UNA CLAVE, DOS VALORES</span><b>1:N + N:M</b></div><div class="nm-pair-diagram"><div><b>OBRA</b><strong>ID = 7</strong></div><span>↘</span><div><b>PROFESIONAL</b><strong>ID = 1</strong></div><div class="nm-link-card"><b>ASIGNACION</b><strong>(7, 1)</strong><span>ROL = Electricista</span></div></div><p>El par (7,1) identifica una fila. (7,2) es otra fila: cambia el profesional.</p>`;
  if(s.kind==='story')return `<div class="nm-scene-header"><span>EL MISMO PROFESIONAL, OTRA OBRA</span><b>Datos iniciales</b></div>${dataCards('profesional')}<p>Diego (ID 1) es Electricista en la obra 7 y Coordinador en la 8. El rol pertenece a la asignación.</p>`;
  if(s.kind==='mapping')return `<div class="nm-scene-header"><span>DOS ORGANIZACIONES DE LOS MISMOS ÍTEMS</span><b>Tabla + GSI</b></div><div class="nm-direction"><button type="button" data-action="direction" data-direction="obra" aria-pressed="${S.direction!=='profesional'}">Por obra · tabla</button><button type="button" data-action="direction" data-direction="profesional" aria-pressed="${S.direction==='profesional'}">Por profesional · índice</button></div>${dataCards(S.direction||'obra')}<p>ASIGNACIONES: PK + SK = (OBRA_ID, PROFESIONAL_ID). El índice invierte su papel. Las referencias no son claves foráneas automáticas en DynamoDB.</p>`;
- if(s.kind==='review')return `<div class="nm-scene-header"><span>LOS SEIS COMANDOS</span><b>Mismo dominio</b></div><div class="nm-command-grid">${[['GetItemCommand','Lee un extremo por ID'],['PutItemCommand','Crea perfil o vínculo'],['ScanCommand','Lista perfiles'],['QueryCommand','Agrupa por obra o profesional'],['UpdateItemCommand','Cambia solo ROL'],['DeleteItemCommand','Quita solo el vínculo']].map(([a,b])=>`<div><b>${a}</b><span>${b}</span></div>`).join('')}</div>`;
+ if(s.kind==='review')return `<div class="nm-scene-header"><span>LOS SEIS COMANDOS</span><b>Mismo dominio</b></div><div class="nm-command-grid">${[['get() → GetItemCommand','Lee un extremo por ID'],['put() → PutItemCommand','Crea perfil o vínculo'],['scan() → ScanCommand','Lista perfiles'],['query() → QueryCommand','Agrupa por obra o profesional'],['update() → UpdateItemCommand','Cambia solo ROL'],['delete() → DeleteItemCommand','Quita solo el vínculo']].map(([a,b])=>`<div><b>${a}</b><span>${b}</span></div>`).join('')}</div>`;
  const nodes=[['request','Petición',c?'IDs + datos':'Tu terminal'],['entry',S.track==='nest'?'Controller':'Handler','Recibe ruta y cuerpo'],['service','Service','Organiza el caso'],['repository','Repository','Usa los modelos'],['model',S.track==='nest'?'Entities + SQL':'Table + Entity','Guarda o consulta'],['response','Respuesta','Devuelve el resultado']];
  return `<div class="nm-scene-header"><span>${c?esc(c.title.toUpperCase()):'PREPARA EL ACCESO A LOS DATOS'}</span><b>${S.track==='nest'?'PostgreSQL':'DynamoDB'}</b></div><div class="nm-trace">${nodes.map(([id,label,meaning],i)=>`<button type="button" data-action="node" data-node="${id}" data-active="${focus===id}" aria-pressed="${focus===id}"><i>${i+1}</i><span class="nm-node-icon" aria-hidden="true">${['⌘','{ }','↳','▤','◉','↩'][i]}</span><strong>${label}</strong><small>${meaning}</small></button>`).join('')}</div>${c?`<div class="nm-command-chip">${esc(S.track==='cloud'?c.cmd:['Repository.save() · find()','Repository.findOneBy() · insert()','Repository.find({ where: { obraId } })','Repository.find({ where: { profesionalId } })','Repository.update()','Repository.delete()'][s.chapter-3])}</div><div class="nm-travel-key">${travellingData(s.chapter)}</div>`:`<div class="nm-model-summary"><b>4 tablas · 1 asociación</b><span>AYUNTAMIENTO → OBRA ↔ PROFESIONAL</span><span>La N:M se guarda en ASIGNACION.</span></div>`}`;
 }
@@ -190,7 +190,7 @@ function onPointerUp(event){if(!drag)return;const moved=drag.moving;const id=dra
 function cleanDrag(){highlight(null);if(drag?.el.hasPointerCapture?.(drag.pointer))drag.el.releasePointerCapture(drag.pointer);drag=null;}
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-22.json?v=nm-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
+ try{D=await (await fetch('CH-22.json?v=nm-3')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

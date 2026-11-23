@@ -1,18 +1,16 @@
-import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';
-import { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';
-import { MODELO_PROFESIONAL, TABLA_PROFESIONALES } from '../../models/profesional-asignacion.model.mjs';
+import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';
+import { MODELO_PROFESIONAL } from '../../models/profesional-asignacion.model.mjs';
 
 export async function crearProfesionalRepository(profesional) {
-  await MODELO_PROFESIONAL.build(PutItemCommand)
-    .item(profesional)
-    .options({ condition: { attr: 'profesionalId', exists: false } })
-    .send();
+  await MODELO_PROFESIONAL.build(EntityRepository).put(
+    profesional,
+    { condition: { attr: 'profesionalId', exists: false } }
+  );
 }
 
 export async function listarProfesionalesRepository() {
-  const { Items = [] } = await TABLA_PROFESIONALES.build(ScanCommand)
-    .entities(MODELO_PROFESIONAL)
-    .options({ consistent: true })
-    .send();
+  const { Items = [] } = await MODELO_PROFESIONAL.build(EntityRepository).scan(
+    { consistent: true }
+  );
   return Items;
 }

@@ -20,6 +20,34 @@ Los directorios `codigo/nest` y `codigo/cloud` contienen el resultado completo d
 
 Para una base vacía de referencia, `datos-iniciales.sql` (Nest) y `cargar-datos-1n.sh` (Serverless) preparan las obras anteriores; después `datos-nm.sql` y `cargar-datos-nm.sh` añaden los nuevos datos. En tu práctica existente utiliza solo la carga N:M. No repitas las altas PartiQL sobre claves que ya existen.
 
+## Un único acceso desde la Entity
+
+Los repositories de esta ampliación y el código completo de referencia usan la acción oficial `EntityRepository` de Toolbox 2.11.1:
+
+```javascript
+import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';
+
+const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(
+  { partition: obraId },
+  { consistent: true }
+);
+```
+
+Prepara el recurso en YAML, describe Table y sus claves y después crea Entity con todos sus campos. En las operaciones importa el modelo y utiliza `build(EntityRepository)`; ya no importas Table en el repository. Los métodos envían la operación y devuelven su respuesta: no llevan `.send()`.
+
+| Método del modelo | Operación DynamoDB que utiliza |
+| --- | --- |
+| `get(clave, opciones)` | `GetItemCommand` |
+| `put(item, opciones)` | `PutItemCommand` |
+| `scan(opciones)` | `ScanCommand` |
+| `query(consulta, opciones)` | `QueryCommand` |
+| `update(item, opciones)` | `UpdateItemCommand` |
+| `delete(clave, opciones)` | `DeleteItemCommand` |
+
+`EntityRepository` es una utilidad de Toolbox dentro de tu capa repository; no añade otra capa a la aplicación. Query y Scan siguen leyendo la tabla o el índice definidos en el modelo. Los listados conservan la paginación propia de DynamoDB; esta forma de acceso no elimina sus límites.
+
+Referencia: [EntityRepository, documentación oficial](https://www.dynamodbtoolbox.com/docs/entities/actions/repository).
+
 ## Modelo y datos
 
 - `PROFESIONAL`: ID, nombre, apellidos, email.

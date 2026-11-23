@@ -1116,6 +1116,12 @@
         "focus": "repository",
         "cues": [
           {
+            "token": ".update(",
+            "start": 489,
+            "end": 497,
+            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
+          },
+          {
             "token": "obraId",
             "start": 390,
             "end": 396,
@@ -1132,12 +1138,6 @@
             "start": 429,
             "end": 432,
             "note": "Es un dato del vínculo; puede cambiar según la obra."
-          },
-          {
-            "token": "update",
-            "start": 490,
-            "end": 496,
-            "note": "La condición utiliza ambos IDs; el dato modificado es ROL."
           }
         ],
         "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.ts\ncode src/asignaciones/modificar-rol/repository.ts"
@@ -1319,6 +1319,12 @@
         "focus": "repository",
         "cues": [
           {
+            "token": ".delete(",
+            "start": 465,
+            "end": 473,
+            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
+          },
+          {
             "token": "obraId",
             "start": 396,
             "end": 402,
@@ -1329,12 +1335,6 @@
             "start": 412,
             "end": 425,
             "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "delete",
-            "start": 466,
-            "end": 472,
-            "note": "Elimina la fila de ASIGNACION; conserva las filas principales."
           }
         ],
         "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.ts\ncode src/asignaciones/eliminar-asignacion/repository.ts"
@@ -1712,7 +1712,7 @@
         "kind": "entity",
         "code": "import { Table } from 'dynamodb-toolbox/table';\nimport { Entity } from 'dynamodb-toolbox/entity';\nimport { item } from 'dynamodb-toolbox/schema/item';\nimport { number } from 'dynamodb-toolbox/schema/number';\nimport { string } from 'dynamodb-toolbox/schema/string';\nimport { db } from '../datos/dynamo.mjs';\n\nexport const TABLA_PROFESIONALES = new Table({\n  name: process.env.TABLA_PROFESIONALES,\n  documentClient: db,\n  partitionKey: { name: 'PROFESIONAL_ID', type: 'number' }\n});\n\nexport const TABLA_ASIGNACIONES = new Table({\n  name: process.env.TABLA_ASIGNACIONES,\n  documentClient: db,\n  partitionKey: { name: 'OBRA_ID', type: 'number' },\n  sortKey: { name: 'PROFESIONAL_ID', type: 'number' },\n  indexes: {\n    PorProfesional: {\n      type: 'global',\n      partitionKey: { name: 'PROFESIONAL_ID', type: 'number' },\n      sortKey: { name: 'OBRA_ID', type: 'number' }\n    }\n  }\n});\n\nexport const MODELO_PROFESIONAL = new Entity({\n  name: 'Profesional',\n  table: TABLA_PROFESIONALES,\n  entityAttribute: false,\n  timestamps: false,\n  schema: item({\n    profesionalId: number().key().savedAs('PROFESIONAL_ID'),\n    nombre: string().savedAs('NOMBRE'),\n    apellidos: string().savedAs('APELLIDOS'),\n    email: string().savedAs('EMAIL')\n  })\n});\n\nexport const MODELO_ASIGNACION = new Entity({\n  name: 'Asignacion',\n  table: TABLA_ASIGNACIONES,\n  entityAttribute: false,\n  timestamps: false,\n  schema: item({\n    obraId: number().key().savedAs('OBRA_ID'),\n    profesionalId: number().key().savedAs('PROFESIONAL_ID'),\n    rol: string().savedAs('ROL')\n  })\n});\n",
         "path": "src/models/profesional-asignacion.model.mjs",
-        "note": "",
+        "note": "En los repositories partirás siempre de MODELO.build(EntityRepository). Cada método get, put, scan, query, update o delete envía su operación y devuelve la respuesta; no añadas .send(). Table permanece dentro del modelo.",
         "expect": "Todos los campos del esquema están presentes. Los dos .key() de Asignacion corresponden a PK y SK de Table.",
         "focus": "model",
         "cues": [
@@ -1793,28 +1793,34 @@
         "chapter": 3,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROFESIONAL, TABLA_PROFESIONALES } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function crearProfesionalRepository(profesional) {\n  await MODELO_PROFESIONAL.build(PutItemCommand)\n    .item(profesional)\n    .options({ condition: { attr: 'profesionalId', exists: false } })\n    .send();\n}\n\nexport async function listarProfesionalesRepository() {\n  const { Items = [] } = await TABLA_PROFESIONALES.build(ScanCommand)\n    .entities(MODELO_PROFESIONAL)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROFESIONAL } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function crearProfesionalRepository(profesional) {\n  await MODELO_PROFESIONAL.build(EntityRepository).put(\n    profesional,\n    { condition: { attr: 'profesionalId', exists: false } }\n  );\n}\n\nexport async function listarProfesionalesRepository() {\n  const { Items = [] } = await MODELO_PROFESIONAL.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/profesionales/crear-listar/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
         "focus": "repository",
         "cues": [
           {
-            "token": "PutItemCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 23,
-            "note": "Guarda una asociación o un profesional."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
           },
           {
-            "token": "ScanCommand",
-            "start": 79,
-            "end": 90,
-            "note": "Recorre el pequeño catálogo de profesionales de esta práctica."
+            "token": ".put(",
+            "start": 278,
+            "end": 283,
+            "note": "Guarda el perfil o el vínculo: PutItemCommand."
+          },
+          {
+            "token": ".scan(",
+            "start": 498,
+            "end": 504,
+            "note": "Recorre el catálogo de este modelo: ScanCommand."
           },
           {
             "token": "profesionalId",
-            "start": 414,
-            "end": 427,
+            "start": 327,
+            "end": 340,
             "note": "Identifica al profesional. El par completo identifica la asignación."
           }
         ],
@@ -1827,7 +1833,7 @@
         "kind": "service",
         "code": "import { crearProfesionalRepository, listarProfesionalesRepository } from './repository.mjs';\n\nexport async function crearProfesionalService(nombre, apellidos, email) {\n  const profesionalId = Date.now();\n  const profesional = { profesionalId, nombre, apellidos, email };\n  await crearProfesionalRepository(profesional);\n  return profesional;\n}\n\nexport function listarProfesionalesService() {\n  return listarProfesionalesRepository();\n}\n",
         "path": "src/profesionales/crear-listar/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
         "focus": "service",
         "cues": [
@@ -1859,7 +1865,7 @@
         "kind": "entry",
         "code": "import { crearProfesionalService, listarProfesionalesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, apellidos, email } = JSON.parse(event.body);\n  const profesional = await crearProfesionalService(nombre, apellidos, email);\n  return { statusCode: 201, body: JSON.stringify(profesional) };\n}\n\nexport async function listarHandler() {\n  const profesionales = await listarProfesionalesService();\n  return { statusCode: 200, body: JSON.stringify(profesionales) };\n}\n",
         "path": "src/profesionales/crear-listar/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
         "focus": "entry",
         "cues": [
@@ -2018,41 +2024,41 @@
         "chapter": 4,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { MODELO_OBRA } from '../../models/ayuntamiento-obra.model.mjs';\nimport { MODELO_PROFESIONAL, MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function buscarObraRepository(obraId) {\n  const { Item } = await MODELO_OBRA.build(GetItemCommand)\n    .key({ obraId }).options({ consistent: true }).send();\n  return Item;\n}\n\nexport async function buscarProfesionalRepository(profesionalId) {\n  const { Item } = await MODELO_PROFESIONAL.build(GetItemCommand)\n    .key({ profesionalId }).options({ consistent: true }).send();\n  return Item;\n}\n\nexport async function asignarProfesionalRepository(obraId, profesionalId, rol) {\n  const asignacion = { obraId, profesionalId, rol };\n  await MODELO_ASIGNACION.build(PutItemCommand)\n    .item(asignacion)\n    .options({ condition: { attr: 'obraId', exists: false } })\n    .send();\n  return asignacion;\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA } from '../../models/ayuntamiento-obra.model.mjs';\nimport { MODELO_PROFESIONAL, MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function buscarObraRepository(obraId) {\n  const { Item } = await MODELO_OBRA.build(EntityRepository).get(\n    { obraId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function buscarProfesionalRepository(profesionalId) {\n  const { Item } = await MODELO_PROFESIONAL.build(EntityRepository).get(\n    { profesionalId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function asignarProfesionalRepository(obraId, profesionalId, rol) {\n  const asignacion = { obraId, profesionalId, rol };\n  await MODELO_ASIGNACION.build(EntityRepository).put(\n    asignacion,\n    { condition: { attr: 'obraId', exists: false } }\n  );\n  return asignacion;\n}\n",
         "path": "src/asignaciones/asignar-profesional/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "repository",
         "cues": [
           {
-            "token": "GetItemCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 23,
-            "note": "Lee un ítem por su clave completa."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
           },
           {
-            "token": "PutItemCommand",
-            "start": 79,
-            "end": 93,
-            "note": "Guarda una asociación o un profesional."
+            "token": ".get(",
+            "start": 368,
+            "end": 373,
+            "note": "Lee un ítem por su clave completa: GetItemCommand."
+          },
+          {
+            "token": ".put(",
+            "start": 832,
+            "end": 837,
+            "note": "Guarda el perfil o el vínculo: PutItemCommand."
           },
           {
             "token": "obraId",
-            "start": 359,
-            "end": 365,
+            "start": 298,
+            "end": 304,
             "note": "Identifica la obra de la asociación."
           },
           {
             "token": "profesionalId",
-            "start": 555,
-            "end": 568,
+            "start": 488,
+            "end": 501,
             "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 796,
-            "end": 799,
-            "note": "Es un dato del vínculo; puede cambiar según la obra."
           }
         ],
         "create": "mkdir -p src/asignaciones/asignar-profesional\nls -d src/asignaciones/asignar-profesional\ntouch src/asignaciones/asignar-profesional/repository.mjs\ncode src/asignaciones/asignar-profesional/repository.mjs"
@@ -2064,7 +2070,7 @@
         "kind": "service",
         "code": "import { buscarObraRepository, buscarProfesionalRepository, asignarProfesionalRepository } from './repository.mjs';\n\nexport class ReferenciaInexistenteError extends Error {}\n\nexport async function asignarProfesionalService(obraId, profesionalId, rol) {\n  const obra = await buscarObraRepository(obraId);\n  const profesional = await buscarProfesionalRepository(profesionalId);\n  if (!obra || !profesional) {\n    throw new ReferenciaInexistenteError('No existe la obra o el profesional');\n  }\n  return asignarProfesionalRepository(obraId, profesionalId, rol);\n}\n",
         "path": "src/asignaciones/asignar-profesional/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
@@ -2108,7 +2114,7 @@
         "kind": "entry",
         "code": "import { asignarProfesionalService, ReferenciaInexistenteError } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const { profesionalId, rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await asignarProfesionalService(obraId, profesionalId, rol);\n    return { statusCode: 201, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error instanceof ReferenciaInexistenteError) {\n      return { statusCode: 404, body: JSON.stringify({ message: error.message }) };\n    }\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 409, body: JSON.stringify({ message: 'El profesional ya está asignado a esa obra' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/asignar-profesional/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
@@ -2285,22 +2291,28 @@
         "chapter": 5,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { TABLA_ASIGNACIONES, MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorObraRepository(obraId) {\n  const { Items = [] } = await TABLA_ASIGNACIONES.build(QueryCommand)\n    .entities(MODELO_ASIGNACION)\n    .query({ partition: obraId })\n    .options({ consistent: true })\n    .send();\n  return Items;\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorObraRepository(obraId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { partition: obraId },\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-obra/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
         "focus": "repository",
         "cues": [
           {
-            "token": "QueryCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 21,
-            "note": "Consulta una partición de la tabla o de su índice."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
+          },
+          {
+            "token": ".query(",
+            "start": 303,
+            "end": 310,
+            "note": "Consulta una partición de la tabla o de su índice: QueryCommand."
           },
           {
             "token": "obraId",
-            "start": 231,
-            "end": 237,
+            "start": 221,
+            "end": 227,
             "note": "Identifica la obra de la asociación."
           }
         ],
@@ -2313,7 +2325,7 @@
         "kind": "service",
         "code": "import { listarAsignacionesPorObraRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorObraService(obraId) {\n  return listarAsignacionesPorObraRepository(obraId);\n}\n",
         "path": "src/asignaciones/listar-por-obra/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
         "focus": "service",
         "cues": [
@@ -2339,7 +2351,7 @@
         "kind": "entry",
         "code": "import { listarAsignacionesPorObraService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const asignaciones = await listarAsignacionesPorObraService(obraId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-obra/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
         "focus": "entry",
         "cues": [
@@ -2498,28 +2510,34 @@
         "chapter": 6,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { TABLA_ASIGNACIONES, MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorProfesionalRepository(profesionalId) {\n  const { Items = [] } = await TABLA_ASIGNACIONES.build(QueryCommand)\n    .entities(MODELO_ASIGNACION)\n    .query({ index: 'PorProfesional', partition: profesionalId })\n    .send();\n  return Items;\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorProfesionalRepository(profesionalId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { index: 'PorProfesional', partition: profesionalId }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-profesional/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "repository",
         "cues": [
           {
-            "token": "QueryCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 21,
-            "note": "Consulta una partición de la tabla o de su índice."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
+          },
+          {
+            "token": ".query(",
+            "start": 317,
+            "end": 324,
+            "note": "Consulta una partición de la tabla o de su índice: QueryCommand."
           },
           {
             "token": "profesionalId",
-            "start": 238,
-            "end": 251,
+            "start": 228,
+            "end": 241,
             "note": "Identifica al profesional. El par completo identifica la asignación."
           },
           {
             "token": "PorProfesional",
-            "start": 213,
-            "end": 227,
+            "start": 203,
+            "end": 217,
             "note": "Usa la segunda organización de los mismos vínculos."
           }
         ],
@@ -2532,7 +2550,7 @@
         "kind": "service",
         "code": "import { listarAsignacionesPorProfesionalRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorProfesionalService(profesionalId) {\n  return listarAsignacionesPorProfesionalRepository(profesionalId);\n}\n",
         "path": "src/asignaciones/listar-por-profesional/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "service",
         "cues": [
@@ -2558,7 +2576,7 @@
         "kind": "entry",
         "code": "import { listarAsignacionesPorProfesionalService } from './service.mjs';\n\nexport async function handler(event) {\n  const profesionalId = Number(event.pathParameters.profesionalId);\n  const asignaciones = await listarAsignacionesPorProfesionalService(profesionalId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-profesional/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "entry",
         "cues": [
@@ -2717,41 +2735,41 @@
         "chapter": 7,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function modificarRolRepository(obraId, profesionalId, rol) {\n  const { Attributes } = await MODELO_ASIGNACION.build(UpdateItemCommand)\n    .item({ obraId, profesionalId, rol })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function modificarRolRepository(obraId, profesionalId, rol) {\n  const { Attributes } = await MODELO_ASIGNACION.build(EntityRepository).update(\n    { obraId, profesionalId, rol },\n    {\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}\n",
         "path": "src/asignaciones/modificar-rol/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "repository",
         "cues": [
           {
-            "token": "UpdateItemCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 26,
-            "note": "Modifica ROL sin cambiar las claves."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
+          },
+          {
+            "token": ".update(",
+            "start": 310,
+            "end": 318,
+            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
           },
           {
             "token": "obraId",
-            "start": 205,
-            "end": 211,
+            "start": 208,
+            "end": 214,
             "note": "Identifica la obra de la asociación."
           },
           {
             "token": "profesionalId",
-            "start": 213,
-            "end": 226,
+            "start": 216,
+            "end": 229,
             "note": "Identifica al profesional. El par completo identifica la asignación."
           },
           {
             "token": "rol",
-            "start": 228,
-            "end": 231,
+            "start": 231,
+            "end": 234,
             "note": "Es un dato del vínculo; puede cambiar según la obra."
-          },
-          {
-            "token": "update",
-            "start": 67,
-            "end": 73,
-            "note": "La condición utiliza ambos IDs; el dato modificado es ROL."
           }
         ],
         "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.mjs\ncode src/asignaciones/modificar-rol/repository.mjs"
@@ -2763,7 +2781,7 @@
         "kind": "service",
         "code": "import { modificarRolRepository } from './repository.mjs';\n\nexport function modificarRolService(obraId, profesionalId, rol) {\n  return modificarRolRepository(obraId, profesionalId, rol);\n}\n",
         "path": "src/asignaciones/modificar-rol/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "service",
         "cues": [
@@ -2801,7 +2819,7 @@
         "kind": "entry",
         "code": "import { modificarRolService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const profesionalId = Number(event.pathParameters.profesionalId);\n  const { rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await modificarRolService(obraId, profesionalId, rol);\n    return { statusCode: 200, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 404, body: JSON.stringify({ message: 'No existe la asignación' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/modificar-rol/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
@@ -2978,35 +2996,35 @@
         "chapter": 8,
         "title": "Prepara el Repository",
         "kind": "repository",
-        "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function eliminarAsignacionRepository(obraId, profesionalId) {\n  await MODELO_ASIGNACION.build(DeleteItemCommand)\n    .key({ obraId, profesionalId })\n    .send();\n}\n",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';\n\nexport async function eliminarAsignacionRepository(obraId, profesionalId) {\n  await MODELO_ASIGNACION.build(EntityRepository).delete(\n    { obraId, profesionalId }\n  );\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/repository.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
         "focus": "repository",
         "cues": [
           {
-            "token": "DeleteItemCommand",
+            "token": "EntityRepository",
             "start": 9,
-            "end": 26,
-            "note": "Borra únicamente este par de identificadores."
+            "end": 25,
+            "note": "Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send()."
+          },
+          {
+            "token": ".delete(",
+            "start": 288,
+            "end": 296,
+            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
           },
           {
             "token": "obraId",
-            "start": 211,
-            "end": 217,
+            "start": 214,
+            "end": 220,
             "note": "Identifica la obra de la asociación."
           },
           {
             "token": "profesionalId",
-            "start": 219,
-            "end": 232,
+            "start": 222,
+            "end": 235,
             "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "delete",
-            "start": 67,
-            "end": 73,
-            "note": "Elimina la fila de ASIGNACION; conserva las filas principales."
           }
         ],
         "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.mjs\ncode src/asignaciones/eliminar-asignacion/repository.mjs"
@@ -3018,7 +3036,7 @@
         "kind": "service",
         "code": "import { eliminarAsignacionRepository } from './repository.mjs';\n\nexport function eliminarAsignacionService(obraId, profesionalId) {\n  return eliminarAsignacionRepository(obraId, profesionalId);\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/service.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
         "focus": "service",
         "cues": [
@@ -3050,7 +3068,7 @@
         "kind": "entry",
         "code": "import { eliminarAsignacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const obraId = Number(event.pathParameters.obraId);\n  const profesionalId = Number(event.pathParameters.profesionalId);\n  await eliminarAsignacionService(obraId, profesionalId);\n  return { statusCode: 204, body: '' };\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/handler.mjs",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
         "focus": "entry",
         "cues": [

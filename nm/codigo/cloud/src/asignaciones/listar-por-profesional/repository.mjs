@@ -1,10 +1,9 @@
-import { QueryCommand } from 'dynamodb-toolbox/table/actions/query';
-import { TABLA_ASIGNACIONES, MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';
+import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';
+import { MODELO_ASIGNACION } from '../../models/profesional-asignacion.model.mjs';
 
 export async function listarAsignacionesPorProfesionalRepository(profesionalId) {
-  const { Items = [] } = await TABLA_ASIGNACIONES.build(QueryCommand)
-    .entities(MODELO_ASIGNACION)
-    .query({ index: 'PorProfesional', partition: profesionalId })
-    .send();
+  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(
+    { index: 'PorProfesional', partition: profesionalId }
+  );
   return Items;
 }

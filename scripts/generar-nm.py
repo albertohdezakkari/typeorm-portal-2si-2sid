@@ -1,6 +1,6 @@
 """Unidad N:M CH-22. Fuente única de código, pasos y pruebas; no escribe entrenar/."""
 from pathlib import Path
-import json,re,shutil
+import json,re,shutil,textwrap
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'nm'
 OLD=json.loads((ROOT/'preparar/CH-22.json').read_text())
@@ -19,7 +19,55 @@ def baseline(tech):
    if b['kind']=='file' and b['path']!='.env':files[b['path']]=code(b['code'])
  return files
 
+def entity_repository(text):
+ """Normaliza los ejemplos originales a la acción oficial EntityRepository v2."""
+ pattern=re.compile(r'(MODELO_\w+|TABLA_\w+)\.build\((GetItemCommand|PutItemCommand|UpdateItemCommand|DeleteItemCommand|QueryCommand|ScanCommand)\)')
+ def argument(start):
+  level=1;quote=None;escape=False;i=start
+  while level:
+   ch=text[i]
+   if quote:
+    if escape:escape=False
+    elif ch=='\\':escape=True
+    elif ch==quote:quote=None
+   elif ch in "\"'`":quote=ch
+   elif ch=='(':level+=1
+   elif ch==')':level-=1
+   i+=1
+  return text[start:i-1],i
+ matches=[]
+ for match in pattern.finditer(text):
+  pos=match.end();methods={}
+  while True:
+   call=re.match(r'\s*\.(\w+)\(',text[pos:])
+   if not call:break
+   body,pos=argument(pos+call.end());methods[call[1]]=body.strip()
+   if call[1]=='send':break
+  assert 'send' in methods,match.group()
+  model=methods.get('entities',match[1]);command=match[2]
+  operation={'GetItemCommand':'get','PutItemCommand':'put','UpdateItemCommand':'update','DeleteItemCommand':'delete','QueryCommand':'query','ScanCommand':'scan'}[command]
+  first=methods.get('key',methods.get('item',methods.get('query')))
+  args=([first] if first else [])+([methods['options']] if 'options' in methods else [])
+  def tidy(value):
+   lines=value.splitlines()
+   if len(lines)>1 and lines[0]=='{' and lines[-1].strip()=='}':
+    return '{\n'+textwrap.indent(textwrap.dedent('\n'.join(lines[1:-1])), '  ')+'\n}'
+   return value
+  formatted=',\n'.join('    '+tidy(line).replace('\n','\n    ') for line in args)
+  replacement=model+'.build(EntityRepository).'+operation+'('+('\n'+formatted+'\n  ' if args else '')+')'
+  matches.append((match.start(),pos,replacement))
+ for start,end,value in reversed(matches):text=text[:start]+value+text[end:]
+ if matches:
+  text=re.sub(r"import \{[^}]+\} from 'dynamodb-toolbox/(?:entity|table)/actions/(?:get|put|update|delete|query|scan)';\n",'',text)
+  def keep_models(match):
+   names=[name.strip() for name in match[1].split(',') if not name.strip().startswith('TABLA_')]
+   return 'import { '+', '.join(names)+' }'+match[2]
+  text=re.sub(r"import \{([^}]+)\}( from '[^']+model.mjs';)",keep_models,text)
+  text="import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\n"+text
+ return text
+
 NEST=baseline('nest'); CLOUD=baseline('cloud')
+CLOUD={path:entity_repository(text) if path.endswith('/repository.mjs') else text for path,text in CLOUD.items()}
 PROF=code('''import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Asignacion } from '../../asignaciones/entities/asignacion.entity';
 
@@ -511,6 +559,7 @@ export async function handler(event) {
  for tech,items in [('nest',{'repository.ts':nr,'service.ts':ns,'controller.ts':nc}),('cloud',{'repository.mjs':cr,'service.mjs':cs,'handler.mjs':ch})]:
   stage=[]
   for path,text in items.items():
+   if tech=='cloud' and path=='repository.mjs':text=entity_repository(text)
    (NEST if tech=='nest' else CLOUD)[prefix+path]=text
    stage.append((prefix+path,text))
   casefiles[tech].append(stage)
@@ -628,7 +677,7 @@ tracks={'nest':[],'cloud':[]}
 
 def cues(text,kind):
  specs={
- 'repository':[('GetItemCommand','Lee un ítem por su clave completa.'),('PutItemCommand','Guarda una asociación o un profesional.'),('QueryCommand','Consulta una partición de la tabla o de su índice.'),('UpdateItemCommand','Modifica ROL sin cambiar las claves.'),('DeleteItemCommand','Borra únicamente este par de identificadores.'),('ScanCommand','Recorre el pequeño catálogo de profesionales de esta práctica.'),('obraId','Identifica la obra de la asociación.'),('profesionalId','Identifica al profesional. El par completo identifica la asignación.'),('rol','Es un dato del vínculo; puede cambiar según la obra.'),('PorProfesional','Usa la segunda organización de los mismos vínculos.'),('insert','INSERT rechaza una pareja cuya PK compuesta ya existe.'),('find','Lee las asignaciones con el filtro de este caso.'),('update','La condición utiliza ambos IDs; el dato modificado es ROL.'),('delete','Elimina la fila de ASIGNACION; conserva las filas principales.')],
+ 'repository':[('EntityRepository','Acceso oficial de Toolbox vinculado a la Entity. Los métodos envían la operación; no llevan .send().'),('.get(','Lee un ítem por su clave completa: GetItemCommand.'),('.put(','Guarda el perfil o el vínculo: PutItemCommand.'),('.scan(','Recorre el catálogo de este modelo: ScanCommand.'),('.query(','Consulta una partición de la tabla o de su índice: QueryCommand.'),('.update(','Modifica datos sin cambiar las claves: UpdateItemCommand.'),('.delete(','Elimina únicamente el ítem de esa clave: DeleteItemCommand.'),('obraId','Identifica la obra de la asociación.'),('profesionalId','Identifica al profesional. El par completo identifica la asignación.'),('rol','Es un dato del vínculo; puede cambiar según la obra.'),('PorProfesional','Usa la segunda organización de los mismos vínculos.'),('insert','INSERT rechaza una pareja cuya PK compuesta ya existe.'),('find','Lee las asignaciones con el filtro de este caso.'),('update','La condición utiliza ambos IDs; el dato modificado es ROL.'),('delete','Elimina la fila de ASIGNACION; conserva las filas principales.')],
  'service':[('obraId','Este valor llega desde la ruta de la petición.'),('profesionalId','Este valor viaja hasta el Repository sin perder la otra clave.'),('await','Espera el resultado antes de seguir o devolverlo.'),('return','La respuesta vuelve a la capa que llamó al Service.'),('rol','El mismo profesional puede tener otro rol en otra obra.')],
  'entry':[('event.pathParameters','Lambda recibe aquí los parámetros de ruta.'),('JSON.parse(event.body)','El cuerpo HTTP es texto JSON y aquí se convierte en objeto.'),('@Param','Nest extrae este valor de la ruta.'),('@Body','Nest obtiene las propiedades del cuerpo JSON.'),('obraId','Primera parte de la clave compuesta.'),('profesionalId','Segunda parte de la clave compuesta.'),('statusCode','Indica el resultado HTTP de la operación.'),('JSON.stringify','Convierte el resultado JavaScript en texto JSON para responder.')],
  'model':[("'ID_OBRA'",'Nombre de la columna SQL que referencia OBRA.'),("'ID_PROFESIONAL'",'Nombre de la columna SQL que referencia PROFESIONAL.'),('PrimaryColumn','Ambas PrimaryColumn forman una sola clave primaria compuesta.'),('ManyToOne','Cada asignación pertenece a una obra y a un profesional.'),("'NOMBRE'",'Nombre y apellidos se guardan por separado.'),("'APELLIDOS'",'Apellido del profesional.'),("'EMAIL'",'Correo del profesional.'),('OneToMany','Colección de vínculos asociados a este registro.'),('PrimaryGeneratedColumn','PostgreSQL genera el ID del nuevo profesional.')],
@@ -675,7 +724,7 @@ psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM
  else:
   add(t,1,'infra','Añade las dos tablas sin reemplazar las anteriores','yaml',yaml_file(0),'serverless.yml',note='Archivo acumulativo completo. Los campos NOMBRE, APELLIDOS, EMAIL y ROL se declaran en Entity; AttributeDefinitions solo contiene claves. NonKeyAttributes copia ROL al índice.',expect='Cuatro tablas, las rutas 1:N originales y ninguna función N:M todavía.')
   add(t,1,'table','Describe Table y el índice PorProfesional','table',TABLES,'src/models/profesional-asignacion.model.mjs',expect='La tabla agrupa por obra; el índice agrupa por profesional. Ninguna Table crea recursos AWS.')
-  add(t,1,'entity','Completa las dos Entities de Toolbox','entity',MODELS,'src/models/profesional-asignacion.model.mjs',expect='Todos los campos del esquema están presentes. Los dos .key() de Asignacion corresponden a PK y SK de Table.')
+  add(t,1,'entity','Completa las dos Entities de Toolbox','entity',MODELS,'src/models/profesional-asignacion.model.mjs',note='En los repositories partirás siempre de MODELO.build(EntityRepository). Cada método get, put, scan, query, update o delete envía su operación y devuelve la respuesta; no añadas .send(). Table permanece dentro del modelo.',expect='Todos los campos del esquema están presentes. Los dos .key() de Asignacion corresponden a PK y SK de Table.')
   add(t,1,'desplegar','Crea los recursos con Serverless','command','npm run package\nnpm run deploy\nnpm run info',note='Misma terminal y sesión de Academy que en 1:N. Conserva AWS_PROFILE, AWS_REGION, TALLER_EQUIPO y LAMBDA_ROLE_ARN. Serverless 3.40.0 local; no hay nuevo login ni rol.',expect='Despliegue terminado. Las cuatro tablas existen y la API 1:N sigue respondiendo.')
   add(t,2,'datos','Carga los profesionales y las asignaciones','command','\n'.join(seeds),note='Terminal del Codespace, dentro de mi-practica/serverless. Ejecuta las altas una sola vez; DuplicateItem indica que ese dato ya existe. No borres ni sobrescribas tus datos.',expect='Dos profesionales y las tres parejas de la ficha, con nombre, apellidos, email y rol.')
   add(t,2,'leer-datos','Lee las asignaciones con PartiQL','command',partiql('SELECT * FROM "ASIGNACIONES_${TALLER_EQUIPO}"')+'\n'+partiql('SELECT * FROM "PROFESIONALES_${TALLER_EQUIPO}"'),expect='Se ven tres vínculos y dos perfiles. En la salida CLI, N indica número y S texto.')
@@ -686,7 +735,7 @@ for t in tracks:
   for path,text in casefiles[t][idx-1]:
    kind='entry' if path.endswith(('handler.mjs','controller.ts')) else 'service' if 'service.' in path else 'repository'
    title={'repository':'Prepara el Repository','service':'Conecta el Service','entry':'Recibe la petición en '+('Controller' if t=='nest' else 'Handler')}[kind]
-   add(t,chapter,c['slug']+'-'+kind,title,kind,text,path,note='El archivo está completo: imports, métodos y cierres. '+('En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.' if idx==2 else 'Los dos IDs identifican una sola asignación.'),expect=c['expect'],focus=kind)
+   add(t,chapter,c['slug']+'-'+kind,title,kind,text,path,note='El archivo está completo: imports, métodos y cierres. '+('Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). ' if t=='cloud' else '')+('En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.' if idx==2 else 'Los dos IDs identifican una sola asignación.'),expect=c['expect'],focus=kind)
   add(t,chapter,c['slug']+'-registro','Registra el caso y conserva los anteriores','module' if t=='nest' else 'yaml',module(idx) if t=='nest' else yaml_file(idx),'src/taller.module.ts' if t=='nest' else 'serverless.yml',expect='Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.',focus='route')
   add(t,chapter,c['slug']+'-ejecutar','Aplica los archivos en tu proyecto','command','npm run build\nnpm run start' if t=='nest' else 'npm run deploy',note='En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.',expect='La aplicación arranca o despliega sin handlers ni imports inexistentes.',focus='request')
   api='http://localhost:3000' if t=='nest' else '$API_URL'
