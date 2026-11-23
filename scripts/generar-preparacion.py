@@ -71,7 +71,7 @@ def generate(source):
         environment = provider.split('  environment:',1)[1]
         for e in (parent, child):
             resources = resources.replace('TableName: '+e['table']+'\n',
-                                          'TableName: '+e['table']+'_${self:provider.stage}\n')
+                                          'TableName: '+e['table']+'_${env:TALLER_EQUIPO}\n')
         text = d['steps']['cloud'][5]['code']
         text = re.sub(r'path: (/[^\s,]+)(?=\s*})', r"path: '\1'", text)
         chunks = re.findall(r'^  (\w+):\n(.*?)(?=^  \w+:\n|\Z)', text, re.M|re.S)
@@ -130,7 +130,7 @@ SELECT * FROM "{e['sql']}" ORDER BY "ID";\n'''
     cloud.append(step('modelos','Crea las tablas, Table y Entity',
         'El YAML crea los recursos. Table describe claves e índices y Entity declara los atributos de los ítems.',
         'mi-practica/serverless · antes del primer caso',[
-            file('serverless.yml',yaml_file(0),'Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.', [["${self:provider.stage}",'Lee provider.stage de este mismo YAML.'], ['Ref:', 'CloudFormation devuelve el nombre real de la tabla a la variable de entorno de Lambda.'], ['ProjectionType: INCLUDE', 'El índice copia sus claves y los campos de NonKeyAttributes; no declara todas las columnas de la tabla.']]),
+            file('serverless.yml',yaml_file(0),'Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.', [["${env:TALLER_EQUIPO}",'Lee directamente TALLER_EQUIPO, exportado en la terminal.'], ['Ref:', 'CloudFormation devuelve el nombre real de la tabla a la variable de entorno de Lambda.'], ['ProjectionType: INCLUDE', 'El índice copia sus claves y los campos de NonKeyAttributes; no declara todas las columnas de la tabla.']]),
             file('src/datos/dynamo.mjs',DYNAMO,'Cliente de DynamoDB. En Lambda usa la región y los permisos de su entorno, sin claves en el archivo.'),
             file(c['modelFile'],d['steps']['cloud'][2]['code'],'Modelos exactos del taller. Table y Entity no crean las tablas.', [['entityAttribute: false', 'Toolbox no añade su etiqueta interna de tipo de entidad.'], ['timestamps: false', 'Toolbox no añade fechas automáticas; conserva los campos de tu ficha.'], ["savedAs('"+child_key+"')",child['input']+' en JavaScript se guarda como '+child_key+' en DynamoDB.']]),
             command('Crea los recursos','npm run deploy\naws dynamodb describe-table --table-name "'+child['table']+'_${TALLER_EQUIPO}" --query \'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}\' --output json')],

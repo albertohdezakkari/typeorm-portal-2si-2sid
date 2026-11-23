@@ -618,7 +618,7 @@ NEW_RESOURCES='''    TablaProfesionales:
               NonKeyAttributes:
                 - ROL # Copia ROL al índice; ambas claves ya se incluyen.
 '''
-BASE_YAML=CLOUD['serverless.yml'].replace('${self:provider.stage}', '${env:TALLER_EQUIPO}')
+BASE_YAML=CLOUD['serverless.yml']
 def yaml_file(through):
  text=BASE_YAML.replace('    TABLA_OBRAS: { Ref: TablaObras }','    TABLA_OBRAS: { Ref: TablaObras }\n    TABLA_PROFESIONALES: { Ref: TablaProfesionales }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }')
  functions=''
