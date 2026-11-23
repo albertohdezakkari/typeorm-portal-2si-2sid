@@ -124,7 +124,7 @@ function setMenu(value){
 function syncMenu(){const menu=$('.nm-menu');if(!menu)return;menu.dataset.pinned=String($('.nm-menu-content').offsetHeight<(outerHeight||innerHeight)*.72);menu.style.transform=menu.dataset.pinned==='true'&&outerOffset?'translateY('+Math.max(0,Math.min(outerOffset,root.offsetHeight-menu.offsetHeight))+'px)':'';setMenu(menuCollapsed);}
 function onScroll(){
  if(scrollFrame)return;
- scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const now=window.scrollY,delta=now-scrollYBefore;scrollYBefore=now;if(Math.abs(delta)<2)return;const dir=delta>0?1:-1;if(dir!==scrollDirection){scrollDistance=0;scrollDirection=dir;}scrollDistance+=Math.abs(delta);if(scrollDistance<12)return;scrollDistance=0;if($('.nm-menu-content').contains(document.activeElement))return;setMenu(dir>0&&$('.nm-menu').getBoundingClientRect().top<=1);});
+ scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const now=window.scrollY,delta=now-scrollYBefore;scrollYBefore=now;if(Math.abs(delta)<2)return;const dir=delta>0?1:-1;if(dir!==scrollDirection){scrollDistance=0;scrollDirection=dir;}scrollDistance+=Math.abs(delta);if(scrollDistance<12)return;scrollDistance=0;if(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))return;setMenu(dir>0&&$('.nm-menu').getBoundingClientRect().top<=1);});
 }
 function say(text,bad=false){const f=$('.nm-feedback')||$('.nm-announcement');f.textContent=text;f.dataset.kind=bad?'bad':'good';resize();}
 async function onClick(event){

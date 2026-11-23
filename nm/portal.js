@@ -2,9 +2,20 @@
 (() => {
  const workspace=document.getElementById('workspace');
  const previous=window.montarCuadernoDual;
- let current=null,sequence=0,scrollFrame=0,lastY=window.scrollY;
+ let current=null,sequence=0,scrollFrame=0,lastY=window.scrollY,scrollDirection=0,scrollDistance=0;
  function viewport(direction=0){if(!current?.started)return;current.frame.contentWindow.postMessage({type:'nm:viewport',binding:current.binding,offset:Math.max(0,-current.frame.getBoundingClientRect().top),height:innerHeight,direction},location.origin);}
- window.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const y=window.scrollY,delta=y-lastY;lastY=y;if(Math.abs(delta)>10)viewport(delta>0?1:-1);});},{passive:true});
+ window.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{
+  scrollFrame=0;
+  const y=window.scrollY,delta=y-lastY;lastY=y;
+  let direction=0;
+  if(Math.abs(delta)>=.5){
+   const nextDirection=Math.sign(delta);
+   if(nextDirection!==scrollDirection)scrollDistance=0;
+   scrollDirection=nextDirection;scrollDistance+=Math.abs(delta);
+   if(scrollDistance>=12){direction=scrollDirection;scrollDistance=0;}
+  }
+  viewport(direction);
+ });},{passive:true});
  window.addEventListener('resize',()=>viewport());
  function clean(){current=null;document.querySelector('[data-tab="nm"]')?.remove();document.getElementById('panel-nm')?.remove();}
  window.montarCuadernoDual=async(student,context)=>{
@@ -21,7 +32,7 @@
   workspace.append(section);
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='7 · Ampliación N:M';
   const simulation=workspace.querySelector(':scope > nav [data-tab="simulacion"]');simulation.textContent='8 · Simulación y entregas';simulation.before(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-1';}});
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-2';}});
   const frame=section.querySelector('iframe');current={key,binding,frame,state:saved,started:false};
   if(location.hash==='#nm')button.click();
  };
