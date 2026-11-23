@@ -1,0 +1,174 @@
+service: taller-ch22
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }
+    TABLA_OBRAS: { Ref: TablaObras }
+    TABLA_PROFESIONALES: { Ref: TablaProfesionales }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearObra:
+    handler: src/obras/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/obras' }
+  listarObras:
+    handler: src/obras/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/obras' }
+  eliminarObra:
+    handler: src/obras/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/obras/{obraId}' }
+  modificarPresupuestoEuros:
+    handler: src/obras/modificar-presupuesto-euros/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/obras/{obraId}' }
+  trasladarObra:
+    handler: src/obras/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/obras/{obraId}/ayuntamiento' }
+  consultarAyuntamiento:
+    handler: src/ayuntamientos/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/ayuntamientos/{ayuntamientoId}/obras' }
+  crearProfesional:
+    handler: src/profesionales/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/profesionales' }
+  listarProfesionales:
+    handler: src/profesionales/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/profesionales' }
+  asignarProfesional:
+    handler: src/asignaciones/asignar-profesional/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/obras/{obraId}/asignaciones' }
+  listarAsignacionesPorObra:
+    handler: src/asignaciones/listar-por-obra/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/obras/{obraId}/asignaciones' }
+  listarAsignacionesPorProfesional:
+    handler: src/asignaciones/listar-por-profesional/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/profesionales/{profesionalId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/obras/{obraId}/asignaciones/{profesionalId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/obras/{obraId}/asignaciones/{profesionalId}' }
+
+resources:
+  Resources:
+    TablaAyuntamientos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: AYUNTAMIENTOS_${self:provider.stage}
+        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_AYUNTAMIENTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: AYUNTAMIENTO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaObras:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: OBRAS_${self:provider.stage}
+        # PARTITION KEY: OBRA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   PRESUPUESTO_EUROS (N: número).
+        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_OBRA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: OBRA_ID, AttributeType: N }
+          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: OBRA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en OBRAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorAyuntamiento
+            # Clave compuesta = partition key + sort key:
+            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: AYUNTAMIENTO_ID
+                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.
+              - AttributeName: OBRA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de OBRAS copiados al índice.
+                - NOMBRE
+                - PRESUPUESTO_EUROS
+
+    TablaProfesionales:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PROFESIONALES_${self:provider.stage}
+        # PK: PROFESIONAL_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PROFESIONAL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PROFESIONAL_ID
+            KeyType: HASH  # Partition key: identifica al profesional.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${self:provider.stage}
+        # PK compuesta: OBRA_ID + PROFESIONAL_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: OBRA_ID, AttributeType: N }
+          - { AttributeName: PROFESIONAL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: OBRA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una obra.
+          - AttributeName: PROFESIONAL_ID
+            KeyType: RANGE # Sort key: distingue al profesional dentro de la obra.
+        GlobalSecondaryIndexes:
+          - IndexName: PorProfesional
+            KeySchema:
+              - AttributeName: PROFESIONAL_ID
+                KeyType: HASH  # Agrupa las asignaciones del profesional.
+              - AttributeName: OBRA_ID
+                KeyType: RANGE # Ordena sus obras por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    ProfesionalesTableName:
+      Value: { Ref: TablaProfesionales }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }
