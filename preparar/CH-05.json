@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/actuaciones/crear-listar/repository.mjs",
             "path": "src/actuaciones/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function crearActuacionRepository(actuacion) {\n  await MODELO_ACTUACION.build(PutItemCommand)\n    .item(actuacion)\n    .options({ condition: { attr: 'actuacionId', exists: false } })\n    .send();\n}\n\nexport async function listarActuacionesRepository() {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(ScanCommand)\n    .entities(MODELO_ACTUACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function crearActuacionRepository(actuacion) {\n  await MODELO_ACTUACION.build(EntityRepository).put(\n    actuacion,\n    { condition: { attr: 'actuacionId', exists: false } }\n  );\n}\n\nexport async function listarActuacionesRepository() {\n  const { Items = [] } = await MODELO_ACTUACION.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/actuaciones/crear-listar\nls -d src/actuaciones/crear-listar\ntouch src/actuaciones/crear-listar/repository.mjs\ncode src/actuaciones/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/actuaciones/eliminar/repository.mjs",
             "path": "src/actuaciones/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function eliminarActuacionRepository(actuacionId) {\n  await MODELO_ACTUACION.build(DeleteItemCommand)\n    .key({ actuacionId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function eliminarActuacionRepository(actuacionId) {\n  await MODELO_ACTUACION.build(EntityRepository).delete(\n    { actuacionId }\n  );\n}",
             "create": "mkdir -p src/actuaciones/eliminar\nls -d src/actuaciones/eliminar\ntouch src/actuaciones/eliminar/repository.mjs\ncode src/actuaciones/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/actuaciones/modificar-duracion-minutos/repository.mjs",
             "path": "src/actuaciones/modificar-duracion-minutos/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(actuacionId, duracionMinutos) {\n  const { Attributes } = await MODELO_ACTUACION.build(UpdateItemCommand)\n    .item({ actuacionId, duracionMinutos })\n    .options({\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(actuacionId, duracionMinutos) {\n  const { Attributes } = await MODELO_ACTUACION.build(EntityRepository).update(\n    { actuacionId, duracionMinutos },\n    {\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/actuaciones/modificar-duracion-minutos\nls -d src/actuaciones/modificar-duracion-minutos\ntouch src/actuaciones/modificar-duracion-minutos/repository.mjs\ncode src/actuaciones/modificar-duracion-minutos/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/festivales/consultar/repository.mjs",
             "path": "src/festivales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function buscarFestivalRepository(festivalId) {\n  const { Item } = await MODELO_FESTIVAL.build(GetItemCommand)\n    .key({ festivalId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarFestivalRepository(festivalId, minimo) {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(QueryCommand)\n    .entities(MODELO_ACTUACION)\n    .query({ index: 'PorFestival', partition: festivalId })\n    .options({ filters: { Actuacion: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function buscarFestivalRepository(festivalId) {\n  const { Item } = await MODELO_FESTIVAL.build(EntityRepository).get(\n    { festivalId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarFestivalRepository(festivalId, minimo) {\n  const { Items = [] } = await MODELO_ACTUACION.build(EntityRepository).query(\n    { index: 'PorFestival', partition: festivalId },\n    { filters: { Actuacion: { attr: 'duracionMinutos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/festivales/consultar\nls -d src/festivales/consultar\ntouch src/festivales/consultar/repository.mjs\ncode src/festivales/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/actuaciones/trasladar/repository.mjs",
             "path": "src/actuaciones/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function trasladarActuacionRepository(actuacionId, festivalId) {\n  const { Attributes } = await MODELO_ACTUACION.build(UpdateItemCommand)\n    .item({ actuacionId, festivalId })\n    .options({\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function trasladarActuacionRepository(actuacionId, festivalId) {\n  const { Attributes } = await MODELO_ACTUACION.build(EntityRepository).update(\n    { actuacionId, festivalId },\n    {\n      condition: { attr: 'actuacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/actuaciones/trasladar\nls -d src/actuaciones/trasladar\ntouch src/actuaciones/trasladar/repository.mjs\ncode src/actuaciones/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/festivales/consultar/repository.mjs",
             "path": "src/festivales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL, TABLA_ACTUACIONES } from '../../models/festival-actuacion.model.mjs';\n\nexport async function buscarFestivalRepository(festivalId) {\n  const { Item } = await MODELO_FESTIVAL.build(GetItemCommand)\n    .key({ festivalId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarFestivalRepository(festivalId, minimo) {\n  const { Items = [] } = await TABLA_ACTUACIONES.build(QueryCommand)\n    .entities(MODELO_ACTUACION)\n    .query({ index: 'PorFestival', partition: festivalId })\n    .options({ filters: { Actuacion: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTUACION, MODELO_FESTIVAL } from '../../models/festival-actuacion.model.mjs';\n\nexport async function buscarFestivalRepository(festivalId) {\n  const { Item } = await MODELO_FESTIVAL.build(EntityRepository).get(\n    { festivalId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarFestivalRepository(festivalId, minimo) {\n  const { Items = [] } = await MODELO_ACTUACION.build(EntityRepository).query(\n    { index: 'PorFestival', partition: festivalId },\n    { filters: { Actuacion: { attr: 'duracionMinutos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/festivales/consultar\nls -d src/festivales/consultar\ntouch src/festivales/consultar/repository.mjs\ncode src/festivales/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

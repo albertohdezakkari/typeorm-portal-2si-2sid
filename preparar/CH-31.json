@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/documentos/crear-listar/repository.mjs",
             "path": "src/documentos/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function crearDocumentoRepository(documento) {\n  await MODELO_DOCUMENTO.build(PutItemCommand)\n    .item(documento)\n    .options({ condition: { attr: 'documentoId', exists: false } })\n    .send();\n}\n\nexport async function listarDocumentosRepository() {\n  const { Items = [] } = await TABLA_DOCUMENTOS.build(ScanCommand)\n    .entities(MODELO_DOCUMENTO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function crearDocumentoRepository(documento) {\n  await MODELO_DOCUMENTO.build(EntityRepository).put(\n    documento,\n    { condition: { attr: 'documentoId', exists: false } }\n  );\n}\n\nexport async function listarDocumentosRepository() {\n  const { Items = [] } = await MODELO_DOCUMENTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/documentos/crear-listar\nls -d src/documentos/crear-listar\ntouch src/documentos/crear-listar/repository.mjs\ncode src/documentos/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/documentos/eliminar/repository.mjs",
             "path": "src/documentos/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function eliminarDocumentoRepository(documentoId) {\n  await MODELO_DOCUMENTO.build(DeleteItemCommand)\n    .key({ documentoId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function eliminarDocumentoRepository(documentoId) {\n  await MODELO_DOCUMENTO.build(EntityRepository).delete(\n    { documentoId }\n  );\n}",
             "create": "mkdir -p src/documentos/eliminar\nls -d src/documentos/eliminar\ntouch src/documentos/eliminar/repository.mjs\ncode src/documentos/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/documentos/modificar-paginas/repository.mjs",
             "path": "src/documentos/modificar-paginas/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function modificarPaginasRepository(documentoId, paginas) {\n  const { Attributes } = await MODELO_DOCUMENTO.build(UpdateItemCommand)\n    .item({ documentoId, paginas })\n    .options({\n      condition: { attr: 'documentoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function modificarPaginasRepository(documentoId, paginas) {\n  const { Attributes } = await MODELO_DOCUMENTO.build(EntityRepository).update(\n    { documentoId, paginas },\n    {\n      condition: { attr: 'documentoId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/documentos/modificar-paginas\nls -d src/documentos/modificar-paginas\ntouch src/documentos/modificar-paginas/repository.mjs\ncode src/documentos/modificar-paginas/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/archivos/consultar/repository.mjs",
             "path": "src/archivos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function buscarArchivoRepository(archivoId) {\n  const { Item } = await MODELO_ARCHIVO.build(GetItemCommand)\n    .key({ archivoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarArchivoRepository(archivoId, minimo) {\n  const { Items = [] } = await TABLA_DOCUMENTOS.build(QueryCommand)\n    .entities(MODELO_DOCUMENTO)\n    .query({ index: 'PorArchivo', partition: archivoId })\n    .options({ filters: { Documento: { attr: 'paginas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function buscarArchivoRepository(archivoId) {\n  const { Item } = await MODELO_ARCHIVO.build(EntityRepository).get(\n    { archivoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarArchivoRepository(archivoId, minimo) {\n  const { Items = [] } = await MODELO_DOCUMENTO.build(EntityRepository).query(\n    { index: 'PorArchivo', partition: archivoId },\n    { filters: { Documento: { attr: 'paginas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/archivos/consultar\nls -d src/archivos/consultar\ntouch src/archivos/consultar/repository.mjs\ncode src/archivos/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/documentos/trasladar/repository.mjs",
             "path": "src/documentos/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function trasladarDocumentoRepository(documentoId, archivoId) {\n  const { Attributes } = await MODELO_DOCUMENTO.build(UpdateItemCommand)\n    .item({ documentoId, archivoId })\n    .options({\n      condition: { attr: 'documentoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function trasladarDocumentoRepository(documentoId, archivoId) {\n  const { Attributes } = await MODELO_DOCUMENTO.build(EntityRepository).update(\n    { documentoId, archivoId },\n    {\n      condition: { attr: 'documentoId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/documentos/trasladar\nls -d src/documentos/trasladar\ntouch src/documentos/trasladar/repository.mjs\ncode src/documentos/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/archivos/consultar/repository.mjs",
             "path": "src/archivos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO, TABLA_DOCUMENTOS } from '../../models/archivo-documento.model.mjs';\n\nexport async function buscarArchivoRepository(archivoId) {\n  const { Item } = await MODELO_ARCHIVO.build(GetItemCommand)\n    .key({ archivoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarArchivoRepository(archivoId, minimo) {\n  const { Items = [] } = await TABLA_DOCUMENTOS.build(QueryCommand)\n    .entities(MODELO_DOCUMENTO)\n    .query({ index: 'PorArchivo', partition: archivoId })\n    .options({ filters: { Documento: { attr: 'paginas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_DOCUMENTO, MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function buscarArchivoRepository(archivoId) {\n  const { Item } = await MODELO_ARCHIVO.build(EntityRepository).get(\n    { archivoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarArchivoRepository(archivoId, minimo) {\n  const { Items = [] } = await MODELO_DOCUMENTO.build(EntityRepository).query(\n    { index: 'PorArchivo', partition: archivoId },\n    { filters: { Documento: { attr: 'paginas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/archivos/consultar\nls -d src/archivos/consultar\ntouch src/archivos/consultar/repository.mjs\ncode src/archivos/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

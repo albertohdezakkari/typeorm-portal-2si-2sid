@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/obras/crear-listar/repository.mjs",
             "path": "src/obras/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearObraRepository(obra) {\n  await MODELO_OBRA.build(PutItemCommand)\n    .item(obra)\n    .options({ condition: { attr: 'obraId', exists: false } })\n    .send();\n}\n\nexport async function listarObrasRepository() {\n  const { Items = [] } = await TABLA_OBRAS.build(ScanCommand)\n    .entities(MODELO_OBRA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearObraRepository(obra) {\n  await MODELO_OBRA.build(EntityRepository).put(\n    obra,\n    { condition: { attr: 'obraId', exists: false } }\n  );\n}\n\nexport async function listarObrasRepository() {\n  const { Items = [] } = await MODELO_OBRA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/obras/crear-listar\nls -d src/obras/crear-listar\ntouch src/obras/crear-listar/repository.mjs\ncode src/obras/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/obras/eliminar/repository.mjs",
             "path": "src/obras/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function eliminarObraRepository(obraId) {\n  await MODELO_OBRA.build(DeleteItemCommand)\n    .key({ obraId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function eliminarObraRepository(obraId) {\n  await MODELO_OBRA.build(EntityRepository).delete(\n    { obraId }\n  );\n}",
             "create": "mkdir -p src/obras/eliminar\nls -d src/obras/eliminar\ntouch src/obras/eliminar/repository.mjs\ncode src/obras/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/obras/modificar-presupuesto-euros/repository.mjs",
             "path": "src/obras/modificar-presupuesto-euros/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function modificarPresupuestoEurosRepository(obraId, presupuestoEuros) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, presupuestoEuros })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function modificarPresupuestoEurosRepository(obraId, presupuestoEuros) {\n  const { Attributes } = await MODELO_OBRA.build(EntityRepository).update(\n    { obraId, presupuestoEuros },\n    {\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/obras/modificar-presupuesto-euros\nls -d src/obras/modificar-presupuesto-euros\ntouch src/obras/modificar-presupuesto-euros/repository.mjs\ncode src/obras/modificar-presupuesto-euros/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/ayuntamientos/consultar/repository.mjs",
             "path": "src/ayuntamientos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(GetItemCommand)\n    .key({ ayuntamientoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await TABLA_OBRAS.build(QueryCommand)\n    .entities(MODELO_OBRA)\n    .query({ index: 'PorAyuntamiento', partition: ayuntamientoId })\n    .options({ filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(EntityRepository).get(\n    { ayuntamientoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await MODELO_OBRA.build(EntityRepository).query(\n    { index: 'PorAyuntamiento', partition: ayuntamientoId },\n    { filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/repository.mjs\ncode src/ayuntamientos/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/obras/trasladar/repository.mjs",
             "path": "src/obras/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function trasladarObraRepository(obraId, ayuntamientoId) {\n  const { Attributes } = await MODELO_OBRA.build(UpdateItemCommand)\n    .item({ obraId, ayuntamientoId })\n    .options({\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function trasladarObraRepository(obraId, ayuntamientoId) {\n  const { Attributes } = await MODELO_OBRA.build(EntityRepository).update(\n    { obraId, ayuntamientoId },\n    {\n      condition: { attr: 'obraId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/obras/trasladar\nls -d src/obras/trasladar\ntouch src/obras/trasladar/repository.mjs\ncode src/obras/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/ayuntamientos/consultar/repository.mjs",
             "path": "src/ayuntamientos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO, TABLA_OBRAS } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(GetItemCommand)\n    .key({ ayuntamientoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await TABLA_OBRAS.build(QueryCommand)\n    .entities(MODELO_OBRA)\n    .query({ index: 'PorAyuntamiento', partition: ayuntamientoId })\n    .options({ filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_OBRA, MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function buscarAyuntamientoRepository(ayuntamientoId) {\n  const { Item } = await MODELO_AYUNTAMIENTO.build(EntityRepository).get(\n    { ayuntamientoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarAyuntamientoRepository(ayuntamientoId, minimo) {\n  const { Items = [] } = await MODELO_OBRA.build(EntityRepository).query(\n    { index: 'PorAyuntamiento', partition: ayuntamientoId },\n    { filters: { Obra: { attr: 'presupuestoEuros', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/ayuntamientos/consultar\nls -d src/ayuntamientos/consultar\ntouch src/ayuntamientos/consultar/repository.mjs\ncode src/ayuntamientos/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

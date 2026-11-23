@@ -8,6 +8,7 @@ from pathlib import Path
 import argparse, copy, hashlib, json, re
 from pypdf import PdfReader
 from campos_modelo import apply as apply_field_guide
+from entrenar_entity_repository import apply as apply_entity_repository
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -159,6 +160,7 @@ def compile_case(case, classic, base, sources, pdf_folder):
         routes['code']=re.sub(r'path: (/[^\s,]+)(?=\s*})',r"path: '\1'",routes['code'])
         for cue in routes['cues']:
             cue['text']=re.sub(r'path: (/\S+)',r"path: '\1'",cue['text'])
+    apply_entity_repository(d)
     for stages in d['steps'].values():
         assert len(stages)==26
         for step in stages:

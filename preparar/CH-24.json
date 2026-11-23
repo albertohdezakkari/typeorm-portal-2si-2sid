@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/pistas/crear-listar/repository.mjs",
             "path": "src/pistas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function crearPistaRepository(pista) {\n  await MODELO_PISTA.build(PutItemCommand)\n    .item(pista)\n    .options({ condition: { attr: 'pistaId', exists: false } })\n    .send();\n}\n\nexport async function listarPistasRepository() {\n  const { Items = [] } = await TABLA_PISTAS.build(ScanCommand)\n    .entities(MODELO_PISTA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function crearPistaRepository(pista) {\n  await MODELO_PISTA.build(EntityRepository).put(\n    pista,\n    { condition: { attr: 'pistaId', exists: false } }\n  );\n}\n\nexport async function listarPistasRepository() {\n  const { Items = [] } = await MODELO_PISTA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/pistas/crear-listar\nls -d src/pistas/crear-listar\ntouch src/pistas/crear-listar/repository.mjs\ncode src/pistas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/pistas/eliminar/repository.mjs",
             "path": "src/pistas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function eliminarPistaRepository(pistaId) {\n  await MODELO_PISTA.build(DeleteItemCommand)\n    .key({ pistaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function eliminarPistaRepository(pistaId) {\n  await MODELO_PISTA.build(EntityRepository).delete(\n    { pistaId }\n  );\n}",
             "create": "mkdir -p src/pistas/eliminar\nls -d src/pistas/eliminar\ntouch src/pistas/eliminar/repository.mjs\ncode src/pistas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/pistas/modificar-superficie-m2/repository.mjs",
             "path": "src/pistas/modificar-superficie-m2/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function modificarSuperficieM2Repository(pistaId, superficieM2) {\n  const { Attributes } = await MODELO_PISTA.build(UpdateItemCommand)\n    .item({ pistaId, superficieM2 })\n    .options({\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function modificarSuperficieM2Repository(pistaId, superficieM2) {\n  const { Attributes } = await MODELO_PISTA.build(EntityRepository).update(\n    { pistaId, superficieM2 },\n    {\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/pistas/modificar-superficie-m2\nls -d src/pistas/modificar-superficie-m2\ntouch src/pistas/modificar-superficie-m2/repository.mjs\ncode src/pistas/modificar-superficie-m2/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/complejos/consultar/repository.mjs",
             "path": "src/complejos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function buscarComplejoRepository(complejoId) {\n  const { Item } = await MODELO_COMPLEJO.build(GetItemCommand)\n    .key({ complejoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarComplejoRepository(complejoId, minimo) {\n  const { Items = [] } = await TABLA_PISTAS.build(QueryCommand)\n    .entities(MODELO_PISTA)\n    .query({ index: 'PorComplejo', partition: complejoId })\n    .options({ filters: { Pista: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function buscarComplejoRepository(complejoId) {\n  const { Item } = await MODELO_COMPLEJO.build(EntityRepository).get(\n    { complejoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarComplejoRepository(complejoId, minimo) {\n  const { Items = [] } = await MODELO_PISTA.build(EntityRepository).query(\n    { index: 'PorComplejo', partition: complejoId },\n    { filters: { Pista: { attr: 'superficieM2', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/complejos/consultar\nls -d src/complejos/consultar\ntouch src/complejos/consultar/repository.mjs\ncode src/complejos/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/pistas/trasladar/repository.mjs",
             "path": "src/pistas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function trasladarPistaRepository(pistaId, complejoId) {\n  const { Attributes } = await MODELO_PISTA.build(UpdateItemCommand)\n    .item({ pistaId, complejoId })\n    .options({\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function trasladarPistaRepository(pistaId, complejoId) {\n  const { Attributes } = await MODELO_PISTA.build(EntityRepository).update(\n    { pistaId, complejoId },\n    {\n      condition: { attr: 'pistaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/pistas/trasladar\nls -d src/pistas/trasladar\ntouch src/pistas/trasladar/repository.mjs\ncode src/pistas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/complejos/consultar/repository.mjs",
             "path": "src/complejos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PISTA, MODELO_COMPLEJO, TABLA_PISTAS } from '../../models/complejo-pista.model.mjs';\n\nexport async function buscarComplejoRepository(complejoId) {\n  const { Item } = await MODELO_COMPLEJO.build(GetItemCommand)\n    .key({ complejoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarComplejoRepository(complejoId, minimo) {\n  const { Items = [] } = await TABLA_PISTAS.build(QueryCommand)\n    .entities(MODELO_PISTA)\n    .query({ index: 'PorComplejo', partition: complejoId })\n    .options({ filters: { Pista: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PISTA, MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function buscarComplejoRepository(complejoId) {\n  const { Item } = await MODELO_COMPLEJO.build(EntityRepository).get(\n    { complejoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarComplejoRepository(complejoId, minimo) {\n  const { Items = [] } = await MODELO_PISTA.build(EntityRepository).query(\n    { index: 'PorComplejo', partition: complejoId },\n    { filters: { Pista: { attr: 'superficieM2', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/complejos/consultar\nls -d src/complejos/consultar\ntouch src/complejos/consultar/repository.mjs\ncode src/complejos/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

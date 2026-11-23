@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/programas/crear-listar/repository.mjs",
             "path": "src/programas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function crearProgramaRepository(programa) {\n  await MODELO_PROGRAMA.build(PutItemCommand)\n    .item(programa)\n    .options({ condition: { attr: 'programaId', exists: false } })\n    .send();\n}\n\nexport async function listarProgramasRepository() {\n  const { Items = [] } = await TABLA_PROGRAMAS.build(ScanCommand)\n    .entities(MODELO_PROGRAMA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function crearProgramaRepository(programa) {\n  await MODELO_PROGRAMA.build(EntityRepository).put(\n    programa,\n    { condition: { attr: 'programaId', exists: false } }\n  );\n}\n\nexport async function listarProgramasRepository() {\n  const { Items = [] } = await MODELO_PROGRAMA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/programas/crear-listar\nls -d src/programas/crear-listar\ntouch src/programas/crear-listar/repository.mjs\ncode src/programas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/programas/eliminar/repository.mjs",
             "path": "src/programas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function eliminarProgramaRepository(programaId) {\n  await MODELO_PROGRAMA.build(DeleteItemCommand)\n    .key({ programaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function eliminarProgramaRepository(programaId) {\n  await MODELO_PROGRAMA.build(EntityRepository).delete(\n    { programaId }\n  );\n}",
             "create": "mkdir -p src/programas/eliminar\nls -d src/programas/eliminar\ntouch src/programas/eliminar/repository.mjs\ncode src/programas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/programas/modificar-duracion-minutos/repository.mjs",
             "path": "src/programas/modificar-duracion-minutos/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(programaId, duracionMinutos) {\n  const { Attributes } = await MODELO_PROGRAMA.build(UpdateItemCommand)\n    .item({ programaId, duracionMinutos })\n    .options({\n      condition: { attr: 'programaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function modificarDuracionMinutosRepository(programaId, duracionMinutos) {\n  const { Attributes } = await MODELO_PROGRAMA.build(EntityRepository).update(\n    { programaId, duracionMinutos },\n    {\n      condition: { attr: 'programaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/programas/modificar-duracion-minutos\nls -d src/programas/modificar-duracion-minutos\ntouch src/programas/modificar-duracion-minutos/repository.mjs\ncode src/programas/modificar-duracion-minutos/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/emisoras/consultar/repository.mjs",
             "path": "src/emisoras/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function buscarEmisoraRepository(emisoraId) {\n  const { Item } = await MODELO_EMISORA.build(GetItemCommand)\n    .key({ emisoraId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEmisoraRepository(emisoraId, minimo) {\n  const { Items = [] } = await TABLA_PROGRAMAS.build(QueryCommand)\n    .entities(MODELO_PROGRAMA)\n    .query({ index: 'PorEmisora', partition: emisoraId })\n    .options({ filters: { Programa: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function buscarEmisoraRepository(emisoraId) {\n  const { Item } = await MODELO_EMISORA.build(EntityRepository).get(\n    { emisoraId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEmisoraRepository(emisoraId, minimo) {\n  const { Items = [] } = await MODELO_PROGRAMA.build(EntityRepository).query(\n    { index: 'PorEmisora', partition: emisoraId },\n    { filters: { Programa: { attr: 'duracionMinutos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/emisoras/consultar\nls -d src/emisoras/consultar\ntouch src/emisoras/consultar/repository.mjs\ncode src/emisoras/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/programas/trasladar/repository.mjs",
             "path": "src/programas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function trasladarProgramaRepository(programaId, emisoraId) {\n  const { Attributes } = await MODELO_PROGRAMA.build(UpdateItemCommand)\n    .item({ programaId, emisoraId })\n    .options({\n      condition: { attr: 'programaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function trasladarProgramaRepository(programaId, emisoraId) {\n  const { Attributes } = await MODELO_PROGRAMA.build(EntityRepository).update(\n    { programaId, emisoraId },\n    {\n      condition: { attr: 'programaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/programas/trasladar\nls -d src/programas/trasladar\ntouch src/programas/trasladar/repository.mjs\ncode src/programas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/emisoras/consultar/repository.mjs",
             "path": "src/emisoras/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROGRAMA, MODELO_EMISORA, TABLA_PROGRAMAS } from '../../models/emisora-programa.model.mjs';\n\nexport async function buscarEmisoraRepository(emisoraId) {\n  const { Item } = await MODELO_EMISORA.build(GetItemCommand)\n    .key({ emisoraId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEmisoraRepository(emisoraId, minimo) {\n  const { Items = [] } = await TABLA_PROGRAMAS.build(QueryCommand)\n    .entities(MODELO_PROGRAMA)\n    .query({ index: 'PorEmisora', partition: emisoraId })\n    .options({ filters: { Programa: { attr: 'duracionMinutos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROGRAMA, MODELO_EMISORA } from '../../models/emisora-programa.model.mjs';\n\nexport async function buscarEmisoraRepository(emisoraId) {\n  const { Item } = await MODELO_EMISORA.build(EntityRepository).get(\n    { emisoraId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEmisoraRepository(emisoraId, minimo) {\n  const { Items = [] } = await MODELO_PROGRAMA.build(EntityRepository).query(\n    { index: 'PorEmisora', partition: emisoraId },\n    { filters: { Programa: { attr: 'duracionMinutos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/emisoras/consultar\nls -d src/emisoras/consultar\ntouch src/emisoras/consultar/repository.mjs\ncode src/emisoras/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

@@ -67,3 +67,9 @@ La comprobación técnica puede limitarse con `--case-id CH-22`. Además de comp
 verifica YAML, claves, proyección, columnas de los metadatos TypeORM y todos los
 atributos del ítem que Toolbox prepara para cada Entity, sin conectar a servicios
 remotos.
+
+## Acceso uniforme a DynamoDB
+
+Todos los repositories de Serverless parten de `MODELO_….build(EntityRepository)` y utilizan `get`, `put`, `scan`, `query`, `update` o `delete`. Estos métodos envían la operación y no necesitan `.send()`. Table y sus índices se preparan dentro del fichero de modelos; los repositories importan la Entity.
+
+El generador aplica esta adaptación mediante `scripts/entrenar_entity_repository.py`, compartiendo la conversión oficial con la ampliación N:M. Los PDF impresos conservan su contexto, campos y casos; el código actualizado aparece identificado como «acceso uniforme con EntityRepository». No se reescriben las fichas originales. Solo se renuevan los puzles de los repositories Serverless revisados; el resto de respuestas, posiciones y aciertos se conserva.

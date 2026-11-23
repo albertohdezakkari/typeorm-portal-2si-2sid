@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/parcelas/crear-listar/repository.mjs",
             "path": "src/parcelas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function crearParcelaRepository(parcela) {\n  await MODELO_PARCELA.build(PutItemCommand)\n    .item(parcela)\n    .options({ condition: { attr: 'parcelaId', exists: false } })\n    .send();\n}\n\nexport async function listarParcelasRepository() {\n  const { Items = [] } = await TABLA_PARCELAS.build(ScanCommand)\n    .entities(MODELO_PARCELA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function crearParcelaRepository(parcela) {\n  await MODELO_PARCELA.build(EntityRepository).put(\n    parcela,\n    { condition: { attr: 'parcelaId', exists: false } }\n  );\n}\n\nexport async function listarParcelasRepository() {\n  const { Items = [] } = await MODELO_PARCELA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/parcelas/crear-listar\nls -d src/parcelas/crear-listar\ntouch src/parcelas/crear-listar/repository.mjs\ncode src/parcelas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/parcelas/eliminar/repository.mjs",
             "path": "src/parcelas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function eliminarParcelaRepository(parcelaId) {\n  await MODELO_PARCELA.build(DeleteItemCommand)\n    .key({ parcelaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function eliminarParcelaRepository(parcelaId) {\n  await MODELO_PARCELA.build(EntityRepository).delete(\n    { parcelaId }\n  );\n}",
             "create": "mkdir -p src/parcelas/eliminar\nls -d src/parcelas/eliminar\ntouch src/parcelas/eliminar/repository.mjs\ncode src/parcelas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/parcelas/modificar-superficie/repository.mjs",
             "path": "src/parcelas/modificar-superficie/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function modificarSuperficieRepository(parcelaId, superficieM2) {\n  const { Attributes } = await MODELO_PARCELA.build(UpdateItemCommand)\n    .item({ parcelaId, superficieM2 })\n    .options({\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function modificarSuperficieRepository(parcelaId, superficieM2) {\n  const { Attributes } = await MODELO_PARCELA.build(EntityRepository).update(\n    { parcelaId, superficieM2 },\n    {\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/parcelas/modificar-superficie\nls -d src/parcelas/modificar-superficie\ntouch src/parcelas/modificar-superficie/repository.mjs\ncode src/parcelas/modificar-superficie/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/huertos/consultar/repository.mjs",
             "path": "src/huertos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function buscarHuertoRepository(huertoId) {\n  const { Item } = await MODELO_HUERTO.build(GetItemCommand)\n    .key({ huertoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHuertoRepository(huertoId, minimo) {\n  const { Items = [] } = await TABLA_PARCELAS.build(QueryCommand)\n    .entities(MODELO_PARCELA)\n    .query({ index: 'PorHuerto', partition: huertoId })\n    .options({ filters: { Parcela: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function buscarHuertoRepository(huertoId) {\n  const { Item } = await MODELO_HUERTO.build(EntityRepository).get(\n    { huertoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHuertoRepository(huertoId, minimo) {\n  const { Items = [] } = await MODELO_PARCELA.build(EntityRepository).query(\n    { index: 'PorHuerto', partition: huertoId },\n    { filters: { Parcela: { attr: 'superficieM2', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/huertos/consultar\nls -d src/huertos/consultar\ntouch src/huertos/consultar/repository.mjs\ncode src/huertos/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/parcelas/trasladar/repository.mjs",
             "path": "src/parcelas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function trasladarParcelaRepository(parcelaId, huertoId) {\n  const { Attributes } = await MODELO_PARCELA.build(UpdateItemCommand)\n    .item({ parcelaId, huertoId })\n    .options({\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function trasladarParcelaRepository(parcelaId, huertoId) {\n  const { Attributes } = await MODELO_PARCELA.build(EntityRepository).update(\n    { parcelaId, huertoId },\n    {\n      condition: { attr: 'parcelaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/parcelas/trasladar\nls -d src/parcelas/trasladar\ntouch src/parcelas/trasladar/repository.mjs\ncode src/parcelas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/huertos/consultar/repository.mjs",
             "path": "src/huertos/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PARCELA, MODELO_HUERTO, TABLA_PARCELAS } from '../../models/huerto-parcela.model.mjs';\n\nexport async function buscarHuertoRepository(huertoId) {\n  const { Item } = await MODELO_HUERTO.build(GetItemCommand)\n    .key({ huertoId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHuertoRepository(huertoId, minimo) {\n  const { Items = [] } = await TABLA_PARCELAS.build(QueryCommand)\n    .entities(MODELO_PARCELA)\n    .query({ index: 'PorHuerto', partition: huertoId })\n    .options({ filters: { Parcela: { attr: 'superficieM2', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARCELA, MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function buscarHuertoRepository(huertoId) {\n  const { Item } = await MODELO_HUERTO.build(EntityRepository).get(\n    { huertoId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHuertoRepository(huertoId, minimo) {\n  const { Items = [] } = await MODELO_PARCELA.build(EntityRepository).query(\n    { index: 'PorHuerto', partition: huertoId },\n    { filters: { Parcela: { attr: 'superficieM2', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/huertos/consultar\nls -d src/huertos/consultar\ntouch src/huertos/consultar/repository.mjs\ncode src/huertos/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

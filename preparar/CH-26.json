@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/aulas/crear-listar/repository.mjs",
             "path": "src/aulas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function crearAulaRepository(aula) {\n  await MODELO_AULA.build(PutItemCommand)\n    .item(aula)\n    .options({ condition: { attr: 'aulaId', exists: false } })\n    .send();\n}\n\nexport async function listarAulasRepository() {\n  const { Items = [] } = await TABLA_AULAS.build(ScanCommand)\n    .entities(MODELO_AULA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function crearAulaRepository(aula) {\n  await MODELO_AULA.build(EntityRepository).put(\n    aula,\n    { condition: { attr: 'aulaId', exists: false } }\n  );\n}\n\nexport async function listarAulasRepository() {\n  const { Items = [] } = await MODELO_AULA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/aulas/crear-listar\nls -d src/aulas/crear-listar\ntouch src/aulas/crear-listar/repository.mjs\ncode src/aulas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/aulas/eliminar/repository.mjs",
             "path": "src/aulas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function eliminarAulaRepository(aulaId) {\n  await MODELO_AULA.build(DeleteItemCommand)\n    .key({ aulaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function eliminarAulaRepository(aulaId) {\n  await MODELO_AULA.build(EntityRepository).delete(\n    { aulaId }\n  );\n}",
             "create": "mkdir -p src/aulas/eliminar\nls -d src/aulas/eliminar\ntouch src/aulas/eliminar/repository.mjs\ncode src/aulas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/aulas/modificar-capacidad/repository.mjs",
             "path": "src/aulas/modificar-capacidad/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function modificarCapacidadRepository(aulaId, capacidad) {\n  const { Attributes } = await MODELO_AULA.build(UpdateItemCommand)\n    .item({ aulaId, capacidad })\n    .options({\n      condition: { attr: 'aulaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function modificarCapacidadRepository(aulaId, capacidad) {\n  const { Attributes } = await MODELO_AULA.build(EntityRepository).update(\n    { aulaId, capacidad },\n    {\n      condition: { attr: 'aulaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/aulas/modificar-capacidad\nls -d src/aulas/modificar-capacidad\ntouch src/aulas/modificar-capacidad/repository.mjs\ncode src/aulas/modificar-capacidad/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/escuelas/consultar/repository.mjs",
             "path": "src/escuelas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function buscarEscuelaRepository(escuelaId) {\n  const { Item } = await MODELO_ESCUELA.build(GetItemCommand)\n    .key({ escuelaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEscuelaRepository(escuelaId, minimo) {\n  const { Items = [] } = await TABLA_AULAS.build(QueryCommand)\n    .entities(MODELO_AULA)\n    .query({ index: 'PorEscuela', partition: escuelaId })\n    .options({ filters: { Aula: { attr: 'capacidad', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function buscarEscuelaRepository(escuelaId) {\n  const { Item } = await MODELO_ESCUELA.build(EntityRepository).get(\n    { escuelaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEscuelaRepository(escuelaId, minimo) {\n  const { Items = [] } = await MODELO_AULA.build(EntityRepository).query(\n    { index: 'PorEscuela', partition: escuelaId },\n    { filters: { Aula: { attr: 'capacidad', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/escuelas/consultar\nls -d src/escuelas/consultar\ntouch src/escuelas/consultar/repository.mjs\ncode src/escuelas/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/aulas/trasladar/repository.mjs",
             "path": "src/aulas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function trasladarAulaRepository(aulaId, escuelaId) {\n  const { Attributes } = await MODELO_AULA.build(UpdateItemCommand)\n    .item({ aulaId, escuelaId })\n    .options({\n      condition: { attr: 'aulaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function trasladarAulaRepository(aulaId, escuelaId) {\n  const { Attributes } = await MODELO_AULA.build(EntityRepository).update(\n    { aulaId, escuelaId },\n    {\n      condition: { attr: 'aulaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/aulas/trasladar\nls -d src/aulas/trasladar\ntouch src/aulas/trasladar/repository.mjs\ncode src/aulas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/escuelas/consultar/repository.mjs",
             "path": "src/escuelas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_AULA, MODELO_ESCUELA, TABLA_AULAS } from '../../models/escuela-aula.model.mjs';\n\nexport async function buscarEscuelaRepository(escuelaId) {\n  const { Item } = await MODELO_ESCUELA.build(GetItemCommand)\n    .key({ escuelaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEscuelaRepository(escuelaId, minimo) {\n  const { Items = [] } = await TABLA_AULAS.build(QueryCommand)\n    .entities(MODELO_AULA)\n    .query({ index: 'PorEscuela', partition: escuelaId })\n    .options({ filters: { Aula: { attr: 'capacidad', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AULA, MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function buscarEscuelaRepository(escuelaId) {\n  const { Item } = await MODELO_ESCUELA.build(EntityRepository).get(\n    { escuelaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEscuelaRepository(escuelaId, minimo) {\n  const { Items = [] } = await MODELO_AULA.build(EntityRepository).query(\n    { index: 'PorEscuela', partition: escuelaId },\n    { filters: { Aula: { attr: 'capacidad', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/escuelas/consultar\nls -d src/escuelas/consultar\ntouch src/escuelas/consultar/repository.mjs\ncode src/escuelas/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

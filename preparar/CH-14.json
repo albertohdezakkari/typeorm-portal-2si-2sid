@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/zonas/crear-listar/repository.mjs",
             "path": "src/zonas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function crearZonaRepository(zona) {\n  await MODELO_ZONA.build(PutItemCommand)\n    .item(zona)\n    .options({ condition: { attr: 'zonaId', exists: false } })\n    .send();\n}\n\nexport async function listarZonasRepository() {\n  const { Items = [] } = await TABLA_ZONAS.build(ScanCommand)\n    .entities(MODELO_ZONA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function crearZonaRepository(zona) {\n  await MODELO_ZONA.build(EntityRepository).put(\n    zona,\n    { condition: { attr: 'zonaId', exists: false } }\n  );\n}\n\nexport async function listarZonasRepository() {\n  const { Items = [] } = await MODELO_ZONA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/zonas/crear-listar\nls -d src/zonas/crear-listar\ntouch src/zonas/crear-listar/repository.mjs\ncode src/zonas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/zonas/eliminar/repository.mjs",
             "path": "src/zonas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function eliminarZonaRepository(zonaId) {\n  await MODELO_ZONA.build(DeleteItemCommand)\n    .key({ zonaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function eliminarZonaRepository(zonaId) {\n  await MODELO_ZONA.build(EntityRepository).delete(\n    { zonaId }\n  );\n}",
             "create": "mkdir -p src/zonas/eliminar\nls -d src/zonas/eliminar\ntouch src/zonas/eliminar/repository.mjs\ncode src/zonas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/zonas/modificar-capacidad/repository.mjs",
             "path": "src/zonas/modificar-capacidad/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function modificarCapacidadRepository(zonaId, capacidad) {\n  const { Attributes } = await MODELO_ZONA.build(UpdateItemCommand)\n    .item({ zonaId, capacidad })\n    .options({\n      condition: { attr: 'zonaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function modificarCapacidadRepository(zonaId, capacidad) {\n  const { Attributes } = await MODELO_ZONA.build(EntityRepository).update(\n    { zonaId, capacidad },\n    {\n      condition: { attr: 'zonaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/zonas/modificar-capacidad\nls -d src/zonas/modificar-capacidad\ntouch src/zonas/modificar-capacidad/repository.mjs\ncode src/zonas/modificar-capacidad/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/parques/consultar/repository.mjs",
             "path": "src/parques/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function buscarParqueRepository(parqueId) {\n  const { Item } = await MODELO_PARQUE.build(GetItemCommand)\n    .key({ parqueId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarParqueRepository(parqueId, minimo) {\n  const { Items = [] } = await TABLA_ZONAS.build(QueryCommand)\n    .entities(MODELO_ZONA)\n    .query({ index: 'PorParque', partition: parqueId })\n    .options({ filters: { Zona: { attr: 'capacidad', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function buscarParqueRepository(parqueId) {\n  const { Item } = await MODELO_PARQUE.build(EntityRepository).get(\n    { parqueId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarParqueRepository(parqueId, minimo) {\n  const { Items = [] } = await MODELO_ZONA.build(EntityRepository).query(\n    { index: 'PorParque', partition: parqueId },\n    { filters: { Zona: { attr: 'capacidad', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/parques/consultar\nls -d src/parques/consultar\ntouch src/parques/consultar/repository.mjs\ncode src/parques/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/zonas/trasladar/repository.mjs",
             "path": "src/zonas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function trasladarZonaRepository(zonaId, parqueId) {\n  const { Attributes } = await MODELO_ZONA.build(UpdateItemCommand)\n    .item({ zonaId, parqueId })\n    .options({\n      condition: { attr: 'zonaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function trasladarZonaRepository(zonaId, parqueId) {\n  const { Attributes } = await MODELO_ZONA.build(EntityRepository).update(\n    { zonaId, parqueId },\n    {\n      condition: { attr: 'zonaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/zonas/trasladar\nls -d src/zonas/trasladar\ntouch src/zonas/trasladar/repository.mjs\ncode src/zonas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/parques/consultar/repository.mjs",
             "path": "src/parques/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ZONA, MODELO_PARQUE, TABLA_ZONAS } from '../../models/parque-zona.model.mjs';\n\nexport async function buscarParqueRepository(parqueId) {\n  const { Item } = await MODELO_PARQUE.build(GetItemCommand)\n    .key({ parqueId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarParqueRepository(parqueId, minimo) {\n  const { Items = [] } = await TABLA_ZONAS.build(QueryCommand)\n    .entities(MODELO_ZONA)\n    .query({ index: 'PorParque', partition: parqueId })\n    .options({ filters: { Zona: { attr: 'capacidad', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ZONA, MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function buscarParqueRepository(parqueId) {\n  const { Item } = await MODELO_PARQUE.build(EntityRepository).get(\n    { parqueId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarParqueRepository(parqueId, minimo) {\n  const { Items = [] } = await MODELO_ZONA.build(EntityRepository).query(\n    { index: 'PorParque', partition: parqueId },\n    { filters: { Zona: { attr: 'capacidad', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/parques/consultar\nls -d src/parques/consultar\ntouch src/parques/consultar/repository.mjs\ncode src/parques/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

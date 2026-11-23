@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/habitaciones/crear-listar/repository.mjs",
             "path": "src/habitaciones/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function crearHabitacionRepository(habitacion) {\n  await MODELO_HABITACION.build(PutItemCommand)\n    .item(habitacion)\n    .options({ condition: { attr: 'habitacionId', exists: false } })\n    .send();\n}\n\nexport async function listarHabitacionesRepository() {\n  const { Items = [] } = await TABLA_HABITACIONES.build(ScanCommand)\n    .entities(MODELO_HABITACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function crearHabitacionRepository(habitacion) {\n  await MODELO_HABITACION.build(EntityRepository).put(\n    habitacion,\n    { condition: { attr: 'habitacionId', exists: false } }\n  );\n}\n\nexport async function listarHabitacionesRepository() {\n  const { Items = [] } = await MODELO_HABITACION.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/habitaciones/crear-listar\nls -d src/habitaciones/crear-listar\ntouch src/habitaciones/crear-listar/repository.mjs\ncode src/habitaciones/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/habitaciones/eliminar/repository.mjs",
             "path": "src/habitaciones/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function eliminarHabitacionRepository(habitacionId) {\n  await MODELO_HABITACION.build(DeleteItemCommand)\n    .key({ habitacionId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function eliminarHabitacionRepository(habitacionId) {\n  await MODELO_HABITACION.build(EntityRepository).delete(\n    { habitacionId }\n  );\n}",
             "create": "mkdir -p src/habitaciones/eliminar\nls -d src/habitaciones/eliminar\ntouch src/habitaciones/eliminar/repository.mjs\ncode src/habitaciones/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/habitaciones/modificar-camas/repository.mjs",
             "path": "src/habitaciones/modificar-camas/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function modificarCamasRepository(habitacionId, camas) {\n  const { Attributes } = await MODELO_HABITACION.build(UpdateItemCommand)\n    .item({ habitacionId, camas })\n    .options({\n      condition: { attr: 'habitacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function modificarCamasRepository(habitacionId, camas) {\n  const { Attributes } = await MODELO_HABITACION.build(EntityRepository).update(\n    { habitacionId, camas },\n    {\n      condition: { attr: 'habitacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/habitaciones/modificar-camas\nls -d src/habitaciones/modificar-camas\ntouch src/habitaciones/modificar-camas/repository.mjs\ncode src/habitaciones/modificar-camas/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/hospitales/consultar/repository.mjs",
             "path": "src/hospitales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function buscarHospitalRepository(hospitalId) {\n  const { Item } = await MODELO_HOSPITAL.build(GetItemCommand)\n    .key({ hospitalId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHospitalRepository(hospitalId, minimo) {\n  const { Items = [] } = await TABLA_HABITACIONES.build(QueryCommand)\n    .entities(MODELO_HABITACION)\n    .query({ index: 'PorHospital', partition: hospitalId })\n    .options({ filters: { Habitacion: { attr: 'camas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function buscarHospitalRepository(hospitalId) {\n  const { Item } = await MODELO_HOSPITAL.build(EntityRepository).get(\n    { hospitalId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHospitalRepository(hospitalId, minimo) {\n  const { Items = [] } = await MODELO_HABITACION.build(EntityRepository).query(\n    { index: 'PorHospital', partition: hospitalId },\n    { filters: { Habitacion: { attr: 'camas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/hospitales/consultar\nls -d src/hospitales/consultar\ntouch src/hospitales/consultar/repository.mjs\ncode src/hospitales/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/habitaciones/trasladar/repository.mjs",
             "path": "src/habitaciones/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function trasladarHabitacionRepository(habitacionId, hospitalId) {\n  const { Attributes } = await MODELO_HABITACION.build(UpdateItemCommand)\n    .item({ habitacionId, hospitalId })\n    .options({\n      condition: { attr: 'habitacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function trasladarHabitacionRepository(habitacionId, hospitalId) {\n  const { Attributes } = await MODELO_HABITACION.build(EntityRepository).update(\n    { habitacionId, hospitalId },\n    {\n      condition: { attr: 'habitacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/habitaciones/trasladar\nls -d src/habitaciones/trasladar\ntouch src/habitaciones/trasladar/repository.mjs\ncode src/habitaciones/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/hospitales/consultar/repository.mjs",
             "path": "src/hospitales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_HABITACION, MODELO_HOSPITAL, TABLA_HABITACIONES } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function buscarHospitalRepository(hospitalId) {\n  const { Item } = await MODELO_HOSPITAL.build(GetItemCommand)\n    .key({ hospitalId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHospitalRepository(hospitalId, minimo) {\n  const { Items = [] } = await TABLA_HABITACIONES.build(QueryCommand)\n    .entities(MODELO_HABITACION)\n    .query({ index: 'PorHospital', partition: hospitalId })\n    .options({ filters: { Habitacion: { attr: 'camas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HABITACION, MODELO_HOSPITAL } from '../../models/hospital-habitacion.model.mjs';\n\nexport async function buscarHospitalRepository(hospitalId) {\n  const { Item } = await MODELO_HOSPITAL.build(EntityRepository).get(\n    { hospitalId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHospitalRepository(hospitalId, minimo) {\n  const { Items = [] } = await MODELO_HABITACION.build(EntityRepository).query(\n    { index: 'PorHospital', partition: hospitalId },\n    { filters: { Habitacion: { attr: 'camas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/hospitales/consultar\nls -d src/hospitales/consultar\ntouch src/hospitales/consultar/repository.mjs\ncode src/hospitales/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

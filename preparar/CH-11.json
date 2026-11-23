@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/reservas/crear-listar/repository.mjs",
             "path": "src/reservas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function crearReservaRepository(reserva) {\n  await MODELO_RESERVA.build(PutItemCommand)\n    .item(reserva)\n    .options({ condition: { attr: 'reservaId', exists: false } })\n    .send();\n}\n\nexport async function listarReservasRepository() {\n  const { Items = [] } = await TABLA_RESERVAS.build(ScanCommand)\n    .entities(MODELO_RESERVA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function crearReservaRepository(reserva) {\n  await MODELO_RESERVA.build(EntityRepository).put(\n    reserva,\n    { condition: { attr: 'reservaId', exists: false } }\n  );\n}\n\nexport async function listarReservasRepository() {\n  const { Items = [] } = await MODELO_RESERVA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/reservas/crear-listar\nls -d src/reservas/crear-listar\ntouch src/reservas/crear-listar/repository.mjs\ncode src/reservas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/reservas/eliminar/repository.mjs",
             "path": "src/reservas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function eliminarReservaRepository(reservaId) {\n  await MODELO_RESERVA.build(DeleteItemCommand)\n    .key({ reservaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function eliminarReservaRepository(reservaId) {\n  await MODELO_RESERVA.build(EntityRepository).delete(\n    { reservaId }\n  );\n}",
             "create": "mkdir -p src/reservas/eliminar\nls -d src/reservas/eliminar\ntouch src/reservas/eliminar/repository.mjs\ncode src/reservas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/reservas/modificar-noches/repository.mjs",
             "path": "src/reservas/modificar-noches/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function modificarNochesRepository(reservaId, noches) {\n  const { Attributes } = await MODELO_RESERVA.build(UpdateItemCommand)\n    .item({ reservaId, noches })\n    .options({\n      condition: { attr: 'reservaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function modificarNochesRepository(reservaId, noches) {\n  const { Attributes } = await MODELO_RESERVA.build(EntityRepository).update(\n    { reservaId, noches },\n    {\n      condition: { attr: 'reservaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/reservas/modificar-noches\nls -d src/reservas/modificar-noches\ntouch src/reservas/modificar-noches/repository.mjs\ncode src/reservas/modificar-noches/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/hoteles/consultar/repository.mjs",
             "path": "src/hoteles/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function buscarHotelRepository(hotelId) {\n  const { Item } = await MODELO_HOTEL.build(GetItemCommand)\n    .key({ hotelId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHotelRepository(hotelId, minimo) {\n  const { Items = [] } = await TABLA_RESERVAS.build(QueryCommand)\n    .entities(MODELO_RESERVA)\n    .query({ index: 'PorHotel', partition: hotelId })\n    .options({ filters: { Reserva: { attr: 'noches', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function buscarHotelRepository(hotelId) {\n  const { Item } = await MODELO_HOTEL.build(EntityRepository).get(\n    { hotelId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHotelRepository(hotelId, minimo) {\n  const { Items = [] } = await MODELO_RESERVA.build(EntityRepository).query(\n    { index: 'PorHotel', partition: hotelId },\n    { filters: { Reserva: { attr: 'noches', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/hoteles/consultar\nls -d src/hoteles/consultar\ntouch src/hoteles/consultar/repository.mjs\ncode src/hoteles/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/reservas/trasladar/repository.mjs",
             "path": "src/reservas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function trasladarReservaRepository(reservaId, hotelId) {\n  const { Attributes } = await MODELO_RESERVA.build(UpdateItemCommand)\n    .item({ reservaId, hotelId })\n    .options({\n      condition: { attr: 'reservaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function trasladarReservaRepository(reservaId, hotelId) {\n  const { Attributes } = await MODELO_RESERVA.build(EntityRepository).update(\n    { reservaId, hotelId },\n    {\n      condition: { attr: 'reservaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/reservas/trasladar\nls -d src/reservas/trasladar\ntouch src/reservas/trasladar/repository.mjs\ncode src/reservas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/hoteles/consultar/repository.mjs",
             "path": "src/hoteles/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_RESERVA, MODELO_HOTEL, TABLA_RESERVAS } from '../../models/hotel-reserva.model.mjs';\n\nexport async function buscarHotelRepository(hotelId) {\n  const { Item } = await MODELO_HOTEL.build(GetItemCommand)\n    .key({ hotelId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarHotelRepository(hotelId, minimo) {\n  const { Items = [] } = await TABLA_RESERVAS.build(QueryCommand)\n    .entities(MODELO_RESERVA)\n    .query({ index: 'PorHotel', partition: hotelId })\n    .options({ filters: { Reserva: { attr: 'noches', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_RESERVA, MODELO_HOTEL } from '../../models/hotel-reserva.model.mjs';\n\nexport async function buscarHotelRepository(hotelId) {\n  const { Item } = await MODELO_HOTEL.build(EntityRepository).get(\n    { hotelId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarHotelRepository(hotelId, minimo) {\n  const { Items = [] } = await MODELO_RESERVA.build(EntityRepository).query(\n    { index: 'PorHotel', partition: hotelId },\n    { filters: { Reserva: { attr: 'noches', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/hoteles/consultar\nls -d src/hoteles/consultar\ntouch src/hoteles/consultar/repository.mjs\ncode src/hoteles/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

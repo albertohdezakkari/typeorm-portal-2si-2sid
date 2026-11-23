@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/publicaciones/crear-listar/repository.mjs",
             "path": "src/publicaciones/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function crearPublicacionRepository(publicacion) {\n  await MODELO_PUBLICACION.build(PutItemCommand)\n    .item(publicacion)\n    .options({ condition: { attr: 'publicacionId', exists: false } })\n    .send();\n}\n\nexport async function listarPublicacionesRepository() {\n  const { Items = [] } = await TABLA_PUBLICACIONES.build(ScanCommand)\n    .entities(MODELO_PUBLICACION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function crearPublicacionRepository(publicacion) {\n  await MODELO_PUBLICACION.build(EntityRepository).put(\n    publicacion,\n    { condition: { attr: 'publicacionId', exists: false } }\n  );\n}\n\nexport async function listarPublicacionesRepository() {\n  const { Items = [] } = await MODELO_PUBLICACION.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/publicaciones/crear-listar\nls -d src/publicaciones/crear-listar\ntouch src/publicaciones/crear-listar/repository.mjs\ncode src/publicaciones/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/publicaciones/eliminar/repository.mjs",
             "path": "src/publicaciones/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function eliminarPublicacionRepository(publicacionId) {\n  await MODELO_PUBLICACION.build(DeleteItemCommand)\n    .key({ publicacionId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function eliminarPublicacionRepository(publicacionId) {\n  await MODELO_PUBLICACION.build(EntityRepository).delete(\n    { publicacionId }\n  );\n}",
             "create": "mkdir -p src/publicaciones/eliminar\nls -d src/publicaciones/eliminar\ntouch src/publicaciones/eliminar/repository.mjs\ncode src/publicaciones/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/publicaciones/modificar-paginas/repository.mjs",
             "path": "src/publicaciones/modificar-paginas/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function modificarPaginasRepository(publicacionId, paginas) {\n  const { Attributes } = await MODELO_PUBLICACION.build(UpdateItemCommand)\n    .item({ publicacionId, paginas })\n    .options({\n      condition: { attr: 'publicacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function modificarPaginasRepository(publicacionId, paginas) {\n  const { Attributes } = await MODELO_PUBLICACION.build(EntityRepository).update(\n    { publicacionId, paginas },\n    {\n      condition: { attr: 'publicacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/publicaciones/modificar-paginas\nls -d src/publicaciones/modificar-paginas\ntouch src/publicaciones/modificar-paginas/repository.mjs\ncode src/publicaciones/modificar-paginas/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/editoriales/consultar/repository.mjs",
             "path": "src/editoriales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function buscarEditorialRepository(editorialId) {\n  const { Item } = await MODELO_EDITORIAL.build(GetItemCommand)\n    .key({ editorialId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEditorialRepository(editorialId, minimo) {\n  const { Items = [] } = await TABLA_PUBLICACIONES.build(QueryCommand)\n    .entities(MODELO_PUBLICACION)\n    .query({ index: 'PorEditorial', partition: editorialId })\n    .options({ filters: { Publicacion: { attr: 'paginas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function buscarEditorialRepository(editorialId) {\n  const { Item } = await MODELO_EDITORIAL.build(EntityRepository).get(\n    { editorialId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEditorialRepository(editorialId, minimo) {\n  const { Items = [] } = await MODELO_PUBLICACION.build(EntityRepository).query(\n    { index: 'PorEditorial', partition: editorialId },\n    { filters: { Publicacion: { attr: 'paginas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/editoriales/consultar\nls -d src/editoriales/consultar\ntouch src/editoriales/consultar/repository.mjs\ncode src/editoriales/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/publicaciones/trasladar/repository.mjs",
             "path": "src/publicaciones/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function trasladarPublicacionRepository(publicacionId, editorialId) {\n  const { Attributes } = await MODELO_PUBLICACION.build(UpdateItemCommand)\n    .item({ publicacionId, editorialId })\n    .options({\n      condition: { attr: 'publicacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function trasladarPublicacionRepository(publicacionId, editorialId) {\n  const { Attributes } = await MODELO_PUBLICACION.build(EntityRepository).update(\n    { publicacionId, editorialId },\n    {\n      condition: { attr: 'publicacionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/publicaciones/trasladar\nls -d src/publicaciones/trasladar\ntouch src/publicaciones/trasladar/repository.mjs\ncode src/publicaciones/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/editoriales/consultar/repository.mjs",
             "path": "src/editoriales/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL, TABLA_PUBLICACIONES } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function buscarEditorialRepository(editorialId) {\n  const { Item } = await MODELO_EDITORIAL.build(GetItemCommand)\n    .key({ editorialId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEditorialRepository(editorialId, minimo) {\n  const { Items = [] } = await TABLA_PUBLICACIONES.build(QueryCommand)\n    .entities(MODELO_PUBLICACION)\n    .query({ index: 'PorEditorial', partition: editorialId })\n    .options({ filters: { Publicacion: { attr: 'paginas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUBLICACION, MODELO_EDITORIAL } from '../../models/editorial-publicacion.model.mjs';\n\nexport async function buscarEditorialRepository(editorialId) {\n  const { Item } = await MODELO_EDITORIAL.build(EntityRepository).get(\n    { editorialId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEditorialRepository(editorialId, minimo) {\n  const { Items = [] } = await MODELO_PUBLICACION.build(EntityRepository).query(\n    { index: 'PorEditorial', partition: editorialId },\n    { filters: { Publicacion: { attr: 'paginas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/editoriales/consultar\nls -d src/editoriales/consultar\ntouch src/editoriales/consultar/repository.mjs\ncode src/editoriales/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

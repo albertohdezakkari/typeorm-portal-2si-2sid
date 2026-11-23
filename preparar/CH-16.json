@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/articulos/crear-listar/repository.mjs",
             "path": "src/articulos/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function crearArticuloRepository(articulo) {\n  await MODELO_ARTICULO.build(PutItemCommand)\n    .item(articulo)\n    .options({ condition: { attr: 'articuloId', exists: false } })\n    .send();\n}\n\nexport async function listarArticulosRepository() {\n  const { Items = [] } = await TABLA_ARTICULOS.build(ScanCommand)\n    .entities(MODELO_ARTICULO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function crearArticuloRepository(articulo) {\n  await MODELO_ARTICULO.build(EntityRepository).put(\n    articulo,\n    { condition: { attr: 'articuloId', exists: false } }\n  );\n}\n\nexport async function listarArticulosRepository() {\n  const { Items = [] } = await MODELO_ARTICULO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/articulos/crear-listar\nls -d src/articulos/crear-listar\ntouch src/articulos/crear-listar/repository.mjs\ncode src/articulos/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/articulos/eliminar/repository.mjs",
             "path": "src/articulos/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function eliminarArticuloRepository(articuloId) {\n  await MODELO_ARTICULO.build(DeleteItemCommand)\n    .key({ articuloId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function eliminarArticuloRepository(articuloId) {\n  await MODELO_ARTICULO.build(EntityRepository).delete(\n    { articuloId }\n  );\n}",
             "create": "mkdir -p src/articulos/eliminar\nls -d src/articulos/eliminar\ntouch src/articulos/eliminar/repository.mjs\ncode src/articulos/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/articulos/modificar-stock/repository.mjs",
             "path": "src/articulos/modificar-stock/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function modificarStockRepository(articuloId, stock) {\n  const { Attributes } = await MODELO_ARTICULO.build(UpdateItemCommand)\n    .item({ articuloId, stock })\n    .options({\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function modificarStockRepository(articuloId, stock) {\n  const { Attributes } = await MODELO_ARTICULO.build(EntityRepository).update(\n    { articuloId, stock },\n    {\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/articulos/modificar-stock\nls -d src/articulos/modificar-stock\ntouch src/articulos/modificar-stock/repository.mjs\ncode src/articulos/modificar-stock/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/tiendas/consultar/repository.mjs",
             "path": "src/tiendas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function buscarTiendaRepository(tiendaId) {\n  const { Item } = await MODELO_TIENDA.build(GetItemCommand)\n    .key({ tiendaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTiendaRepository(tiendaId, minimo) {\n  const { Items = [] } = await TABLA_ARTICULOS.build(QueryCommand)\n    .entities(MODELO_ARTICULO)\n    .query({ index: 'PorTienda', partition: tiendaId })\n    .options({ filters: { Articulo: { attr: 'stock', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function buscarTiendaRepository(tiendaId) {\n  const { Item } = await MODELO_TIENDA.build(EntityRepository).get(\n    { tiendaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarTiendaRepository(tiendaId, minimo) {\n  const { Items = [] } = await MODELO_ARTICULO.build(EntityRepository).query(\n    { index: 'PorTienda', partition: tiendaId },\n    { filters: { Articulo: { attr: 'stock', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/tiendas/consultar\nls -d src/tiendas/consultar\ntouch src/tiendas/consultar/repository.mjs\ncode src/tiendas/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/articulos/trasladar/repository.mjs",
             "path": "src/articulos/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function trasladarArticuloRepository(articuloId, tiendaId) {\n  const { Attributes } = await MODELO_ARTICULO.build(UpdateItemCommand)\n    .item({ articuloId, tiendaId })\n    .options({\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function trasladarArticuloRepository(articuloId, tiendaId) {\n  const { Attributes } = await MODELO_ARTICULO.build(EntityRepository).update(\n    { articuloId, tiendaId },\n    {\n      condition: { attr: 'articuloId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/articulos/trasladar\nls -d src/articulos/trasladar\ntouch src/articulos/trasladar/repository.mjs\ncode src/articulos/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/tiendas/consultar/repository.mjs",
             "path": "src/tiendas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ARTICULO, MODELO_TIENDA, TABLA_ARTICULOS } from '../../models/tienda-articulo.model.mjs';\n\nexport async function buscarTiendaRepository(tiendaId) {\n  const { Item } = await MODELO_TIENDA.build(GetItemCommand)\n    .key({ tiendaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTiendaRepository(tiendaId, minimo) {\n  const { Items = [] } = await TABLA_ARTICULOS.build(QueryCommand)\n    .entities(MODELO_ARTICULO)\n    .query({ index: 'PorTienda', partition: tiendaId })\n    .options({ filters: { Articulo: { attr: 'stock', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARTICULO, MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function buscarTiendaRepository(tiendaId) {\n  const { Item } = await MODELO_TIENDA.build(EntityRepository).get(\n    { tiendaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarTiendaRepository(tiendaId, minimo) {\n  const { Items = [] } = await MODELO_ARTICULO.build(EntityRepository).query(\n    { index: 'PorTienda', partition: tiendaId },\n    { filters: { Articulo: { attr: 'stock', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/tiendas/consultar\nls -d src/tiendas/consultar\ntouch src/tiendas/consultar/repository.mjs\ncode src/tiendas/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

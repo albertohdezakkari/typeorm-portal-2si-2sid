@@ -163,7 +163,7 @@
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json`, `preparar/${encodeURIComponent(context.id)}.json?v=aula-2`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=entity-1`, `preparar/${encodeURIComponent(context.id)}.json?v=entity-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;

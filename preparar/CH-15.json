@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/proyectos/crear-listar/repository.mjs",
             "path": "src/proyectos/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function crearProyectoRepository(proyecto) {\n  await MODELO_PROYECTO.build(PutItemCommand)\n    .item(proyecto)\n    .options({ condition: { attr: 'proyectoId', exists: false } })\n    .send();\n}\n\nexport async function listarProyectosRepository() {\n  const { Items = [] } = await TABLA_PROYECTOS.build(ScanCommand)\n    .entities(MODELO_PROYECTO)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function crearProyectoRepository(proyecto) {\n  await MODELO_PROYECTO.build(EntityRepository).put(\n    proyecto,\n    { condition: { attr: 'proyectoId', exists: false } }\n  );\n}\n\nexport async function listarProyectosRepository() {\n  const { Items = [] } = await MODELO_PROYECTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/proyectos/crear-listar\nls -d src/proyectos/crear-listar\ntouch src/proyectos/crear-listar/repository.mjs\ncode src/proyectos/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/proyectos/eliminar/repository.mjs",
             "path": "src/proyectos/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function eliminarProyectoRepository(proyectoId) {\n  await MODELO_PROYECTO.build(DeleteItemCommand)\n    .key({ proyectoId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function eliminarProyectoRepository(proyectoId) {\n  await MODELO_PROYECTO.build(EntityRepository).delete(\n    { proyectoId }\n  );\n}",
             "create": "mkdir -p src/proyectos/eliminar\nls -d src/proyectos/eliminar\ntouch src/proyectos/eliminar/repository.mjs\ncode src/proyectos/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/proyectos/modificar-horas-estimadas/repository.mjs",
             "path": "src/proyectos/modificar-horas-estimadas/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function modificarHorasEstimadasRepository(proyectoId, horasEstimadas) {\n  const { Attributes } = await MODELO_PROYECTO.build(UpdateItemCommand)\n    .item({ proyectoId, horasEstimadas })\n    .options({\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function modificarHorasEstimadasRepository(proyectoId, horasEstimadas) {\n  const { Attributes } = await MODELO_PROYECTO.build(EntityRepository).update(\n    { proyectoId, horasEstimadas },\n    {\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/proyectos/modificar-horas-estimadas\nls -d src/proyectos/modificar-horas-estimadas\ntouch src/proyectos/modificar-horas-estimadas/repository.mjs\ncode src/proyectos/modificar-horas-estimadas/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/empresas/consultar/repository.mjs",
             "path": "src/empresas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function buscarEmpresaRepository(empresaId) {\n  const { Item } = await MODELO_EMPRESA.build(GetItemCommand)\n    .key({ empresaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEmpresaRepository(empresaId, minimo) {\n  const { Items = [] } = await TABLA_PROYECTOS.build(QueryCommand)\n    .entities(MODELO_PROYECTO)\n    .query({ index: 'PorEmpresa', partition: empresaId })\n    .options({ filters: { Proyecto: { attr: 'horasEstimadas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function buscarEmpresaRepository(empresaId) {\n  const { Item } = await MODELO_EMPRESA.build(EntityRepository).get(\n    { empresaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEmpresaRepository(empresaId, minimo) {\n  const { Items = [] } = await MODELO_PROYECTO.build(EntityRepository).query(\n    { index: 'PorEmpresa', partition: empresaId },\n    { filters: { Proyecto: { attr: 'horasEstimadas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/empresas/consultar\nls -d src/empresas/consultar\ntouch src/empresas/consultar/repository.mjs\ncode src/empresas/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/proyectos/trasladar/repository.mjs",
             "path": "src/proyectos/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function trasladarProyectoRepository(proyectoId, empresaId) {\n  const { Attributes } = await MODELO_PROYECTO.build(UpdateItemCommand)\n    .item({ proyectoId, empresaId })\n    .options({\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function trasladarProyectoRepository(proyectoId, empresaId) {\n  const { Attributes } = await MODELO_PROYECTO.build(EntityRepository).update(\n    { proyectoId, empresaId },\n    {\n      condition: { attr: 'proyectoId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/proyectos/trasladar\nls -d src/proyectos/trasladar\ntouch src/proyectos/trasladar/repository.mjs\ncode src/proyectos/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/empresas/consultar/repository.mjs",
             "path": "src/empresas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_PROYECTO, MODELO_EMPRESA, TABLA_PROYECTOS } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function buscarEmpresaRepository(empresaId) {\n  const { Item } = await MODELO_EMPRESA.build(GetItemCommand)\n    .key({ empresaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarEmpresaRepository(empresaId, minimo) {\n  const { Items = [] } = await TABLA_PROYECTOS.build(QueryCommand)\n    .entities(MODELO_PROYECTO)\n    .query({ index: 'PorEmpresa', partition: empresaId })\n    .options({ filters: { Proyecto: { attr: 'horasEstimadas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PROYECTO, MODELO_EMPRESA } from '../../models/empresa-proyecto.model.mjs';\n\nexport async function buscarEmpresaRepository(empresaId) {\n  const { Item } = await MODELO_EMPRESA.build(EntityRepository).get(\n    { empresaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarEmpresaRepository(empresaId, minimo) {\n  const { Items = [] } = await MODELO_PROYECTO.build(EntityRepository).query(\n    { index: 'PorEmpresa', partition: empresaId },\n    { filters: { Proyecto: { attr: 'horasEstimadas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/empresas/consultar\nls -d src/empresas/consultar\ntouch src/empresas/consultar/repository.mjs\ncode src/empresas/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

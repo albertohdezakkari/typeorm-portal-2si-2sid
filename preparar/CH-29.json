@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/cosechas/crear-listar/repository.mjs",
             "path": "src/cosechas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearCosechaRepository(cosecha) {\n  await MODELO_COSECHA.build(PutItemCommand)\n    .item(cosecha)\n    .options({ condition: { attr: 'cosechaId', exists: false } })\n    .send();\n}\n\nexport async function listarCosechasRepository() {\n  const { Items = [] } = await TABLA_COSECHAS.build(ScanCommand)\n    .entities(MODELO_COSECHA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearCosechaRepository(cosecha) {\n  await MODELO_COSECHA.build(EntityRepository).put(\n    cosecha,\n    { condition: { attr: 'cosechaId', exists: false } }\n  );\n}\n\nexport async function listarCosechasRepository() {\n  const { Items = [] } = await MODELO_COSECHA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/cosechas/crear-listar\nls -d src/cosechas/crear-listar\ntouch src/cosechas/crear-listar/repository.mjs\ncode src/cosechas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/cosechas/eliminar/repository.mjs",
             "path": "src/cosechas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function eliminarCosechaRepository(cosechaId) {\n  await MODELO_COSECHA.build(DeleteItemCommand)\n    .key({ cosechaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function eliminarCosechaRepository(cosechaId) {\n  await MODELO_COSECHA.build(EntityRepository).delete(\n    { cosechaId }\n  );\n}",
             "create": "mkdir -p src/cosechas/eliminar\nls -d src/cosechas/eliminar\ntouch src/cosechas/eliminar/repository.mjs\ncode src/cosechas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/cosechas/modificar-kilos/repository.mjs",
             "path": "src/cosechas/modificar-kilos/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function modificarKilosRepository(cosechaId, kilos) {\n  const { Attributes } = await MODELO_COSECHA.build(UpdateItemCommand)\n    .item({ cosechaId, kilos })\n    .options({\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function modificarKilosRepository(cosechaId, kilos) {\n  const { Attributes } = await MODELO_COSECHA.build(EntityRepository).update(\n    { cosechaId, kilos },\n    {\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/cosechas/modificar-kilos\nls -d src/cosechas/modificar-kilos\ntouch src/cosechas/modificar-kilos/repository.mjs\ncode src/cosechas/modificar-kilos/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/granjas/consultar/repository.mjs",
             "path": "src/granjas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function buscarGranjaRepository(granjaId) {\n  const { Item } = await MODELO_GRANJA.build(GetItemCommand)\n    .key({ granjaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarGranjaRepository(granjaId, minimo) {\n  const { Items = [] } = await TABLA_COSECHAS.build(QueryCommand)\n    .entities(MODELO_COSECHA)\n    .query({ index: 'PorGranja', partition: granjaId })\n    .options({ filters: { Cosecha: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function buscarGranjaRepository(granjaId) {\n  const { Item } = await MODELO_GRANJA.build(EntityRepository).get(\n    { granjaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarGranjaRepository(granjaId, minimo) {\n  const { Items = [] } = await MODELO_COSECHA.build(EntityRepository).query(\n    { index: 'PorGranja', partition: granjaId },\n    { filters: { Cosecha: { attr: 'kilos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/granjas/consultar\nls -d src/granjas/consultar\ntouch src/granjas/consultar/repository.mjs\ncode src/granjas/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/cosechas/trasladar/repository.mjs",
             "path": "src/cosechas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function trasladarCosechaRepository(cosechaId, granjaId) {\n  const { Attributes } = await MODELO_COSECHA.build(UpdateItemCommand)\n    .item({ cosechaId, granjaId })\n    .options({\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function trasladarCosechaRepository(cosechaId, granjaId) {\n  const { Attributes } = await MODELO_COSECHA.build(EntityRepository).update(\n    { cosechaId, granjaId },\n    {\n      condition: { attr: 'cosechaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/cosechas/trasladar\nls -d src/cosechas/trasladar\ntouch src/cosechas/trasladar/repository.mjs\ncode src/cosechas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/granjas/consultar/repository.mjs",
             "path": "src/granjas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COSECHA, MODELO_GRANJA, TABLA_COSECHAS } from '../../models/granja-cosecha.model.mjs';\n\nexport async function buscarGranjaRepository(granjaId) {\n  const { Item } = await MODELO_GRANJA.build(GetItemCommand)\n    .key({ granjaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarGranjaRepository(granjaId, minimo) {\n  const { Items = [] } = await TABLA_COSECHAS.build(QueryCommand)\n    .entities(MODELO_COSECHA)\n    .query({ index: 'PorGranja', partition: granjaId })\n    .options({ filters: { Cosecha: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COSECHA, MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function buscarGranjaRepository(granjaId) {\n  const { Item } = await MODELO_GRANJA.build(EntityRepository).get(\n    { granjaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarGranjaRepository(granjaId, minimo) {\n  const { Items = [] } = await MODELO_COSECHA.build(EntityRepository).query(\n    { index: 'PorGranja', partition: granjaId },\n    { filters: { Cosecha: { attr: 'kilos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/granjas/consultar\nls -d src/granjas/consultar\ntouch src/granjas/consultar/repository.mjs\ncode src/granjas/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

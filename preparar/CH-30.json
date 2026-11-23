@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/funciones/crear-listar/repository.mjs",
             "path": "src/funciones/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function crearFuncionRepository(funcion) {\n  await MODELO_FUNCION.build(PutItemCommand)\n    .item(funcion)\n    .options({ condition: { attr: 'funcionId', exists: false } })\n    .send();\n}\n\nexport async function listarFuncionesRepository() {\n  const { Items = [] } = await TABLA_FUNCIONES.build(ScanCommand)\n    .entities(MODELO_FUNCION)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function crearFuncionRepository(funcion) {\n  await MODELO_FUNCION.build(EntityRepository).put(\n    funcion,\n    { condition: { attr: 'funcionId', exists: false } }\n  );\n}\n\nexport async function listarFuncionesRepository() {\n  const { Items = [] } = await MODELO_FUNCION.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/funciones/crear-listar\nls -d src/funciones/crear-listar\ntouch src/funciones/crear-listar/repository.mjs\ncode src/funciones/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/funciones/eliminar/repository.mjs",
             "path": "src/funciones/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function eliminarFuncionRepository(funcionId) {\n  await MODELO_FUNCION.build(DeleteItemCommand)\n    .key({ funcionId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function eliminarFuncionRepository(funcionId) {\n  await MODELO_FUNCION.build(EntityRepository).delete(\n    { funcionId }\n  );\n}",
             "create": "mkdir -p src/funciones/eliminar\nls -d src/funciones/eliminar\ntouch src/funciones/eliminar/repository.mjs\ncode src/funciones/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/funciones/modificar-aforo/repository.mjs",
             "path": "src/funciones/modificar-aforo/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function modificarAforoRepository(funcionId, aforo) {\n  const { Attributes } = await MODELO_FUNCION.build(UpdateItemCommand)\n    .item({ funcionId, aforo })\n    .options({\n      condition: { attr: 'funcionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function modificarAforoRepository(funcionId, aforo) {\n  const { Attributes } = await MODELO_FUNCION.build(EntityRepository).update(\n    { funcionId, aforo },\n    {\n      condition: { attr: 'funcionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/funciones/modificar-aforo\nls -d src/funciones/modificar-aforo\ntouch src/funciones/modificar-aforo/repository.mjs\ncode src/funciones/modificar-aforo/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/teatros/consultar/repository.mjs",
             "path": "src/teatros/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function buscarTeatroRepository(teatroId) {\n  const { Item } = await MODELO_TEATRO.build(GetItemCommand)\n    .key({ teatroId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTeatroRepository(teatroId, minimo) {\n  const { Items = [] } = await TABLA_FUNCIONES.build(QueryCommand)\n    .entities(MODELO_FUNCION)\n    .query({ index: 'PorTeatro', partition: teatroId })\n    .options({ filters: { Funcion: { attr: 'aforo', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function buscarTeatroRepository(teatroId) {\n  const { Item } = await MODELO_TEATRO.build(EntityRepository).get(\n    { teatroId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarTeatroRepository(teatroId, minimo) {\n  const { Items = [] } = await MODELO_FUNCION.build(EntityRepository).query(\n    { index: 'PorTeatro', partition: teatroId },\n    { filters: { Funcion: { attr: 'aforo', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/teatros/consultar\nls -d src/teatros/consultar\ntouch src/teatros/consultar/repository.mjs\ncode src/teatros/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/funciones/trasladar/repository.mjs",
             "path": "src/funciones/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function trasladarFuncionRepository(funcionId, teatroId) {\n  const { Attributes } = await MODELO_FUNCION.build(UpdateItemCommand)\n    .item({ funcionId, teatroId })\n    .options({\n      condition: { attr: 'funcionId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function trasladarFuncionRepository(funcionId, teatroId) {\n  const { Attributes } = await MODELO_FUNCION.build(EntityRepository).update(\n    { funcionId, teatroId },\n    {\n      condition: { attr: 'funcionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/funciones/trasladar\nls -d src/funciones/trasladar\ntouch src/funciones/trasladar/repository.mjs\ncode src/funciones/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/teatros/consultar/repository.mjs",
             "path": "src/teatros/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_FUNCION, MODELO_TEATRO, TABLA_FUNCIONES } from '../../models/teatro-funcion.model.mjs';\n\nexport async function buscarTeatroRepository(teatroId) {\n  const { Item } = await MODELO_TEATRO.build(GetItemCommand)\n    .key({ teatroId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarTeatroRepository(teatroId, minimo) {\n  const { Items = [] } = await TABLA_FUNCIONES.build(QueryCommand)\n    .entities(MODELO_FUNCION)\n    .query({ index: 'PorTeatro', partition: teatroId })\n    .options({ filters: { Funcion: { attr: 'aforo', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_FUNCION, MODELO_TEATRO } from '../../models/teatro-funcion.model.mjs';\n\nexport async function buscarTeatroRepository(teatroId) {\n  const { Item } = await MODELO_TEATRO.build(EntityRepository).get(\n    { teatroId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarTeatroRepository(teatroId, minimo) {\n  const { Items = [] } = await MODELO_FUNCION.build(EntityRepository).query(\n    { index: 'PorTeatro', partition: teatroId },\n    { filters: { Funcion: { attr: 'aforo', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/teatros/consultar\nls -d src/teatros/consultar\ntouch src/teatros/consultar/repository.mjs\ncode src/teatros/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

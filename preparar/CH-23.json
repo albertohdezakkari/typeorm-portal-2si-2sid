@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/comandas/crear-listar/repository.mjs",
             "path": "src/comandas/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function crearComandaRepository(comanda) {\n  await MODELO_COMANDA.build(PutItemCommand)\n    .item(comanda)\n    .options({ condition: { attr: 'comandaId', exists: false } })\n    .send();\n}\n\nexport async function listarComandasRepository() {\n  const { Items = [] } = await TABLA_COMANDAS.build(ScanCommand)\n    .entities(MODELO_COMANDA)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function crearComandaRepository(comanda) {\n  await MODELO_COMANDA.build(EntityRepository).put(\n    comanda,\n    { condition: { attr: 'comandaId', exists: false } }\n  );\n}\n\nexport async function listarComandasRepository() {\n  const { Items = [] } = await MODELO_COMANDA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/comandas/crear-listar\nls -d src/comandas/crear-listar\ntouch src/comandas/crear-listar/repository.mjs\ncode src/comandas/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/comandas/eliminar/repository.mjs",
             "path": "src/comandas/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function eliminarComandaRepository(comandaId) {\n  await MODELO_COMANDA.build(DeleteItemCommand)\n    .key({ comandaId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function eliminarComandaRepository(comandaId) {\n  await MODELO_COMANDA.build(EntityRepository).delete(\n    { comandaId }\n  );\n}",
             "create": "mkdir -p src/comandas/eliminar\nls -d src/comandas/eliminar\ntouch src/comandas/eliminar/repository.mjs\ncode src/comandas/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/comandas/modificar-importe-centimos/repository.mjs",
             "path": "src/comandas/modificar-importe-centimos/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function modificarImporteCentimosRepository(comandaId, importeCentimos) {\n  const { Attributes } = await MODELO_COMANDA.build(UpdateItemCommand)\n    .item({ comandaId, importeCentimos })\n    .options({\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function modificarImporteCentimosRepository(comandaId, importeCentimos) {\n  const { Attributes } = await MODELO_COMANDA.build(EntityRepository).update(\n    { comandaId, importeCentimos },\n    {\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/comandas/modificar-importe-centimos\nls -d src/comandas/modificar-importe-centimos\ntouch src/comandas/modificar-importe-centimos/repository.mjs\ncode src/comandas/modificar-importe-centimos/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/cafeterias/consultar/repository.mjs",
             "path": "src/cafeterias/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function buscarCafeteriaRepository(cafeteriaId) {\n  const { Item } = await MODELO_CAFETERIA.build(GetItemCommand)\n    .key({ cafeteriaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCafeteriaRepository(cafeteriaId, minimo) {\n  const { Items = [] } = await TABLA_COMANDAS.build(QueryCommand)\n    .entities(MODELO_COMANDA)\n    .query({ index: 'PorCafeteria', partition: cafeteriaId })\n    .options({ filters: { Comanda: { attr: 'importeCentimos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function buscarCafeteriaRepository(cafeteriaId) {\n  const { Item } = await MODELO_CAFETERIA.build(EntityRepository).get(\n    { cafeteriaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarCafeteriaRepository(cafeteriaId, minimo) {\n  const { Items = [] } = await MODELO_COMANDA.build(EntityRepository).query(\n    { index: 'PorCafeteria', partition: cafeteriaId },\n    { filters: { Comanda: { attr: 'importeCentimos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/cafeterias/consultar\nls -d src/cafeterias/consultar\ntouch src/cafeterias/consultar/repository.mjs\ncode src/cafeterias/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/comandas/trasladar/repository.mjs",
             "path": "src/comandas/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function trasladarComandaRepository(comandaId, cafeteriaId) {\n  const { Attributes } = await MODELO_COMANDA.build(UpdateItemCommand)\n    .item({ comandaId, cafeteriaId })\n    .options({\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function trasladarComandaRepository(comandaId, cafeteriaId) {\n  const { Attributes } = await MODELO_COMANDA.build(EntityRepository).update(\n    { comandaId, cafeteriaId },\n    {\n      condition: { attr: 'comandaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/comandas/trasladar\nls -d src/comandas/trasladar\ntouch src/comandas/trasladar/repository.mjs\ncode src/comandas/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/cafeterias/consultar/repository.mjs",
             "path": "src/cafeterias/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_COMANDA, MODELO_CAFETERIA, TABLA_COMANDAS } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function buscarCafeteriaRepository(cafeteriaId) {\n  const { Item } = await MODELO_CAFETERIA.build(GetItemCommand)\n    .key({ cafeteriaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCafeteriaRepository(cafeteriaId, minimo) {\n  const { Items = [] } = await TABLA_COMANDAS.build(QueryCommand)\n    .entities(MODELO_COMANDA)\n    .query({ index: 'PorCafeteria', partition: cafeteriaId })\n    .options({ filters: { Comanda: { attr: 'importeCentimos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMANDA, MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function buscarCafeteriaRepository(cafeteriaId) {\n  const { Item } = await MODELO_CAFETERIA.build(EntityRepository).get(\n    { cafeteriaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarCafeteriaRepository(cafeteriaId, minimo) {\n  const { Items = [] } = await MODELO_COMANDA.build(EntityRepository).query(\n    { index: 'PorCafeteria', partition: cafeteriaId },\n    { filters: { Comanda: { attr: 'importeCentimos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/cafeterias/consultar\nls -d src/cafeterias/consultar\ntouch src/cafeterias/consultar/repository.mjs\ncode src/cafeterias/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

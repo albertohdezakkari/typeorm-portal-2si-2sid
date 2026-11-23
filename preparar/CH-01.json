@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/animales/crear-listar/repository.mjs",
             "path": "src/animales/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function crearAnimalRepository(animal) {\n  await MODELO_ANIMAL.build(PutItemCommand)\n    .item(animal)\n    .options({ condition: { attr: 'animalId', exists: false } })\n    .send();\n}\n\nexport async function listarAnimalesRepository() {\n  const { Items = [] } = await TABLA_ANIMALES.build(ScanCommand)\n    .entities(MODELO_ANIMAL)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function crearAnimalRepository(animal) {\n  await MODELO_ANIMAL.build(EntityRepository).put(\n    animal,\n    { condition: { attr: 'animalId', exists: false } }\n  );\n}\n\nexport async function listarAnimalesRepository() {\n  const { Items = [] } = await MODELO_ANIMAL.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/animales/crear-listar\nls -d src/animales/crear-listar\ntouch src/animales/crear-listar/repository.mjs\ncode src/animales/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/animales/eliminar/repository.mjs",
             "path": "src/animales/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function eliminarAnimalRepository(animalId) {\n  await MODELO_ANIMAL.build(DeleteItemCommand)\n    .key({ animalId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function eliminarAnimalRepository(animalId) {\n  await MODELO_ANIMAL.build(EntityRepository).delete(\n    { animalId }\n  );\n}",
             "create": "mkdir -p src/animales/eliminar\nls -d src/animales/eliminar\ntouch src/animales/eliminar/repository.mjs\ncode src/animales/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/animales/modificar-edad-meses/repository.mjs",
             "path": "src/animales/modificar-edad-meses/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function modificarEdadMesesRepository(animalId, edadMeses) {\n  const { Attributes } = await MODELO_ANIMAL.build(UpdateItemCommand)\n    .item({ animalId, edadMeses })\n    .options({\n      condition: { attr: 'animalId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function modificarEdadMesesRepository(animalId, edadMeses) {\n  const { Attributes } = await MODELO_ANIMAL.build(EntityRepository).update(\n    { animalId, edadMeses },\n    {\n      condition: { attr: 'animalId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/animales/modificar-edad-meses\nls -d src/animales/modificar-edad-meses\ntouch src/animales/modificar-edad-meses/repository.mjs\ncode src/animales/modificar-edad-meses/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/refugios/consultar/repository.mjs",
             "path": "src/refugios/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function buscarRefugioRepository(refugioId) {\n  const { Item } = await MODELO_REFUGIO.build(GetItemCommand)\n    .key({ refugioId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarRefugioRepository(refugioId, minimo) {\n  const { Items = [] } = await TABLA_ANIMALES.build(QueryCommand)\n    .entities(MODELO_ANIMAL)\n    .query({ index: 'PorRefugio', partition: refugioId })\n    .options({ filters: { Animal: { attr: 'edadMeses', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function buscarRefugioRepository(refugioId) {\n  const { Item } = await MODELO_REFUGIO.build(EntityRepository).get(\n    { refugioId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarRefugioRepository(refugioId, minimo) {\n  const { Items = [] } = await MODELO_ANIMAL.build(EntityRepository).query(\n    { index: 'PorRefugio', partition: refugioId },\n    { filters: { Animal: { attr: 'edadMeses', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/refugios/consultar\nls -d src/refugios/consultar\ntouch src/refugios/consultar/repository.mjs\ncode src/refugios/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/animales/trasladar/repository.mjs",
             "path": "src/animales/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function trasladarAnimalRepository(animalId, refugioId) {\n  const { Attributes } = await MODELO_ANIMAL.build(UpdateItemCommand)\n    .item({ animalId, refugioId })\n    .options({\n      condition: { attr: 'animalId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function trasladarAnimalRepository(animalId, refugioId) {\n  const { Attributes } = await MODELO_ANIMAL.build(EntityRepository).update(\n    { animalId, refugioId },\n    {\n      condition: { attr: 'animalId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/animales/trasladar\nls -d src/animales/trasladar\ntouch src/animales/trasladar/repository.mjs\ncode src/animales/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/refugios/consultar/repository.mjs",
             "path": "src/refugios/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ANIMAL, MODELO_REFUGIO, TABLA_ANIMALES } from '../../models/refugio-animal.model.mjs';\n\nexport async function buscarRefugioRepository(refugioId) {\n  const { Item } = await MODELO_REFUGIO.build(GetItemCommand)\n    .key({ refugioId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarRefugioRepository(refugioId, minimo) {\n  const { Items = [] } = await TABLA_ANIMALES.build(QueryCommand)\n    .entities(MODELO_ANIMAL)\n    .query({ index: 'PorRefugio', partition: refugioId })\n    .options({ filters: { Animal: { attr: 'edadMeses', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ANIMAL, MODELO_REFUGIO } from '../../models/refugio-animal.model.mjs';\n\nexport async function buscarRefugioRepository(refugioId) {\n  const { Item } = await MODELO_REFUGIO.build(EntityRepository).get(\n    { refugioId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarRefugioRepository(refugioId, minimo) {\n  const { Items = [] } = await MODELO_ANIMAL.build(EntityRepository).query(\n    { index: 'PorRefugio', partition: refugioId },\n    { filters: { Animal: { attr: 'edadMeses', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/refugios/consultar\nls -d src/refugios/consultar\ntouch src/refugios/consultar/repository.mjs\ncode src/refugios/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

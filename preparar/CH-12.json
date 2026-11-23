@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/lotes/crear-listar/repository.mjs",
             "path": "src/lotes/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function crearLoteRepository(lote) {\n  await MODELO_LOTE.build(PutItemCommand)\n    .item(lote)\n    .options({ condition: { attr: 'loteId', exists: false } })\n    .send();\n}\n\nexport async function listarLotesRepository() {\n  const { Items = [] } = await TABLA_LOTES.build(ScanCommand)\n    .entities(MODELO_LOTE)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function crearLoteRepository(lote) {\n  await MODELO_LOTE.build(EntityRepository).put(\n    lote,\n    { condition: { attr: 'loteId', exists: false } }\n  );\n}\n\nexport async function listarLotesRepository() {\n  const { Items = [] } = await MODELO_LOTE.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/lotes/crear-listar\nls -d src/lotes/crear-listar\ntouch src/lotes/crear-listar/repository.mjs\ncode src/lotes/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/lotes/eliminar/repository.mjs",
             "path": "src/lotes/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function eliminarLoteRepository(loteId) {\n  await MODELO_LOTE.build(DeleteItemCommand)\n    .key({ loteId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function eliminarLoteRepository(loteId) {\n  await MODELO_LOTE.build(EntityRepository).delete(\n    { loteId }\n  );\n}",
             "create": "mkdir -p src/lotes/eliminar\nls -d src/lotes/eliminar\ntouch src/lotes/eliminar/repository.mjs\ncode src/lotes/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/lotes/modificar-kilos/repository.mjs",
             "path": "src/lotes/modificar-kilos/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function modificarKilosRepository(loteId, kilos) {\n  const { Attributes } = await MODELO_LOTE.build(UpdateItemCommand)\n    .item({ loteId, kilos })\n    .options({\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function modificarKilosRepository(loteId, kilos) {\n  const { Attributes } = await MODELO_LOTE.build(EntityRepository).update(\n    { loteId, kilos },\n    {\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/lotes/modificar-kilos\nls -d src/lotes/modificar-kilos\ntouch src/lotes/modificar-kilos/repository.mjs\ncode src/lotes/modificar-kilos/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/cooperativas/consultar/repository.mjs",
             "path": "src/cooperativas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function buscarCooperativaRepository(cooperativaId) {\n  const { Item } = await MODELO_COOPERATIVA.build(GetItemCommand)\n    .key({ cooperativaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCooperativaRepository(cooperativaId, minimo) {\n  const { Items = [] } = await TABLA_LOTES.build(QueryCommand)\n    .entities(MODELO_LOTE)\n    .query({ index: 'PorCooperativa', partition: cooperativaId })\n    .options({ filters: { Lote: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function buscarCooperativaRepository(cooperativaId) {\n  const { Item } = await MODELO_COOPERATIVA.build(EntityRepository).get(\n    { cooperativaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarCooperativaRepository(cooperativaId, minimo) {\n  const { Items = [] } = await MODELO_LOTE.build(EntityRepository).query(\n    { index: 'PorCooperativa', partition: cooperativaId },\n    { filters: { Lote: { attr: 'kilos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/cooperativas/consultar\nls -d src/cooperativas/consultar\ntouch src/cooperativas/consultar/repository.mjs\ncode src/cooperativas/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/lotes/trasladar/repository.mjs",
             "path": "src/lotes/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function trasladarLoteRepository(loteId, cooperativaId) {\n  const { Attributes } = await MODELO_LOTE.build(UpdateItemCommand)\n    .item({ loteId, cooperativaId })\n    .options({\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function trasladarLoteRepository(loteId, cooperativaId) {\n  const { Attributes } = await MODELO_LOTE.build(EntityRepository).update(\n    { loteId, cooperativaId },\n    {\n      condition: { attr: 'loteId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/lotes/trasladar\nls -d src/lotes/trasladar\ntouch src/lotes/trasladar/repository.mjs\ncode src/lotes/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/cooperativas/consultar/repository.mjs",
             "path": "src/cooperativas/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_LOTE, MODELO_COOPERATIVA, TABLA_LOTES } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function buscarCooperativaRepository(cooperativaId) {\n  const { Item } = await MODELO_COOPERATIVA.build(GetItemCommand)\n    .key({ cooperativaId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarCooperativaRepository(cooperativaId, minimo) {\n  const { Items = [] } = await TABLA_LOTES.build(QueryCommand)\n    .entities(MODELO_LOTE)\n    .query({ index: 'PorCooperativa', partition: cooperativaId })\n    .options({ filters: { Lote: { attr: 'kilos', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LOTE, MODELO_COOPERATIVA } from '../../models/cooperativa-lote.model.mjs';\n\nexport async function buscarCooperativaRepository(cooperativaId) {\n  const { Item } = await MODELO_COOPERATIVA.build(EntityRepository).get(\n    { cooperativaId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarCooperativaRepository(cooperativaId, minimo) {\n  const { Items = [] } = await MODELO_LOTE.build(EntityRepository).query(\n    { index: 'PorCooperativa', partition: cooperativaId },\n    { filters: { Lote: { attr: 'kilos', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/cooperativas/consultar\nls -d src/cooperativas/consultar\ntouch src/cooperativas/consultar/repository.mjs\ncode src/cooperativas/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

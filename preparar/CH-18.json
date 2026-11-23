@@ -1334,7 +1334,7 @@
             "kind": "file",
             "title": "src/actividades/crear-listar/repository.mjs",
             "path": "src/actividades/crear-listar/repository.mjs",
-            "code": "import { PutItemCommand } from 'dynamodb-toolbox/entity/actions/put';\nimport { ScanCommand } from 'dynamodb-toolbox/table/actions/scan';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function crearActividadRepository(actividad) {\n  await MODELO_ACTIVIDAD.build(PutItemCommand)\n    .item(actividad)\n    .options({ condition: { attr: 'actividadId', exists: false } })\n    .send();\n}\n\nexport async function listarActividadesRepository() {\n  const { Items = [] } = await TABLA_ACTIVIDADES.build(ScanCommand)\n    .entities(MODELO_ACTIVIDAD)\n    .options({ consistent: true })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function crearActividadRepository(actividad) {\n  await MODELO_ACTIVIDAD.build(EntityRepository).put(\n    actividad,\n    { condition: { attr: 'actividadId', exists: false } }\n  );\n}\n\nexport async function listarActividadesRepository() {\n  const { Items = [] } = await MODELO_ACTIVIDAD.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/actividades/crear-listar\nls -d src/actividades/crear-listar\ntouch src/actividades/crear-listar/repository.mjs\ncode src/actividades/crear-listar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1418,7 +1418,7 @@
             "kind": "file",
             "title": "src/actividades/eliminar/repository.mjs",
             "path": "src/actividades/eliminar/repository.mjs",
-            "code": "import { DeleteItemCommand } from 'dynamodb-toolbox/entity/actions/delete';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function eliminarActividadRepository(actividadId) {\n  await MODELO_ACTIVIDAD.build(DeleteItemCommand)\n    .key({ actividadId })\n    .send();\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function eliminarActividadRepository(actividadId) {\n  await MODELO_ACTIVIDAD.build(EntityRepository).delete(\n    { actividadId }\n  );\n}",
             "create": "mkdir -p src/actividades/eliminar\nls -d src/actividades/eliminar\ntouch src/actividades/eliminar/repository.mjs\ncode src/actividades/eliminar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1488,7 +1488,7 @@
             "kind": "file",
             "title": "src/actividades/modificar-plazas/repository.mjs",
             "path": "src/actividades/modificar-plazas/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function modificarPlazasRepository(actividadId, plazas) {\n  const { Attributes } = await MODELO_ACTIVIDAD.build(UpdateItemCommand)\n    .item({ actividadId, plazas })\n    .options({\n      condition: { attr: 'actividadId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function modificarPlazasRepository(actividadId, plazas) {\n  const { Attributes } = await MODELO_ACTIVIDAD.build(EntityRepository).update(\n    { actividadId, plazas },\n    {\n      condition: { attr: 'actividadId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/actividades/modificar-plazas\nls -d src/actividades/modificar-plazas\ntouch src/actividades/modificar-plazas/repository.mjs\ncode src/actividades/modificar-plazas/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1540,7 +1540,7 @@
             "kind": "file",
             "title": "src/clubes/consultar/repository.mjs",
             "path": "src/clubes/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function buscarClubRepository(clubId) {\n  const { Item } = await MODELO_CLUB.build(GetItemCommand)\n    .key({ clubId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarClubRepository(clubId, minimo) {\n  const { Items = [] } = await TABLA_ACTIVIDADES.build(QueryCommand)\n    .entities(MODELO_ACTIVIDAD)\n    .query({ index: 'PorClub', partition: clubId })\n    .options({ filters: { Actividad: { attr: 'plazas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function buscarClubRepository(clubId) {\n  const { Item } = await MODELO_CLUB.build(EntityRepository).get(\n    { clubId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarClubRepository(clubId, minimo) {\n  const { Items = [] } = await MODELO_ACTIVIDAD.build(EntityRepository).query(\n    { index: 'PorClub', partition: clubId },\n    { filters: { Actividad: { attr: 'plazas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/clubes/consultar\nls -d src/clubes/consultar\ntouch src/clubes/consultar/repository.mjs\ncode src/clubes/consultar/repository.mjs",
             "explain": "Crea este repository antes del service de traslado: lo importa para buscar el registro principal.",
             "terms": []
@@ -1567,7 +1567,7 @@
             "kind": "file",
             "title": "src/actividades/trasladar/repository.mjs",
             "path": "src/actividades/trasladar/repository.mjs",
-            "code": "import { UpdateItemCommand } from 'dynamodb-toolbox/entity/actions/update';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function trasladarActividadRepository(actividadId, clubId) {\n  const { Attributes } = await MODELO_ACTIVIDAD.build(UpdateItemCommand)\n    .item({ actividadId, clubId })\n    .options({\n      condition: { attr: 'actividadId', exists: true },\n      returnValues: 'ALL_NEW'\n    })\n    .send();\n  return Attributes;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function trasladarActividadRepository(actividadId, clubId) {\n  const { Attributes } = await MODELO_ACTIVIDAD.build(EntityRepository).update(\n    { actividadId, clubId },\n    {\n      condition: { attr: 'actividadId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}",
             "create": "mkdir -p src/actividades/trasladar\nls -d src/actividades/trasladar\ntouch src/actividades/trasladar/repository.mjs\ncode src/actividades/trasladar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []
@@ -1637,7 +1637,7 @@
             "kind": "file",
             "title": "src/clubes/consultar/repository.mjs",
             "path": "src/clubes/consultar/repository.mjs",
-            "code": "import { GetItemCommand } from 'dynamodb-toolbox/entity/actions/get';\nimport { QueryCommand } from 'dynamodb-toolbox/table/actions/query';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB, TABLA_ACTIVIDADES } from '../../models/club-actividad.model.mjs';\n\nexport async function buscarClubRepository(clubId) {\n  const { Item } = await MODELO_CLUB.build(GetItemCommand)\n    .key({ clubId }).options({ consistent: true }).send();\n  return Item ?? null;\n}\n\nexport async function consultarClubRepository(clubId, minimo) {\n  const { Items = [] } = await TABLA_ACTIVIDADES.build(QueryCommand)\n    .entities(MODELO_ACTIVIDAD)\n    .query({ index: 'PorClub', partition: clubId })\n    .options({ filters: { Actividad: { attr: 'plazas', gte: minimo } } })\n    .send();\n  return Items;\n}",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ACTIVIDAD, MODELO_CLUB } from '../../models/club-actividad.model.mjs';\n\nexport async function buscarClubRepository(clubId) {\n  const { Item } = await MODELO_CLUB.build(EntityRepository).get(\n    { clubId },\n    { consistent: true }\n  );\n  return Item ?? null;\n}\n\nexport async function consultarClubRepository(clubId, minimo) {\n  const { Items = [] } = await MODELO_ACTIVIDAD.build(EntityRepository).query(\n    { index: 'PorClub', partition: clubId },\n    { filters: { Actividad: { attr: 'plazas', gte: minimo } } }\n  );\n  return Items;\n}",
             "create": "mkdir -p src/clubes/consultar\nls -d src/clubes/consultar\ntouch src/clubes/consultar/repository.mjs\ncode src/clubes/consultar/repository.mjs",
             "explain": "Mismo archivo completo que estudias en Entrenar.",
             "terms": []

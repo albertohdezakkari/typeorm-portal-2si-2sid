@@ -1,4 +1,4 @@
-import { montarTaller } from './taller.js?v=preparacion-1';
+import { montarTaller } from './taller.js?v=entity-1';
 
 const status = document.getElementById('estado');
 const container = document.getElementById('taller');
@@ -25,7 +25,7 @@ window.addEventListener('message', async event => {
   status.textContent = 'Preparando tu taller…';
   try {
     const caseUrl = new URL(`casos/${init.caseId}.json`, location.href);
-    if (init.tabsLayout === 'wrap') caseUrl.searchParams.set('v', init.canPrepare ? 'preparacion-1' : 'aula-1');
+    caseUrl.searchParams.set('v', 'entity-1');
     const [dataResponse, templateResponse] = await Promise.all([
       fetch(caseUrl),
       fetch(new URL('plantilla.html?v=preparacion-1', location.href)),
