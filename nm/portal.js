@@ -32,7 +32,7 @@
   workspace.append(section);
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='7 · Ampliación N:M';
   const simulation=workspace.querySelector(':scope > nav [data-tab="simulacion"]');simulation.textContent='8 · Simulación y entregas';simulation.before(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-4';}});
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-5';}});
   const frame=section.querySelector('iframe');current={key,binding,frame,state:saved,started:false};
   if(location.hash==='#nm')button.click();
  };

@@ -12,7 +12,7 @@ Puedes cambiar entre Nest + TypeORM y Serverless + Toolbox en cada concepto. Obs
 
 ## Tu proyecto
 
-Continúa en `mi-practica/nest` o `mi-practica/serverless`, dentro de tu copia personal. Conserva tus tablas, archivos y datos 1:N. La obra 7 queda en ayuntamiento 2 y presupuesto 15000 al terminar el recorrido anterior.
+Continúa en la carpeta real de tu backend 1:N, con el nombre y la ubicación que elegiste: en Nest contiene `package.json` y `src`; en Serverless, también `serverless.yml`. Abre una terminal en esa carpeta. Si trabajas desde otro ordenador, clona tu propio repositorio y abre su backend. Conserva tus tablas, archivos y datos 1:N. La obra 7 queda en ayuntamiento 2 y presupuesto 15000 al terminar el recorrido anterior.
 
 Si partes de cero, usa **Abrir preparación 1:N** en el cuaderno. Reutiliza las bases existentes de [Nest + TypeORM](https://github.com/albertohdezakkari/typeorm-base) y [Serverless](https://github.com/albertohdezakkari/festival-checkin-01), con sus recorridos de configuración. Después aplica la ampliación N:M.
 
