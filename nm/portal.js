@@ -31,8 +31,12 @@
  // Los enlaces del taller (por ejemplo «Abrir preparación 1:N») también cambian de categoría.
  window.activarNavegacionCuaderno=button=>{
   if(current&&current.mainNav.contains(button)){
+   const fromNm=current.relation==='nm';
    category(button.dataset.tab==='nm'?'nm':'one');
-   if(button.dataset.tab!=='nm')current.lastOneTab=button.dataset.tab;
+   if(button.dataset.tab!=='nm'){
+    current.lastOneTab=button.dataset.tab;
+    if(fromNm)history.replaceState(null,'',button.dataset.tab==='training'?'#entrenar':'#1n');
+   }
   }
   return previousNavigation?.(button)||false;
  };
