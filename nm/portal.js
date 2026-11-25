@@ -2,8 +2,40 @@
 (() => {
  const workspace=document.getElementById('workspace');
  const previous=window.montarCuadernoDual;
+ const previousNavigation=window.activarNavegacionCuaderno;
  let current=null,sequence=0,scrollFrame=0,lastY=window.scrollY,scrollDirection=0,scrollDistance=0;
- function viewport(direction=0){if(!current?.started)return;current.frame.contentWindow.postMessage({type:'nm:viewport',binding:current.binding,offset:Math.max(0,-current.frame.getBoundingClientRect().top),height:innerHeight,direction},location.origin);}
+ function viewport(direction=0){if(!current?.started||current.relation!=='nm')return;current.frame.contentWindow.postMessage({type:'nm:viewport',binding:current.binding,offset:Math.max(0,-current.frame.getBoundingClientRect().top),height:innerHeight,direction},location.origin);}
+ function category(relation){
+  if(!current)return;
+  current.relation=relation;
+  workspace.dataset.relationCategory=relation;
+  current.mainNav.hidden=relation==='nm';
+  if(current.banner)current.banner.hidden=relation==='nm';
+  for(const button of current.categories.querySelectorAll('[data-relation]'))button.setAttribute('aria-pressed',String(button.dataset.relation===relation));
+ }
+ function choose(relation){
+  if(!current)return;
+  if(relation==='nm'){
+   if(current.relation!=='nm')current.lastOneTab=document.getElementById('panel-preparation')?.classList.contains('active')?'preparation':current.mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases';
+   category('nm');
+   current.nmButton.click();
+   history.replaceState(null,'','#nm');
+   viewport();
+  }else{
+   category('one');
+   const destination=current.mainNav.querySelector(`[data-tab="${current.lastOneTab}"]`)||current.mainNav.querySelector('[data-tab="bases"]');
+   destination.click();
+   history.replaceState(null,'',destination.dataset.tab==='training'?'#entrenar':'#1n');
+  }
+ }
+ // Los enlaces del taller (por ejemplo «Abrir preparación 1:N») también cambian de categoría.
+ window.activarNavegacionCuaderno=button=>{
+  if(current&&current.mainNav.contains(button)){
+   category(button.dataset.tab==='nm'?'nm':'one');
+   if(button.dataset.tab!=='nm')current.lastOneTab=button.dataset.tab;
+  }
+  return previousNavigation?.(button)||false;
+ };
  window.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=requestAnimationFrame(()=>{
   scrollFrame=0;
   const y=window.scrollY,delta=y-lastY;lastY=y;
@@ -17,7 +49,11 @@
   viewport(direction);
  });},{passive:true});
  window.addEventListener('resize',()=>viewport());
- function clean(){current=null;document.querySelector('[data-tab="nm"]')?.remove();document.getElementById('panel-nm')?.remove();}
+ function clean(){
+  if(current){current.mainNav.hidden=false;if(current.banner)current.banner.hidden=false;current.categories.remove();}
+  delete workspace.dataset.relationCategory;
+  current=null;document.querySelector('[data-tab="nm"]')?.remove();document.getElementById('panel-nm')?.remove();
+ }
  window.montarCuadernoDual=async(student,context)=>{
   const request=++sequence;clean();
   await previous(student,context);
@@ -30,11 +66,19 @@
   const section=document.createElement('section');section.id='panel-nm';section.className='tab-panel';section.style.padding='clamp(8px,1.5vw,18px)';
   section.innerHTML='<h2 style="margin:5px 0 12px">Ampliación N:M · Obras y profesionales</h2><p id="nm-status" role="status" style="font-size:13px;color:#607762">Se conserva tu recorrido 1:N. Esta unidad guarda su propio avance en este navegador.</p><iframe id="nm-frame" title="Arturo: ampliación N:M con TypeORM y Serverless" style="width:100%;min-height:800px;border:0;display:block" referrerpolicy="same-origin"></iframe>';
   workspace.append(section);
-  const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='7 · Ampliación N:M';
-  const simulation=workspace.querySelector(':scope > nav [data-tab="simulacion"]');simulation.textContent='8 · Simulación y entregas';simulation.before(button);
+  const mainNav=workspace.querySelector(':scope > nav.tabs');
+  const banner=workspace.querySelector('.mq-pilot-banner');
+  const categories=document.createElement('section');categories.className='nm-category-picker';
+  categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>Ayuntamiento y Obra · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>Obras y profesionales · ampliación del proyecto</small></span></button></nav>';
+  (banner||mainNav).before(categories);
+  categories.addEventListener('click',event=>{const button=event.target.closest('[data-relation]');if(button)choose(button.dataset.relation);});
+  // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
+  const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
+  const simulation=mainNav.querySelector('[data-tab="simulacion"]');simulation.before(button);
   button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-5';}});
-  const frame=section.querySelector('iframe');current={key,binding,frame,state:saved,started:false};
-  if(location.hash==='#nm')button.click();
+  const frame=section.querySelector('iframe');current={key,binding,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
+  category('one');
+  if(location.hash==='#nm')choose('nm');
  };
  window.addEventListener('message',event=>{
   if(!current||event.origin!==location.origin||event.source!==current.frame.contentWindow)return;
