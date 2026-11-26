@@ -43,9 +43,7 @@
         ${flow([['YAML','Crea recursos AWS'],['Table + Entity','Describe tus datos'],['Repository','Envía el comando']],'Desde la infraestructura a la escritura')}
         <ul class="mq-facts"><li><b>Guía de arranque</b><code>0-codespaces.md</code></li><li><b>Framework local</b><code>Serverless 3.40.0</code></li><li><b>Ejemplo que ya funciona</b><span>Festival: 3 tablas · 6 Lambdas</span></li></ul>
         <a class="mq-button" href="https://github.com/albertohdezakkari/festival-checkin-01/blob/main/0-codespaces.md" target="_blank" rel="noopener">Abrir la guía de Codespaces ↗</a></div></article>
-      </div>
-      <div class="mq-bridge"><span class="mq-bridge-symbol" aria-hidden="true">⇄</span><div><strong>Del proyecto base a tu contexto</strong><p>TypeORM parte del arranque Nest. Festival muestra una aplicación completa. En tu taller prepararás ${esc(data.context.parent.sql)} / ${esc(data.context.child.sql)} en SQL y ${esc(data.context.parent.table)} / ${esc(data.context.child.table)} en DynamoDB: dos entidades relacionadas en ambas tecnologías.</p></div>${action('training','Continuar en mi taller')}</div>
-      <div class="mq-footlink"><span>Las guías presentan las bases; la preparación guiada reúne los archivos y las pruebas de tu contexto.</span>${action('preparation','Preparar y ejecutar mi contexto')}</div>`;
+      </div>`;
   }
 
   function operationNav() {
