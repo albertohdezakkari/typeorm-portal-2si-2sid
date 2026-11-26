@@ -1,0 +1,174 @@
+service: taller-ch15
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_EMPRESAS: { Ref: TablaEmpresas }
+    TABLA_PROYECTOS: { Ref: TablaProyectos }
+    TABLA_COLABORADORES: { Ref: TablaColaboradores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearProyecto:
+    handler: src/proyectos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/proyectos' }
+  listarProyectos:
+    handler: src/proyectos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/proyectos' }
+  eliminarProyecto:
+    handler: src/proyectos/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/proyectos/{proyectoId}' }
+  modificarHorasEstimadas:
+    handler: src/proyectos/modificar-horas-estimadas/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyectos/{proyectoId}' }
+  trasladarProyecto:
+    handler: src/proyectos/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyectos/{proyectoId}/empresa' }
+  consultarEmpresa:
+    handler: src/empresas/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/empresas/{empresaId}/proyectos' }
+  crearColaborador:
+    handler: src/colaboradores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/colaboradores' }
+  listarColaboradores:
+    handler: src/colaboradores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/colaboradores' }
+  asignarColaborador:
+    handler: src/asignaciones/asignar-colaborador/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/proyectos/{proyectoId}/asignaciones' }
+  listarAsignacionesPorProyecto:
+    handler: src/asignaciones/listar-por-proyecto/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/proyectos/{proyectoId}/asignaciones' }
+  listarAsignacionesPorColaborador:
+    handler: src/asignaciones/listar-por-colaborador/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/colaboradores/{colaboradorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyectos/{proyectoId}/asignaciones/{colaboradorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/proyectos/{proyectoId}/asignaciones/{colaboradorId}' }
+
+resources:
+  Resources:
+    TablaEmpresas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: EMPRESAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: EMPRESA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_EMPRESA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: EMPRESA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: EMPRESA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaProyectos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PROYECTOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PROYECTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   HORAS_ESTIMADAS (N: número).
+        #   EMPRESA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PROYECTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PROYECTO_ID, AttributeType: N }
+          - { AttributeName: EMPRESA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PROYECTO_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en PROYECTOS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorEmpresa
+            # Clave compuesta = partition key + sort key:
+            # (EMPRESA_ID, PROYECTO_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: EMPRESA_ID
+                KeyType: HASH   # Partition key. Agrupa por Empresa.
+              - AttributeName: PROYECTO_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PROYECTOS copiados al índice.
+                - NOMBRE
+                - HORAS_ESTIMADAS
+
+    TablaColaboradores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: COLABORADORES_${env:TALLER_EQUIPO}
+        # PK: COLABORADOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: COLABORADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COLABORADOR_ID
+            KeyType: HASH  # Partition key: identifica al colaborador.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PROYECTO_ID + COLABORADOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PROYECTO_ID, AttributeType: N }
+          - { AttributeName: COLABORADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PROYECTO_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de un proyecto.
+          - AttributeName: COLABORADOR_ID
+            KeyType: RANGE # Sort key: distingue al colaborador dentro de el proyecto.
+        GlobalSecondaryIndexes:
+          - IndexName: PorColaborador
+            KeySchema:
+              - AttributeName: COLABORADOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del colaborador.
+              - AttributeName: PROYECTO_ID
+                KeyType: RANGE # Ordena sus proyectos por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    ColaboradoresTableName:
+      Value: { Ref: TablaColaboradores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

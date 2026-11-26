@@ -1,0 +1,174 @@
+service: taller-ch24
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_COMPLEJOS: { Ref: TablaComplejos }
+    TABLA_PISTAS: { Ref: TablaPistas }
+    TABLA_ENTRENADORES: { Ref: TablaEntrenadores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearPista:
+    handler: src/pistas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/pistas' }
+  listarPistas:
+    handler: src/pistas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/pistas' }
+  eliminarPista:
+    handler: src/pistas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }
+  modificarSuperficieM2:
+    handler: src/pistas/modificar-superficie-m2/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }
+  trasladarPista:
+    handler: src/pistas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/complejo' }
+  consultarComplejo:
+    handler: src/complejos/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/complejos/{complejoId}/pistas' }
+  crearEntrenador:
+    handler: src/entrenadores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/entrenadores' }
+  listarEntrenadores:
+    handler: src/entrenadores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/entrenadores' }
+  asignarEntrenador:
+    handler: src/asignaciones/asignar-entrenador/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/pistas/{pistaId}/asignaciones' }
+  listarAsignacionesPorPista:
+    handler: src/asignaciones/listar-por-pista/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/pistas/{pistaId}/asignaciones' }
+  listarAsignacionesPorEntrenador:
+    handler: src/asignaciones/listar-por-entrenador/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/entrenadores/{entrenadorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/asignaciones/{entrenadorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/pistas/{pistaId}/asignaciones/{entrenadorId}' }
+
+resources:
+  Resources:
+    TablaComplejos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: COMPLEJOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: COMPLEJO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_COMPLEJO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: COMPLEJO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COMPLEJO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaPistas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PISTAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PISTA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   SUPERFICIE_M2 (N: número).
+        #   COMPLEJO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PISTA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PISTA_ID, AttributeType: N }
+          - { AttributeName: COMPLEJO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PISTA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en PISTAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorComplejo
+            # Clave compuesta = partition key + sort key:
+            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: COMPLEJO_ID
+                KeyType: HASH   # Partition key. Agrupa por Complejo.
+              - AttributeName: PISTA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PISTAS copiados al índice.
+                - NOMBRE
+                - SUPERFICIE_M2
+
+    TablaEntrenadores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ENTRENADORES_${env:TALLER_EQUIPO}
+        # PK: ENTRENADOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ENTRENADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ENTRENADOR_ID
+            KeyType: HASH  # Partition key: identifica al entrenador.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PISTA_ID + ENTRENADOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PISTA_ID, AttributeType: N }
+          - { AttributeName: ENTRENADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PISTA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una pista.
+          - AttributeName: ENTRENADOR_ID
+            KeyType: RANGE # Sort key: distingue al entrenador dentro de la pista.
+        GlobalSecondaryIndexes:
+          - IndexName: PorEntrenador
+            KeySchema:
+              - AttributeName: ENTRENADOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del entrenador.
+              - AttributeName: PISTA_ID
+                KeyType: RANGE # Ordena sus pistas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    EntrenadoresTableName:
+      Value: { Ref: TablaEntrenadores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

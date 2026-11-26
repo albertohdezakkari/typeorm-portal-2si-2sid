@@ -1,0 +1,174 @@
+service: taller-ch23
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_CAFETERIAS: { Ref: TablaCafeterias }
+    TABLA_COMANDAS: { Ref: TablaComandas }
+    TABLA_COCINEROS: { Ref: TablaCocineros }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearComanda:
+    handler: src/comandas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/comandas' }
+  listarComandas:
+    handler: src/comandas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/comandas' }
+  eliminarComanda:
+    handler: src/comandas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }
+  modificarImporteCentimos:
+    handler: src/comandas/modificar-importe-centimos/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }
+  trasladarComanda:
+    handler: src/comandas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/cafeteria' }
+  consultarCafeteria:
+    handler: src/cafeterias/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cafeterias/{cafeteriaId}/comandas' }
+  crearCocinero:
+    handler: src/cocineros/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/cocineros' }
+  listarCocineros:
+    handler: src/cocineros/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/cocineros' }
+  asignarCocinero:
+    handler: src/asignaciones/asignar-cocinero/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/comandas/{comandaId}/asignaciones' }
+  listarAsignacionesPorComanda:
+    handler: src/asignaciones/listar-por-comanda/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/comandas/{comandaId}/asignaciones' }
+  listarAsignacionesPorCocinero:
+    handler: src/asignaciones/listar-por-cocinero/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cocineros/{cocineroId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/asignaciones/{cocineroId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/comandas/{comandaId}/asignaciones/{cocineroId}' }
+
+resources:
+  Resources:
+    TablaCafeterias:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: CAFETERIAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: CAFETERIA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_CAFETERIA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: CAFETERIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: CAFETERIA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaComandas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: COMANDAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: COMANDA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   IMPORTE_CENTIMOS (N: número).
+        #   CAFETERIA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_COMANDA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: COMANDA_ID, AttributeType: N }
+          - { AttributeName: CAFETERIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COMANDA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en COMANDAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorCafeteria
+            # Clave compuesta = partition key + sort key:
+            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: CAFETERIA_ID
+                KeyType: HASH   # Partition key. Agrupa por Cafeteria.
+              - AttributeName: COMANDA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.
+                - NOMBRE
+                - IMPORTE_CENTIMOS
+
+    TablaCocineros:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: COCINEROS_${env:TALLER_EQUIPO}
+        # PK: COCINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: COCINERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COCINERO_ID
+            KeyType: HASH  # Partition key: identifica al cocinero.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: COMANDA_ID + COCINERO_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: COMANDA_ID, AttributeType: N }
+          - { AttributeName: COCINERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COMANDA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una comanda.
+          - AttributeName: COCINERO_ID
+            KeyType: RANGE # Sort key: distingue al cocinero dentro de la comanda.
+        GlobalSecondaryIndexes:
+          - IndexName: PorCocinero
+            KeySchema:
+              - AttributeName: COCINERO_ID
+                KeyType: HASH  # Agrupa las asignaciones del cocinero.
+              - AttributeName: COMANDA_ID
+                KeyType: RANGE # Ordena sus comandas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    CocinerosTableName:
+      Value: { Ref: TablaCocineros }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

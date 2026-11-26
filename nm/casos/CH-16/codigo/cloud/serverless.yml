@@ -1,0 +1,174 @@
+service: taller-ch16
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_TIENDAS: { Ref: TablaTiendas }
+    TABLA_ARTICULOS: { Ref: TablaArticulos }
+    TABLA_VENDEDORES: { Ref: TablaVendedores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearArticulo:
+    handler: src/articulos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/articulos' }
+  listarArticulos:
+    handler: src/articulos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/articulos' }
+  eliminarArticulo:
+    handler: src/articulos/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/articulos/{articuloId}' }
+  modificarStock:
+    handler: src/articulos/modificar-stock/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/articulos/{articuloId}' }
+  trasladarArticulo:
+    handler: src/articulos/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/articulos/{articuloId}/tienda' }
+  consultarTienda:
+    handler: src/tiendas/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/tiendas/{tiendaId}/articulos' }
+  crearVendedor:
+    handler: src/vendedores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/vendedores' }
+  listarVendedores:
+    handler: src/vendedores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/vendedores' }
+  asignarVendedor:
+    handler: src/asignaciones/asignar-vendedor/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/articulos/{articuloId}/asignaciones' }
+  listarAsignacionesPorArticulo:
+    handler: src/asignaciones/listar-por-articulo/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/articulos/{articuloId}/asignaciones' }
+  listarAsignacionesPorVendedor:
+    handler: src/asignaciones/listar-por-vendedor/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/vendedores/{vendedorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/articulos/{articuloId}/asignaciones/{vendedorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/articulos/{articuloId}/asignaciones/{vendedorId}' }
+
+resources:
+  Resources:
+    TablaTiendas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TIENDAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: TIENDA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_TIENDA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: TIENDA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TIENDA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaArticulos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ARTICULOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: ARTICULO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   STOCK (N: número).
+        #   TIENDA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_ARTICULO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: ARTICULO_ID, AttributeType: N }
+          - { AttributeName: TIENDA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ARTICULO_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en ARTICULOS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorTienda
+            # Clave compuesta = partition key + sort key:
+            # (TIENDA_ID, ARTICULO_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: TIENDA_ID
+                KeyType: HASH   # Partition key. Agrupa por Tienda.
+              - AttributeName: ARTICULO_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de ARTICULOS copiados al índice.
+                - NOMBRE
+                - STOCK
+
+    TablaVendedores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: VENDEDORES_${env:TALLER_EQUIPO}
+        # PK: VENDEDOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: VENDEDOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: VENDEDOR_ID
+            KeyType: HASH  # Partition key: identifica al vendedor.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: ARTICULO_ID + VENDEDOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ARTICULO_ID, AttributeType: N }
+          - { AttributeName: VENDEDOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ARTICULO_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de un articulo.
+          - AttributeName: VENDEDOR_ID
+            KeyType: RANGE # Sort key: distingue al vendedor dentro de el articulo.
+        GlobalSecondaryIndexes:
+          - IndexName: PorVendedor
+            KeySchema:
+              - AttributeName: VENDEDOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del vendedor.
+              - AttributeName: ARTICULO_ID
+                KeyType: RANGE # Ordena sus articulos por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    VendedoresTableName:
+      Value: { Ref: TablaVendedores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

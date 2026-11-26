@@ -1,0 +1,174 @@
+service: taller-ch19
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_PUERTOS: { Ref: TablaPuertos }
+    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }
+    TABLA_TRIPULANTES: { Ref: TablaTripulantes }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearEmbarcacion:
+    handler: src/embarcaciones/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/embarcaciones' }
+  listarEmbarcaciones:
+    handler: src/embarcaciones/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/embarcaciones' }
+  eliminarEmbarcacion:
+    handler: src/embarcaciones/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }
+  modificarEsloraMetros:
+    handler: src/embarcaciones/modificar-eslora-metros/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }
+  trasladarEmbarcacion:
+    handler: src/embarcaciones/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/puerto' }
+  consultarPuerto:
+    handler: src/puertos/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/puertos/{puertoId}/embarcaciones' }
+  crearTripulante:
+    handler: src/tripulantes/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/tripulantes' }
+  listarTripulantes:
+    handler: src/tripulantes/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/tripulantes' }
+  asignarTripulante:
+    handler: src/asignaciones/asignar-tripulante/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/embarcaciones/{embarcacionId}/asignaciones' }
+  listarAsignacionesPorEmbarcacion:
+    handler: src/asignaciones/listar-por-embarcacion/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/embarcaciones/{embarcacionId}/asignaciones' }
+  listarAsignacionesPorTripulante:
+    handler: src/asignaciones/listar-por-tripulante/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/tripulantes/{tripulanteId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/asignaciones/{tripulanteId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}/asignaciones/{tripulanteId}' }
+
+resources:
+  Resources:
+    TablaPuertos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PUERTOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PUERTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_PUERTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PUERTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PUERTO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaEmbarcaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: EMBARCACION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   ESLORA_METROS (N: número).
+        #   PUERTO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_EMBARCACION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: EMBARCACION_ID, AttributeType: N }
+          - { AttributeName: PUERTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: EMBARCACION_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en EMBARCACIONES.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorPuerto
+            # Clave compuesta = partition key + sort key:
+            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: PUERTO_ID
+                KeyType: HASH   # Partition key. Agrupa por Puerto.
+              - AttributeName: EMBARCACION_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.
+                - NOMBRE
+                - ESLORA_METROS
+
+    TablaTripulantes:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TRIPULANTES_${env:TALLER_EQUIPO}
+        # PK: TRIPULANTE_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: TRIPULANTE_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TRIPULANTE_ID
+            KeyType: HASH  # Partition key: identifica al tripulante.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: EMBARCACION_ID + TRIPULANTE_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: EMBARCACION_ID, AttributeType: N }
+          - { AttributeName: TRIPULANTE_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: EMBARCACION_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una embarcacion.
+          - AttributeName: TRIPULANTE_ID
+            KeyType: RANGE # Sort key: distingue al tripulante dentro de la embarcacion.
+        GlobalSecondaryIndexes:
+          - IndexName: PorTripulante
+            KeySchema:
+              - AttributeName: TRIPULANTE_ID
+                KeyType: HASH  # Agrupa las asignaciones del tripulante.
+              - AttributeName: EMBARCACION_ID
+                KeyType: RANGE # Ordena sus embarcaciones por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    TripulantesTableName:
+      Value: { Ref: TablaTripulantes }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

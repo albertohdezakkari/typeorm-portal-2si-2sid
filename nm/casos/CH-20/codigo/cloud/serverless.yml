@@ -1,0 +1,174 @@
+service: taller-ch20
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_ESTACIONES: { Ref: TablaEstaciones }
+    TABLA_TRAYECTOS: { Ref: TablaTrayectos }
+    TABLA_CONDUCTORES: { Ref: TablaConductores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearTrayecto:
+    handler: src/trayectos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/trayectos' }
+  listarTrayectos:
+    handler: src/trayectos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/trayectos' }
+  eliminarTrayecto:
+    handler: src/trayectos/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }
+  modificarDistanciaKm:
+    handler: src/trayectos/modificar-distancia-km/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }
+  trasladarTrayecto:
+    handler: src/trayectos/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/estacion' }
+  consultarEstacion:
+    handler: src/estaciones/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/estaciones/{estacionId}/trayectos' }
+  crearConductor:
+    handler: src/conductores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/conductores' }
+  listarConductores:
+    handler: src/conductores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/conductores' }
+  asignarConductor:
+    handler: src/asignaciones/asignar-conductor/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/trayectos/{trayectoId}/asignaciones' }
+  listarAsignacionesPorTrayecto:
+    handler: src/asignaciones/listar-por-trayecto/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/trayectos/{trayectoId}/asignaciones' }
+  listarAsignacionesPorConductor:
+    handler: src/asignaciones/listar-por-conductor/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/conductores/{conductorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/asignaciones/{conductorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}/asignaciones/{conductorId}' }
+
+resources:
+  Resources:
+    TablaEstaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ESTACIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: ESTACION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_ESTACION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ESTACION_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ESTACION_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaTrayectos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TRAYECTOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: TRAYECTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   DISTANCIA_KM (N: número).
+        #   ESTACION_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_TRAYECTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: TRAYECTO_ID, AttributeType: N }
+          - { AttributeName: ESTACION_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TRAYECTO_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en TRAYECTOS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorEstacion
+            # Clave compuesta = partition key + sort key:
+            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: ESTACION_ID
+                KeyType: HASH   # Partition key. Agrupa por Estacion.
+              - AttributeName: TRAYECTO_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.
+                - NOMBRE
+                - DISTANCIA_KM
+
+    TablaConductores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: CONDUCTORES_${env:TALLER_EQUIPO}
+        # PK: CONDUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: CONDUCTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: CONDUCTOR_ID
+            KeyType: HASH  # Partition key: identifica al conductor.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: TRAYECTO_ID + CONDUCTOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: TRAYECTO_ID, AttributeType: N }
+          - { AttributeName: CONDUCTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TRAYECTO_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de un trayecto.
+          - AttributeName: CONDUCTOR_ID
+            KeyType: RANGE # Sort key: distingue al conductor dentro de el trayecto.
+        GlobalSecondaryIndexes:
+          - IndexName: PorConductor
+            KeySchema:
+              - AttributeName: CONDUCTOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del conductor.
+              - AttributeName: TRAYECTO_ID
+                KeyType: RANGE # Ordena sus trayectos por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    ConductoresTableName:
+      Value: { Ref: TablaConductores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

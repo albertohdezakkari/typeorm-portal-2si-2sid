@@ -1,0 +1,174 @@
+service: taller-ch21
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }
+    TABLA_MUESTRAS: { Ref: TablaMuestras }
+    TABLA_ANALISTAS: { Ref: TablaAnalistas }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearMuestra:
+    handler: src/muestras/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/muestras' }
+  listarMuestras:
+    handler: src/muestras/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/muestras' }
+  eliminarMuestra:
+    handler: src/muestras/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }
+  modificarCantidadMl:
+    handler: src/muestras/modificar-cantidad-ml/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }
+  trasladarMuestra:
+    handler: src/muestras/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/laboratorio' }
+  consultarLaboratorio:
+    handler: src/laboratorios/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/laboratorios/{laboratorioId}/muestras' }
+  crearAnalista:
+    handler: src/analistas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/analistas' }
+  listarAnalistas:
+    handler: src/analistas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/analistas' }
+  asignarAnalista:
+    handler: src/asignaciones/asignar-analista/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/muestras/{muestraId}/asignaciones' }
+  listarAsignacionesPorMuestra:
+    handler: src/asignaciones/listar-por-muestra/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/muestras/{muestraId}/asignaciones' }
+  listarAsignacionesPorAnalista:
+    handler: src/asignaciones/listar-por-analista/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/analistas/{analistaId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/asignaciones/{analistaId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/muestras/{muestraId}/asignaciones/{analistaId}' }
+
+resources:
+  Resources:
+    TablaLaboratorios:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: LABORATORIOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: LABORATORIO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_LABORATORIO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: LABORATORIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: LABORATORIO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaMuestras:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: MUESTRAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: MUESTRA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   CANTIDAD_ML (N: número).
+        #   LABORATORIO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_MUESTRA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: MUESTRA_ID, AttributeType: N }
+          - { AttributeName: LABORATORIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: MUESTRA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en MUESTRAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorLaboratorio
+            # Clave compuesta = partition key + sort key:
+            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: LABORATORIO_ID
+                KeyType: HASH   # Partition key. Agrupa por Laboratorio.
+              - AttributeName: MUESTRA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.
+                - NOMBRE
+                - CANTIDAD_ML
+
+    TablaAnalistas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ANALISTAS_${env:TALLER_EQUIPO}
+        # PK: ANALISTA_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ANALISTA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ANALISTA_ID
+            KeyType: HASH  # Partition key: identifica al analista.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: MUESTRA_ID + ANALISTA_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: MUESTRA_ID, AttributeType: N }
+          - { AttributeName: ANALISTA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: MUESTRA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una muestra.
+          - AttributeName: ANALISTA_ID
+            KeyType: RANGE # Sort key: distingue al analista dentro de la muestra.
+        GlobalSecondaryIndexes:
+          - IndexName: PorAnalista
+            KeySchema:
+              - AttributeName: ANALISTA_ID
+                KeyType: HASH  # Agrupa las asignaciones del analista.
+              - AttributeName: MUESTRA_ID
+                KeyType: RANGE # Ordena sus muestras por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    AnalistasTableName:
+      Value: { Ref: TablaAnalistas }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

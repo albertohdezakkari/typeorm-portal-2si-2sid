@@ -1,0 +1,174 @@
+service: taller-ch02
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_HUERTOS: { Ref: TablaHuertos }
+    TABLA_PARCELAS: { Ref: TablaParcelas }
+    TABLA_CULTIVADORES: { Ref: TablaCultivadores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearParcela:
+    handler: src/parcelas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/parcelas' }
+  listarParcelas:
+    handler: src/parcelas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/parcelas' }
+  eliminarParcela:
+    handler: src/parcelas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }
+  modificarSuperficie:
+    handler: src/parcelas/modificar-superficie/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }
+  trasladarParcela:
+    handler: src/parcelas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/huerto' }
+  consultarHuerto:
+    handler: src/huertos/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/huertos/{huertoId}/parcelas' }
+  crearCultivador:
+    handler: src/cultivadores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/cultivadores' }
+  listarCultivadores:
+    handler: src/cultivadores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/cultivadores' }
+  asignarCultivador:
+    handler: src/asignaciones/asignar-cultivador/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/parcelas/{parcelaId}/asignaciones' }
+  listarAsignacionesPorParcela:
+    handler: src/asignaciones/listar-por-parcela/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/parcelas/{parcelaId}/asignaciones' }
+  listarAsignacionesPorCultivador:
+    handler: src/asignaciones/listar-por-cultivador/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cultivadores/{cultivadorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/asignaciones/{cultivadorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}/asignaciones/{cultivadorId}' }
+
+resources:
+  Resources:
+    TablaHuertos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HUERTOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: HUERTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_HUERTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: HUERTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HUERTO_ID
+            KeyType: HASH  # Partition key del huerto.
+
+    TablaParcelas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PARCELAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PARCELA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   SUPERFICIE_M2 (N: número).
+        #   HUERTO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PARCELA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PARCELA_ID, AttributeType: N }
+          - { AttributeName: HUERTO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PARCELA_ID
+            KeyType: HASH  # Partition key de la parcela.
+
+        # GSI: segunda forma de buscar en PARCELAS.
+        # Global: reúne parcelas de toda la tabla por huerto.
+        GlobalSecondaryIndexes:
+          - IndexName: PorHuerto
+            # Clave compuesta = partition key + sort key:
+            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: HUERTO_ID
+                KeyType: HASH   # Partition key. Agrupa por huerto.
+              - AttributeName: PARCELA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.
+                - NOMBRE
+                - SUPERFICIE_M2
+
+    TablaCultivadores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: CULTIVADORES_${env:TALLER_EQUIPO}
+        # PK: CULTIVADOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: CULTIVADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: CULTIVADOR_ID
+            KeyType: HASH  # Partition key: identifica al cultivador.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PARCELA_ID + CULTIVADOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PARCELA_ID, AttributeType: N }
+          - { AttributeName: CULTIVADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PARCELA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una parcela.
+          - AttributeName: CULTIVADOR_ID
+            KeyType: RANGE # Sort key: distingue al cultivador dentro de la parcela.
+        GlobalSecondaryIndexes:
+          - IndexName: PorCultivador
+            KeySchema:
+              - AttributeName: CULTIVADOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del cultivador.
+              - AttributeName: PARCELA_ID
+                KeyType: RANGE # Ordena sus parcelas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    CultivadoresTableName:
+      Value: { Ref: TablaCultivadores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

@@ -1,0 +1,174 @@
+service: taller-ch13
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_CINES: { Ref: TablaCines }
+    TABLA_PROYECCIONES: { Ref: TablaProyecciones }
+    TABLA_TECNICOS: { Ref: TablaTecnicos }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearProyeccion:
+    handler: src/proyecciones/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/proyecciones' }
+  listarProyecciones:
+    handler: src/proyecciones/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/proyecciones' }
+  eliminarProyeccion:
+    handler: src/proyecciones/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }
+  modificarDuracionMinutos:
+    handler: src/proyecciones/modificar-duracion-minutos/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }
+  trasladarProyeccion:
+    handler: src/proyecciones/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/cine' }
+  consultarCine:
+    handler: src/cines/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cines/{cineId}/proyecciones' }
+  crearTecnico:
+    handler: src/tecnicos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/tecnicos' }
+  listarTecnicos:
+    handler: src/tecnicos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/tecnicos' }
+  asignarTecnico:
+    handler: src/asignaciones/asignar-tecnico/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/proyecciones/{proyeccionId}/asignaciones' }
+  listarAsignacionesPorProyeccion:
+    handler: src/asignaciones/listar-por-proyeccion/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/proyecciones/{proyeccionId}/asignaciones' }
+  listarAsignacionesPorTecnico:
+    handler: src/asignaciones/listar-por-tecnico/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/tecnicos/{tecnicoId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/asignaciones/{tecnicoId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}/asignaciones/{tecnicoId}' }
+
+resources:
+  Resources:
+    TablaCines:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: CINES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: CINE_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_CINE.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: CINE_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: CINE_ID
+            KeyType: HASH  # Partition key del cine.
+
+    TablaProyecciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PROYECCIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PROYECCION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   PELICULA (S: texto).
+        #   DURACION_MINUTOS (N: número).
+        #   CINE_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PROYECCION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PROYECCION_ID, AttributeType: N }
+          - { AttributeName: CINE_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PROYECCION_ID
+            KeyType: HASH  # Partition key de la proyeccion.
+
+        # GSI: segunda forma de buscar en PROYECCIONES.
+        # Global: reúne proyecciones de toda la tabla por cine.
+        GlobalSecondaryIndexes:
+          - IndexName: PorCine
+            # Clave compuesta = partition key + sort key:
+            # (CINE_ID, PROYECCION_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: CINE_ID
+                KeyType: HASH   # Partition key. Agrupa por cine.
+              - AttributeName: PROYECCION_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.
+                - PELICULA
+                - DURACION_MINUTOS
+
+    TablaTecnicos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TECNICOS_${env:TALLER_EQUIPO}
+        # PK: TECNICO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: TECNICO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TECNICO_ID
+            KeyType: HASH  # Partition key: identifica al tecnico.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PROYECCION_ID + TECNICO_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PROYECCION_ID, AttributeType: N }
+          - { AttributeName: TECNICO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PROYECCION_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una proyeccion.
+          - AttributeName: TECNICO_ID
+            KeyType: RANGE # Sort key: distingue al tecnico dentro de la proyeccion.
+        GlobalSecondaryIndexes:
+          - IndexName: PorTecnico
+            KeySchema:
+              - AttributeName: TECNICO_ID
+                KeyType: HASH  # Agrupa las asignaciones del tecnico.
+              - AttributeName: PROYECCION_ID
+                KeyType: RANGE # Ordena sus proyecciones por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    TecnicosTableName:
+      Value: { Ref: TablaTecnicos }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

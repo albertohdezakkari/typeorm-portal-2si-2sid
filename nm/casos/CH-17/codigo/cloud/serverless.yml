@@ -1,0 +1,174 @@
+service: taller-ch17
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_ESTUDIOS: { Ref: TablaEstudios }
+    TABLA_ESCENAS: { Ref: TablaEscenas }
+    TABLA_ACTORES: { Ref: TablaActores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearEscena:
+    handler: src/escenas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/escenas' }
+  listarEscenas:
+    handler: src/escenas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/escenas' }
+  eliminarEscena:
+    handler: src/escenas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/escenas/{escenaId}' }
+  modificarDuracionSegundos:
+    handler: src/escenas/modificar-duracion-segundos/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/escenas/{escenaId}' }
+  trasladarEscena:
+    handler: src/escenas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/escenas/{escenaId}/estudio' }
+  consultarEstudio:
+    handler: src/estudios/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/estudios/{estudioId}/escenas' }
+  crearActor:
+    handler: src/actores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/actores' }
+  listarActores:
+    handler: src/actores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/actores' }
+  asignarActor:
+    handler: src/asignaciones/asignar-actor/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/escenas/{escenaId}/asignaciones' }
+  listarAsignacionesPorEscena:
+    handler: src/asignaciones/listar-por-escena/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/escenas/{escenaId}/asignaciones' }
+  listarAsignacionesPorActor:
+    handler: src/asignaciones/listar-por-actor/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/actores/{actorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/escenas/{escenaId}/asignaciones/{actorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/escenas/{escenaId}/asignaciones/{actorId}' }
+
+resources:
+  Resources:
+    TablaEstudios:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ESTUDIOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: ESTUDIO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_ESTUDIO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ESTUDIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ESTUDIO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaEscenas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ESCENAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: ESCENA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   DURACION_SEGUNDOS (N: número).
+        #   ESTUDIO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_ESCENA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: ESCENA_ID, AttributeType: N }
+          - { AttributeName: ESTUDIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ESCENA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en ESCENAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorEstudio
+            # Clave compuesta = partition key + sort key:
+            # (ESTUDIO_ID, ESCENA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: ESTUDIO_ID
+                KeyType: HASH   # Partition key. Agrupa por Estudio.
+              - AttributeName: ESCENA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de ESCENAS copiados al índice.
+                - NOMBRE
+                - DURACION_SEGUNDOS
+
+    TablaActores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ACTORES_${env:TALLER_EQUIPO}
+        # PK: ACTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ACTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ACTOR_ID
+            KeyType: HASH  # Partition key: identifica al actor.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: ESCENA_ID + ACTOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ESCENA_ID, AttributeType: N }
+          - { AttributeName: ACTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ESCENA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una escena.
+          - AttributeName: ACTOR_ID
+            KeyType: RANGE # Sort key: distingue al actor dentro de la escena.
+        GlobalSecondaryIndexes:
+          - IndexName: PorActor
+            KeySchema:
+              - AttributeName: ACTOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del actor.
+              - AttributeName: ESCENA_ID
+                KeyType: RANGE # Ordena sus escenas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    ActoresTableName:
+      Value: { Ref: TablaActores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

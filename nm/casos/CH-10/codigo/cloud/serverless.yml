@@ -1,0 +1,174 @@
+service: taller-ch10
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_HOSPITALES: { Ref: TablaHospitales }
+    TABLA_HABITACIONES: { Ref: TablaHabitaciones }
+    TABLA_ENFERMEROS: { Ref: TablaEnfermeros }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearHabitacion:
+    handler: src/habitaciones/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/habitaciones' }
+  listarHabitaciones:
+    handler: src/habitaciones/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/habitaciones' }
+  eliminarHabitacion:
+    handler: src/habitaciones/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/habitaciones/{habitacionId}' }
+  modificarCamas:
+    handler: src/habitaciones/modificar-camas/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/habitaciones/{habitacionId}' }
+  trasladarHabitacion:
+    handler: src/habitaciones/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/habitaciones/{habitacionId}/hospital' }
+  consultarHospital:
+    handler: src/hospitales/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/hospitales/{hospitalId}/habitaciones' }
+  crearEnfermero:
+    handler: src/enfermeros/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/enfermeros' }
+  listarEnfermeros:
+    handler: src/enfermeros/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/enfermeros' }
+  asignarEnfermero:
+    handler: src/asignaciones/asignar-enfermero/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/habitaciones/{habitacionId}/asignaciones' }
+  listarAsignacionesPorHabitacion:
+    handler: src/asignaciones/listar-por-habitacion/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/habitaciones/{habitacionId}/asignaciones' }
+  listarAsignacionesPorEnfermero:
+    handler: src/asignaciones/listar-por-enfermero/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/enfermeros/{enfermeroId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/habitaciones/{habitacionId}/asignaciones/{enfermeroId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/habitaciones/{habitacionId}/asignaciones/{enfermeroId}' }
+
+resources:
+  Resources:
+    TablaHospitales:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HOSPITALES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: HOSPITAL_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_HOSPITAL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: HOSPITAL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HOSPITAL_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaHabitaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HABITACIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: HABITACION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   CAMAS (N: número).
+        #   HOSPITAL_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_HABITACION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: HABITACION_ID, AttributeType: N }
+          - { AttributeName: HOSPITAL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HABITACION_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en HABITACIONES.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorHospital
+            # Clave compuesta = partition key + sort key:
+            # (HOSPITAL_ID, HABITACION_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: HOSPITAL_ID
+                KeyType: HASH   # Partition key. Agrupa por Hospital.
+              - AttributeName: HABITACION_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de HABITACIONES copiados al índice.
+                - NOMBRE
+                - CAMAS
+
+    TablaEnfermeros:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ENFERMEROS_${env:TALLER_EQUIPO}
+        # PK: ENFERMERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ENFERMERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ENFERMERO_ID
+            KeyType: HASH  # Partition key: identifica al enfermero.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: HABITACION_ID + ENFERMERO_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: HABITACION_ID, AttributeType: N }
+          - { AttributeName: ENFERMERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HABITACION_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una habitacion.
+          - AttributeName: ENFERMERO_ID
+            KeyType: RANGE # Sort key: distingue al enfermero dentro de la habitacion.
+        GlobalSecondaryIndexes:
+          - IndexName: PorEnfermero
+            KeySchema:
+              - AttributeName: ENFERMERO_ID
+                KeyType: HASH  # Agrupa las asignaciones del enfermero.
+              - AttributeName: HABITACION_ID
+                KeyType: RANGE # Ordena sus habitaciones por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    EnfermerosTableName:
+      Value: { Ref: TablaEnfermeros }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

@@ -1,0 +1,174 @@
+service: taller-ch27
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_URBANIZACIONES: { Ref: TablaUrbanizaciones }
+    TABLA_PLAZAS: { Ref: TablaPlazas }
+    TABLA_TECNICOS: { Ref: TablaTecnicos }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearPlaza:
+    handler: src/plazas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/plazas' }
+  listarPlazas:
+    handler: src/plazas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/plazas' }
+  eliminarPlaza:
+    handler: src/plazas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/plazas/{plazaId}' }
+  modificarSuperficieM2:
+    handler: src/plazas/modificar-superficie-m2/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/plazas/{plazaId}' }
+  trasladarPlaza:
+    handler: src/plazas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/plazas/{plazaId}/urbanizacion' }
+  consultarUrbanizacion:
+    handler: src/urbanizaciones/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/urbanizaciones/{urbanizacionId}/plazas' }
+  crearTecnico:
+    handler: src/tecnicos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/tecnicos' }
+  listarTecnicos:
+    handler: src/tecnicos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/tecnicos' }
+  asignarTecnico:
+    handler: src/asignaciones/asignar-tecnico/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/plazas/{plazaId}/asignaciones' }
+  listarAsignacionesPorPlaza:
+    handler: src/asignaciones/listar-por-plaza/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/plazas/{plazaId}/asignaciones' }
+  listarAsignacionesPorTecnico:
+    handler: src/asignaciones/listar-por-tecnico/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/tecnicos/{tecnicoId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/plazas/{plazaId}/asignaciones/{tecnicoId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/plazas/{plazaId}/asignaciones/{tecnicoId}' }
+
+resources:
+  Resources:
+    TablaUrbanizaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: URBANIZACIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: URBANIZACION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_URBANIZACION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: URBANIZACION_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: URBANIZACION_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaPlazas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PLAZAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PLAZA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   SUPERFICIE_M2 (N: número).
+        #   URBANIZACION_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PLAZA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PLAZA_ID, AttributeType: N }
+          - { AttributeName: URBANIZACION_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PLAZA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en PLAZAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorUrbanizacion
+            # Clave compuesta = partition key + sort key:
+            # (URBANIZACION_ID, PLAZA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: URBANIZACION_ID
+                KeyType: HASH   # Partition key. Agrupa por Urbanizacion.
+              - AttributeName: PLAZA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PLAZAS copiados al índice.
+                - NOMBRE
+                - SUPERFICIE_M2
+
+    TablaTecnicos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: TECNICOS_${env:TALLER_EQUIPO}
+        # PK: TECNICO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: TECNICO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: TECNICO_ID
+            KeyType: HASH  # Partition key: identifica al tecnico.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PLAZA_ID + TECNICO_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PLAZA_ID, AttributeType: N }
+          - { AttributeName: TECNICO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PLAZA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una plaza.
+          - AttributeName: TECNICO_ID
+            KeyType: RANGE # Sort key: distingue al tecnico dentro de la plaza.
+        GlobalSecondaryIndexes:
+          - IndexName: PorTecnico
+            KeySchema:
+              - AttributeName: TECNICO_ID
+                KeyType: HASH  # Agrupa las asignaciones del tecnico.
+              - AttributeName: PLAZA_ID
+                KeyType: RANGE # Ordena sus plazas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    TecnicosTableName:
+      Value: { Ref: TablaTecnicos }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

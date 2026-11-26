@@ -1,0 +1,174 @@
+service: taller-ch29
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_GRANJAS: { Ref: TablaGranjas }
+    TABLA_COSECHAS: { Ref: TablaCosechas }
+    TABLA_AGRICULTORES: { Ref: TablaAgricultores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearCosecha:
+    handler: src/cosechas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/cosechas' }
+  listarCosechas:
+    handler: src/cosechas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/cosechas' }
+  eliminarCosecha:
+    handler: src/cosechas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }
+  modificarKilos:
+    handler: src/cosechas/modificar-kilos/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }
+  trasladarCosecha:
+    handler: src/cosechas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/granja' }
+  consultarGranja:
+    handler: src/granjas/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/granjas/{granjaId}/cosechas' }
+  crearAgricultor:
+    handler: src/agricultores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/agricultores' }
+  listarAgricultores:
+    handler: src/agricultores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/agricultores' }
+  asignarAgricultor:
+    handler: src/asignaciones/asignar-agricultor/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/cosechas/{cosechaId}/asignaciones' }
+  listarAsignacionesPorCosecha:
+    handler: src/asignaciones/listar-por-cosecha/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cosechas/{cosechaId}/asignaciones' }
+  listarAsignacionesPorAgricultor:
+    handler: src/asignaciones/listar-por-agricultor/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/agricultores/{agricultorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/asignaciones/{agricultorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}/asignaciones/{agricultorId}' }
+
+resources:
+  Resources:
+    TablaGranjas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: GRANJAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: GRANJA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_GRANJA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: GRANJA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: GRANJA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaCosechas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: COSECHAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: COSECHA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   KILOS (N: número).
+        #   GRANJA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_COSECHA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: COSECHA_ID, AttributeType: N }
+          - { AttributeName: GRANJA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COSECHA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en COSECHAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorGranja
+            # Clave compuesta = partition key + sort key:
+            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: GRANJA_ID
+                KeyType: HASH   # Partition key. Agrupa por Granja.
+              - AttributeName: COSECHA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.
+                - NOMBRE
+                - KILOS
+
+    TablaAgricultores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: AGRICULTORES_${env:TALLER_EQUIPO}
+        # PK: AGRICULTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: AGRICULTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: AGRICULTOR_ID
+            KeyType: HASH  # Partition key: identifica al agricultor.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: COSECHA_ID + AGRICULTOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: COSECHA_ID, AttributeType: N }
+          - { AttributeName: AGRICULTOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: COSECHA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una cosecha.
+          - AttributeName: AGRICULTOR_ID
+            KeyType: RANGE # Sort key: distingue al agricultor dentro de la cosecha.
+        GlobalSecondaryIndexes:
+          - IndexName: PorAgricultor
+            KeySchema:
+              - AttributeName: AGRICULTOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del agricultor.
+              - AttributeName: COSECHA_ID
+                KeyType: RANGE # Ordena sus cosechas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    AgricultoresTableName:
+      Value: { Ref: TablaAgricultores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

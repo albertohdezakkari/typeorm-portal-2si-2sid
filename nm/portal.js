@@ -1,8 +1,10 @@
-// Amplía únicamente CH-22. No modifica el runtime ni las claves del taller 1:N.
+// Amplía cada contexto conservando el runtime y las claves del taller 1:N.
 (() => {
  const workspace=document.getElementById('workspace');
  const previous=window.montarCuadernoDual;
  const previousNavigation=window.activarNavegacionCuaderno;
+ const catalogue=fetch('nm/contextos.json?v=nm-10').then(response=>{if(!response.ok)throw new Error('Catálogo N:M no disponible');return response.json();});
+ const escapeHtml=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let current=null,sequence=0,scrollFrame=0,lastY=window.scrollY,scrollDirection=0,scrollDistance=0;
  function viewport(direction=0){if(!current?.started||current.relation!=='nm')return;current.frame.contentWindow.postMessage({type:'nm:viewport',binding:current.binding,offset:Math.max(0,-current.frame.getBoundingClientRect().top),height:innerHeight,direction},location.origin);}
  function category(relation){
@@ -61,26 +63,28 @@
  window.montarCuadernoDual=async(student,context)=>{
   const request=++sequence;clean();
   await previous(student,context);
-  if(request!==sequence||context.id!=='CH-22'||workspace.dataset.currentCase!=='CH-22'||!workspace.classList.contains('active'))return;
-  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(student.email.trim().toLowerCase()+'|CH-22|nm'));
+  if(request!==sequence||workspace.dataset.currentCase!==context.id||!workspace.classList.contains('active'))return;
+  const metadata=(await catalogue)[context.id];
+  if(!metadata||request!==sequence)return;
+  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(student.email.trim().toLowerCase()+'|'+context.id+'|nm'));
   if(request!==sequence)return;
   const key='sv:nm:v1:'+Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
   let saved=null;try{saved=JSON.parse(localStorage.getItem(key)||'null');}catch{}
   const binding=crypto.randomUUID();
   const section=document.createElement('section');section.id='panel-nm';section.className='tab-panel';section.style.padding='clamp(8px,1.5vw,18px)';
-  section.innerHTML='<h2 style="margin:5px 0 12px">Ampliación N:M · Obras y profesionales</h2><p id="nm-status" role="status" style="font-size:13px;color:#607762">Se conserva tu recorrido 1:N. Esta unidad guarda su propio avance en este navegador.</p><iframe id="nm-frame" title="Arturo: ampliación N:M con TypeORM y Serverless" style="width:100%;min-height:800px;border:0;display:block" referrerpolicy="same-origin"></iframe>';
+  section.innerHTML='<h2 style="margin:5px 0 12px">Ampliación N:M · '+escapeHtml(metadata.title)+'</h2><p id="nm-status" role="status" style="font-size:13px;color:#607762">Se conserva tu recorrido 1:N. Esta unidad guarda su propio avance en este navegador.</p><iframe id="nm-frame" title="'+escapeHtml(context.id+' · '+metadata.title+': TypeORM y Serverless')+'" style="width:100%;min-height:800px;border:0;display:block" referrerpolicy="same-origin"></iframe>';
   workspace.append(section);
   const mainNav=workspace.querySelector(':scope > nav.tabs');
   const banner=workspace.querySelector('.mq-pilot-banner');
   const categories=document.createElement('section');categories.className='nm-category-picker';
-  categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>Ayuntamiento y Obra · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>Obras y profesionales · ampliación del proyecto</small></span></button></nav>';
+  categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>'+escapeHtml(metadata.baselineTitle)+' · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>'+escapeHtml(metadata.title)+' · ampliación del proyecto</small></span></button></nav>';
   (banner||mainNav).before(categories);
   categories.addEventListener('click',event=>{const button=event.target.closest('[data-relation]');if(button)choose(button.dataset.relation);});
   // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
   const simulation=mainNav.querySelector('[data-tab="simulacion"]');simulation.before(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src='nm/?v=nm-9';}});
-  const frame=section.querySelector('iframe');current={key,binding,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=nm-10';}});
+  const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
   if(location.hash==='#nm')choose('nm');
  };
@@ -90,7 +94,7 @@
   if(data?.type==='nm:ready'){current.frame.contentWindow.postMessage({type:'nm:init',binding:current.binding,state:current.state},location.origin);return;}
   if(data?.binding!==current.binding)return;
   if(data.type==='nm:height'&&Number.isFinite(data.height)){current.frame.style.height=Math.max(800,Math.min(28000,data.height+8))+'px';viewport();}
-  if(data.type==='nm:progress'&&data.state?.version===1&&data.state.caseId==='CH-22'&&data.state.unit==='nm'){
+  if(data.type==='nm:progress'&&data.state?.version===1&&data.state.caseId===current.caseId&&data.state.unit==='nm'){
    try{const json=JSON.stringify(data.state);if(json.length<180000){localStorage.setItem(current.key,json);current.state=data.state;document.getElementById('nm-status').textContent='Avance N:M guardado en este navegador. Tu progreso 1:N se conserva por separado.';}}catch{}
   }
   if(data.type==='nm:baseline')window.abrirPreparacionGuiada?.(data.track);

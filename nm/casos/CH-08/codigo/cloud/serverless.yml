@@ -1,0 +1,174 @@
+service: taller-ch08
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_PANADERIAS: { Ref: TablaPanaderias }
+    TABLA_PRODUCTOS: { Ref: TablaProductos }
+    TABLA_PANADEROS: { Ref: TablaPanaderos }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearProducto:
+    handler: src/productos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/productos' }
+  listarProductos:
+    handler: src/productos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/productos' }
+  eliminarProducto:
+    handler: src/productos/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/productos/{productoId}' }
+  modificarPrecioCentimos:
+    handler: src/productos/modificar-precio-centimos/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/productos/{productoId}' }
+  trasladarProducto:
+    handler: src/productos/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/productos/{productoId}/panaderia' }
+  consultarPanaderia:
+    handler: src/panaderias/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/panaderias/{panaderiaId}/productos' }
+  crearPanadero:
+    handler: src/panaderos/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/panaderos' }
+  listarPanaderos:
+    handler: src/panaderos/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/panaderos' }
+  asignarPanadero:
+    handler: src/asignaciones/asignar-panadero/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/productos/{productoId}/asignaciones' }
+  listarAsignacionesPorProducto:
+    handler: src/asignaciones/listar-por-producto/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/productos/{productoId}/asignaciones' }
+  listarAsignacionesPorPanadero:
+    handler: src/asignaciones/listar-por-panadero/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/panaderos/{panaderoId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/productos/{productoId}/asignaciones/{panaderoId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/productos/{productoId}/asignaciones/{panaderoId}' }
+
+resources:
+  Resources:
+    TablaPanaderias:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PANADERIAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PANADERIA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_PANADERIA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PANADERIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PANADERIA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaProductos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PRODUCTOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: PRODUCTO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   PRECIO_CENTIMOS (N: número).
+        #   PANADERIA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_PRODUCTO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: PRODUCTO_ID, AttributeType: N }
+          - { AttributeName: PANADERIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PRODUCTO_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en PRODUCTOS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorPanaderia
+            # Clave compuesta = partition key + sort key:
+            # (PANADERIA_ID, PRODUCTO_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: PANADERIA_ID
+                KeyType: HASH   # Partition key. Agrupa por Panaderia.
+              - AttributeName: PRODUCTO_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de PRODUCTOS copiados al índice.
+                - NOMBRE
+                - PRECIO_CENTIMOS
+
+    TablaPanaderos:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: PANADEROS_${env:TALLER_EQUIPO}
+        # PK: PANADERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PANADERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PANADERO_ID
+            KeyType: HASH  # Partition key: identifica al panadero.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: PRODUCTO_ID + PANADERO_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: PRODUCTO_ID, AttributeType: N }
+          - { AttributeName: PANADERO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: PRODUCTO_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de un producto.
+          - AttributeName: PANADERO_ID
+            KeyType: RANGE # Sort key: distingue al panadero dentro de el producto.
+        GlobalSecondaryIndexes:
+          - IndexName: PorPanadero
+            KeySchema:
+              - AttributeName: PANADERO_ID
+                KeyType: HASH  # Agrupa las asignaciones del panadero.
+              - AttributeName: PRODUCTO_ID
+                KeyType: RANGE # Ordena sus productos por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    PanaderosTableName:
+      Value: { Ref: TablaPanaderos }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

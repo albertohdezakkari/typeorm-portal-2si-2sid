@@ -1,0 +1,174 @@
+service: taller-ch11
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_HOTELES: { Ref: TablaHoteles }
+    TABLA_RESERVAS: { Ref: TablaReservas }
+    TABLA_HUESPEDES: { Ref: TablaHuespedes }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearReserva:
+    handler: src/reservas/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/reservas' }
+  listarReservas:
+    handler: src/reservas/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/reservas' }
+  eliminarReserva:
+    handler: src/reservas/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/reservas/{reservaId}' }
+  modificarNoches:
+    handler: src/reservas/modificar-noches/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/reservas/{reservaId}' }
+  trasladarReserva:
+    handler: src/reservas/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/reservas/{reservaId}/hotel' }
+  consultarHotel:
+    handler: src/hoteles/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/hoteles/{hotelId}/reservas' }
+  crearHuesped:
+    handler: src/huespedes/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/huespedes' }
+  listarHuespedes:
+    handler: src/huespedes/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/huespedes' }
+  asignarHuesped:
+    handler: src/asignaciones/asignar-huesped/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/reservas/{reservaId}/asignaciones' }
+  listarAsignacionesPorReserva:
+    handler: src/asignaciones/listar-por-reserva/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/reservas/{reservaId}/asignaciones' }
+  listarAsignacionesPorHuesped:
+    handler: src/asignaciones/listar-por-huesped/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/huespedes/{huespedId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/reservas/{reservaId}/asignaciones/{huespedId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/reservas/{reservaId}/asignaciones/{huespedId}' }
+
+resources:
+  Resources:
+    TablaHoteles:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HOTELES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: HOTEL_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_HOTEL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: HOTEL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HOTEL_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaReservas:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: RESERVAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: RESERVA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   NOCHES (N: número).
+        #   HOTEL_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_RESERVA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: RESERVA_ID, AttributeType: N }
+          - { AttributeName: HOTEL_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: RESERVA_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en RESERVAS.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorHotel
+            # Clave compuesta = partition key + sort key:
+            # (HOTEL_ID, RESERVA_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: HOTEL_ID
+                KeyType: HASH   # Partition key. Agrupa por Hotel.
+              - AttributeName: RESERVA_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de RESERVAS copiados al índice.
+                - NOMBRE
+                - NOCHES
+
+    TablaHuespedes:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: HUESPEDES_${env:TALLER_EQUIPO}
+        # PK: HUESPED_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: HUESPED_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: HUESPED_ID
+            KeyType: HASH  # Partition key: identifica al huesped.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: RESERVA_ID + HUESPED_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: RESERVA_ID, AttributeType: N }
+          - { AttributeName: HUESPED_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: RESERVA_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una reserva.
+          - AttributeName: HUESPED_ID
+            KeyType: RANGE # Sort key: distingue al huesped dentro de la reserva.
+        GlobalSecondaryIndexes:
+          - IndexName: PorHuesped
+            KeySchema:
+              - AttributeName: HUESPED_ID
+                KeyType: HASH  # Agrupa las asignaciones del huesped.
+              - AttributeName: RESERVA_ID
+                KeyType: RANGE # Ordena sus reservas por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    HuespedesTableName:
+      Value: { Ref: TablaHuespedes }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

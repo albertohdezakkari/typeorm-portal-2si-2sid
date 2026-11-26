@@ -1,0 +1,174 @@
+service: taller-ch01
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_REFUGIOS: { Ref: TablaRefugios }
+    TABLA_ANIMALES: { Ref: TablaAnimales }
+    TABLA_CUIDADORES: { Ref: TablaCuidadores }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearAnimal:
+    handler: src/animales/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/animales' }
+  listarAnimales:
+    handler: src/animales/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/animales' }
+  eliminarAnimal:
+    handler: src/animales/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/animales/{animalId}' }
+  modificarEdadMeses:
+    handler: src/animales/modificar-edad-meses/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/animales/{animalId}' }
+  trasladarAnimal:
+    handler: src/animales/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/animales/{animalId}/refugio' }
+  consultarRefugio:
+    handler: src/refugios/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/refugios/{refugioId}/animales' }
+  crearCuidador:
+    handler: src/cuidadores/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/cuidadores' }
+  listarCuidadores:
+    handler: src/cuidadores/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/cuidadores' }
+  asignarCuidador:
+    handler: src/asignaciones/asignar-cuidador/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/animales/{animalId}/asignaciones' }
+  listarAsignacionesPorAnimal:
+    handler: src/asignaciones/listar-por-animal/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/animales/{animalId}/asignaciones' }
+  listarAsignacionesPorCuidador:
+    handler: src/asignaciones/listar-por-cuidador/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/cuidadores/{cuidadorId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/animales/{animalId}/asignaciones/{cuidadorId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/animales/{animalId}/asignaciones/{cuidadorId}' }
+
+resources:
+  Resources:
+    TablaRefugios:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: REFUGIOS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: REFUGIO_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_REFUGIO.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: REFUGIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: REFUGIO_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaAnimales:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ANIMALES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: ANIMAL_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   EDAD_MESES (N: número).
+        #   REFUGIO_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_ANIMAL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: ANIMAL_ID, AttributeType: N }
+          - { AttributeName: REFUGIO_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ANIMAL_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en ANIMALES.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorRefugio
+            # Clave compuesta = partition key + sort key:
+            # (REFUGIO_ID, ANIMAL_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: REFUGIO_ID
+                KeyType: HASH   # Partition key. Agrupa por Refugio.
+              - AttributeName: ANIMAL_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de ANIMALES copiados al índice.
+                - NOMBRE
+                - EDAD_MESES
+
+    TablaCuidadores:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: CUIDADORES_${env:TALLER_EQUIPO}
+        # PK: CUIDADOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: CUIDADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: CUIDADOR_ID
+            KeyType: HASH  # Partition key: identifica al cuidador.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: ANIMAL_ID + CUIDADOR_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: ANIMAL_ID, AttributeType: N }
+          - { AttributeName: CUIDADOR_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: ANIMAL_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de un animal.
+          - AttributeName: CUIDADOR_ID
+            KeyType: RANGE # Sort key: distingue al cuidador dentro de el animal.
+        GlobalSecondaryIndexes:
+          - IndexName: PorCuidador
+            KeySchema:
+              - AttributeName: CUIDADOR_ID
+                KeyType: HASH  # Agrupa las asignaciones del cuidador.
+              - AttributeName: ANIMAL_ID
+                KeyType: RANGE # Ordena sus animales por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    CuidadoresTableName:
+      Value: { Ref: TablaCuidadores }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }

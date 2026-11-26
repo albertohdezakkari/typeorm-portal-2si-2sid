@@ -1,0 +1,174 @@
+service: taller-ch07
+frameworkVersion: '3.40.0'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ${env:AWS_REGION}
+  stage: ${env:TALLER_EQUIPO}
+  iam:
+    role: ${env:LAMBDA_ROLE_ARN}
+  httpApi:
+    payload: '2.0'
+    cors: true
+
+  environment:
+    TABLA_AGENCIAS: { Ref: TablaAgencias }
+    TABLA_EXCURSIONES: { Ref: TablaExcursiones }
+    TABLA_GUIAS: { Ref: TablaGuias }
+    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }
+
+
+functions:
+  salud:
+    handler: src/salud/handler.handler
+    events:
+      - httpApi: { method: GET, path: /salud }
+  crearExcursion:
+    handler: src/excursiones/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/excursiones' }
+  listarExcursiones:
+    handler: src/excursiones/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/excursiones' }
+  eliminarExcursion:
+    handler: src/excursiones/eliminar/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }
+  modificarDuracionHoras:
+    handler: src/excursiones/modificar-duracion-horas/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }
+  trasladarExcursion:
+    handler: src/excursiones/trasladar/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/agencia' }
+  consultarAgencia:
+    handler: src/agencias/consultar/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/agencias/{agenciaId}/excursiones' }
+  crearGuia:
+    handler: src/guias/crear-listar/handler.crearHandler
+    events:
+      - httpApi: { method: POST, path: '/guias' }
+  listarGuias:
+    handler: src/guias/crear-listar/handler.listarHandler
+    events:
+      - httpApi: { method: GET, path: '/guias' }
+  asignarGuia:
+    handler: src/asignaciones/asignar-guia/handler.handler
+    events:
+      - httpApi: { method: POST, path: '/excursiones/{excursionId}/asignaciones' }
+  listarAsignacionesPorExcursion:
+    handler: src/asignaciones/listar-por-excursion/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/excursiones/{excursionId}/asignaciones' }
+  listarAsignacionesPorGuia:
+    handler: src/asignaciones/listar-por-guia/handler.handler
+    events:
+      - httpApi: { method: GET, path: '/guias/{guiaId}/asignaciones' }
+  modificarRol:
+    handler: src/asignaciones/modificar-rol/handler.handler
+    events:
+      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/asignaciones/{guiaId}' }
+  eliminarAsignacion:
+    handler: src/asignaciones/eliminar-asignacion/handler.handler
+    events:
+      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}/asignaciones/{guiaId}' }
+
+resources:
+  Resources:
+    TablaAgencias:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: AGENCIAS_${env:TALLER_EQUIPO}
+        # PARTITION KEY: AGENCIA_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        # Sus tipos se describen en MODELO_AGENCIA.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: AGENCIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: AGENCIA_ID
+            KeyType: HASH  # Partition key del lado 1.
+
+    TablaExcursiones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: EXCURSIONES_${env:TALLER_EQUIPO}
+        # PARTITION KEY: EXCURSION_ID (N: número).
+        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):
+        #   NOMBRE (S: texto).
+        #   DURACION_HORAS (N: número).
+        #   AGENCIA_ID (N: referencia y clave del GSI).
+        # Sus tipos se describen en MODELO_EXCURSION.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:  # N = número. Declara las claves.
+          - { AttributeName: EXCURSION_ID, AttributeType: N }
+          - { AttributeName: AGENCIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: EXCURSION_ID
+            KeyType: HASH  # Partition key del lado N.
+
+        # GSI: segunda forma de buscar en EXCURSIONES.
+        # Global: agrupa todo el lado N por su referencia.
+        GlobalSecondaryIndexes:
+          - IndexName: PorAgencia
+            # Clave compuesta = partition key + sort key:
+            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.
+            KeySchema:
+              - AttributeName: AGENCIA_ID
+                KeyType: HASH   # Partition key. Agrupa por Agencia.
+              - AttributeName: EXCURSION_ID
+                KeyType: RANGE  # Sort key. Ordena por ID.
+            Projection:
+              ProjectionType: INCLUDE  # Claves + campos de abajo.
+              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.
+                - NOMBRE
+                - DURACION_HORAS
+
+    TablaGuias:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: GUIAS_${env:TALLER_EQUIPO}
+        # PK: GUIA_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: GUIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: GUIA_ID
+            KeyType: HASH  # Partition key: identifica al guia.
+
+    TablaAsignaciones:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}
+        # PK compuesta: EXCURSION_ID + GUIA_ID. Dato no clave: ROL.
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - { AttributeName: EXCURSION_ID, AttributeType: N }
+          - { AttributeName: GUIA_ID, AttributeType: N }
+        KeySchema:
+          - AttributeName: EXCURSION_ID
+            KeyType: HASH  # Partition key: agrupa las asignaciones de una excursion.
+          - AttributeName: GUIA_ID
+            KeyType: RANGE # Sort key: distingue al guia dentro de la excursion.
+        GlobalSecondaryIndexes:
+          - IndexName: PorGuia
+            KeySchema:
+              - AttributeName: GUIA_ID
+                KeyType: HASH  # Agrupa las asignaciones del guia.
+              - AttributeName: EXCURSION_ID
+                KeyType: RANGE # Ordena sus excursiones por ID.
+            Projection:
+              ProjectionType: INCLUDE
+              NonKeyAttributes:
+                - ROL # Copia ROL al índice; ambas claves ya se incluyen.
+
+  Outputs:
+    GuiasTableName:
+      Value: { Ref: TablaGuias }
+    AsignacionesTableName:
+      Value: { Ref: TablaAsignaciones }
