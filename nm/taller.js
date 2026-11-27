@@ -274,12 +274,18 @@ function onPointerDown(event){const el=event.target.closest('[data-piece]');if(!
 function onPointerMove(event){if(!drag)return;if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>7)drag.moving=true;if(!drag.moving)return;event.preventDefault();selected=drag.id;highlight(targetAt(event.clientX,event.clientY));}
 function onPointerUp(event){if(!drag)return;const moved=drag.moving;const id=drag.id;const slot=moved?targetAt(event.clientX,event.clientY):null;if(slot){event.preventDefault();place(+slot.dataset.slot,id);}cleanDrag();}
 function cleanDrag(){highlight(null);if(drag?.el.hasPointerCapture?.(drag.pointer))drag.el.releasePointerCapture(drag.pointer);drag=null;}
+function startAtBeginning(){
+ if(!D.projectBase)return;
+ delete S.returnTo;go(0);$('.nm-guide-map').open=true;
+ $('.nm-chapters button').focus({preventScroll:true});
+ send('nm:started');
+}
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-22.json?v=nm-sin-carga-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
+ try{D=await (await fetch('CH-22.json?v=nm-sin-carga-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
-window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});
+window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:start')startAtBeginning();if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});
 root.addEventListener('keydown',e=>{if(e.key==='Tab'||e.key.startsWith('Arrow'))keyboardNavigation=true;});
 root.addEventListener('pointerdown',()=>{keyboardNavigation=false;});
 if(parent===window)init({});else parent.postMessage({type:'nm:ready'},location.origin);

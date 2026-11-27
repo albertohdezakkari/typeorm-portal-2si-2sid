@@ -2,7 +2,7 @@
 
 ## Piloto Arturo · lectura completa · 27/11/2026
 
-Arturo (CH-22) estudia 1:N y N:M con los archivos completos visibles y un botón para copiar su contenido. No hay animaciones, puzles ni requisitos de montaje para avanzar. Las explicaciones y los dibujos permanecen como apoyo estático. Tecnología, caso y archivo seleccionado comparten sus colores en las dos relaciones mediante `lectura.css`. Se conservan la posición y las marcas anteriores. Los demás alumnos mantienen su recorrido hasta validar este piloto.
+Arturo (CH-22) estudia 1:N y N:M con los archivos completos visibles y un botón para copiar su contenido. No hay animaciones, puzles ni requisitos de montaje para avanzar. Las explicaciones y los dibujos permanecen como apoyo estático. Tecnología, caso y archivo seleccionado comparten sus colores en las dos relaciones mediante `lectura.css`. Se conservan las marcas anteriores y la posición del recorrido 1:N. Al abrir N:M, Arturo empieza en «01 · Entender la N:M», con su cabecera visible desde arriba. Los demás alumnos mantienen su recorrido hasta validar este piloto.
 
 Abre el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), selecciona tu correo y elige **Relación N:M**. Los 30 alumnos tienen su ampliación contextualizada: modelos, código por capas, seis casos, animaciones, puzles y fichas imprimibles. **Relación 1:N** conserva el proyecto anterior y su avance.
 
