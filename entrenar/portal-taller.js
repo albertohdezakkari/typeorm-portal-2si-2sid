@@ -46,8 +46,8 @@
         },
       });
       frame.src = 'entrenar/?v=guiado-arturo-1';
-      // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
-      if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
+      // Arturo empieza en Preparar; los demás conservan sus enlaces directos.
+      if (caseData.id !== 'CH-22' && location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {
       status.textContent = 'No se ha podido preparar el taller. Recarga la página e inténtalo de nuevo.';
     }

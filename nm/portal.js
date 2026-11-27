@@ -15,7 +15,7 @@
   if(current.banner)current.banner.hidden=relation==='nm';
   for(const button of current.categories.querySelectorAll('[data-relation]'))button.setAttribute('aria-pressed',String(button.dataset.relation===relation));
   const caption=current.categories.querySelector('[data-relation-caption]');
-  if(caption){const detail=current.categories.querySelector('details'),wasOpen=detail.open;caption.textContent='Relación '+(relation==='nm'?'N:M':'1:N');detail.open=false;if(wasOpen)detail.querySelector('summary').focus({preventScroll:true});}
+  if(caption)caption.textContent='Relación '+(relation==='nm'?'N:M':'1:N');
  }
  function choose(relation){
   if(!current)return;
@@ -82,7 +82,7 @@
   const categories=document.createElement('section');categories.className='nm-category-picker';
   categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>'+escapeHtml(metadata.baselineTitle)+' · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>'+escapeHtml(metadata.title)+' · ampliación del proyecto</small></span></button></nav>';
   if(context.id==='CH-22'){
-   const content=[...categories.childNodes],details=document.createElement('details');details.className='guided-relation-choice';
+   const content=[...categories.childNodes],details=document.createElement('details');details.className='guided-relation-choice';details.open=true;
    details.innerHTML='<summary><strong data-relation-caption>Relación 1:N</strong><span>Cambiar relación</span></summary>';
    details.append(...content);categories.replaceChildren(details);
   }
@@ -94,7 +94,7 @@
   button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=guiado-arturo-1';}});
   const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
-  if(location.hash==='#nm')choose('nm');
+  if(context.id!=='CH-22'&&location.hash==='#nm')choose('nm');
  };
  window.addEventListener('message',event=>{
   if(!current||event.origin!==location.origin||event.source!==current.frame.contentWindow)return;
