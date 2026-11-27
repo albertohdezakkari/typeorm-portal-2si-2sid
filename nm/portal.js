@@ -14,6 +14,8 @@
   current.mainNav.hidden=relation==='nm';
   if(current.banner)current.banner.hidden=relation==='nm';
   for(const button of current.categories.querySelectorAll('[data-relation]'))button.setAttribute('aria-pressed',String(button.dataset.relation===relation));
+  const caption=current.categories.querySelector('[data-relation-caption]');
+  if(caption){const detail=current.categories.querySelector('details'),wasOpen=detail.open;caption.textContent='Relación '+(relation==='nm'?'N:M':'1:N');detail.open=false;if(wasOpen)detail.querySelector('summary').focus({preventScroll:true});}
  }
  function choose(relation){
   if(!current)return;
@@ -79,12 +81,17 @@
   const banner=workspace.querySelector('.mq-pilot-banner');
   const categories=document.createElement('section');categories.className='nm-category-picker';
   categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>'+escapeHtml(metadata.baselineTitle)+' · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>'+escapeHtml(metadata.title)+' · ampliación del proyecto</small></span></button></nav>';
+  if(context.id==='CH-22'){
+   const content=[...categories.childNodes],details=document.createElement('details');details.className='guided-relation-choice';
+   details.innerHTML='<summary><strong data-relation-caption>Relación 1:N</strong><span>Cambiar relación</span></summary>';
+   details.append(...content);categories.replaceChildren(details);
+  }
   (banner||mainNav).before(categories);
   categories.addEventListener('click',event=>{const button=event.target.closest('[data-relation]');if(button)choose(button.dataset.relation);});
   // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
   const simulation=mainNav.querySelector('[data-tab="simulacion"]');if(simulation)simulation.before(button);else mainNav.append(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=dos-pestanas-arturo-1';}});
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=guiado-arturo-1';}});
   const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
   if(location.hash==='#nm')choose('nm');

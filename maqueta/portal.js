@@ -103,6 +103,7 @@
     pageBrand.textContent = originalBrand;
     trainingHeading.textContent=originalTrainingHeading;
     delete workspace.dataset.simpleNest;
+    delete workspace.dataset.guidedCourse;
     delete workspace.dataset.cuaderno;
     mountedContext = null;
     mounted = false;
@@ -135,6 +136,7 @@
     data = null; preparation = null;
     track = 'nest'; operation = 1; archiveChoice = 'animation';
     mountedContext = context.id;
+    if(context.id==='CH-22')workspace.dataset.guidedCourse='true';
     if (!mounted) {
       mounted = true;
       workspace.dataset.cuaderno = context.id;
@@ -175,7 +177,7 @@
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=dos-pestanas-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=dos-pestanas-arturo-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=guiado-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=guiado-arturo-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;

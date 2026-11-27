@@ -58,6 +58,7 @@ function shell(){
  else if(D.nestSimpleRevision){
   root.querySelector('.nm-toolbar a').textContent='Fichas anteriores (con Repository) ↗';
  }
+ setupNMGuidance();
  root.addEventListener('click',onClick);
  root.addEventListener('dragstart',onDragStart);root.addEventListener('dragover',onDragOver);root.addEventListener('drop',onDrop);root.addEventListener('dragend',cleanDrag);
  root.addEventListener('pointerdown',onPointerDown);root.addEventListener('pointermove',onPointerMove);root.addEventListener('pointerup',onPointerUp);root.addEventListener('pointercancel',cleanDrag);
@@ -118,8 +119,41 @@ function bank(){
  const s=stage(),used=new Set(Object.values(S.answers[key()]||{}));
  return s.cues.map((c,i)=>({id:String(i),token:c.token})).filter(x=>!used.has(x.id)&&+x.id===S.cue).sort((a,b)=>a.token.localeCompare(b.token)).map(x=>`<button type="button" draggable="true" class="nm-piece" data-piece="${x.id}" data-action="piece" aria-pressed="${selected===x.id}">${esc(x.token)}</button>`).join('');
 }
+function setupNMGuidance(){
+ if(!D.projectBase)return;
+ root.setAttribute('data-guided-course','');
+ const map=document.createElement('details');map.className='nm-guide-map';
+ map.innerHTML='<summary><strong data-nm-guide-route></strong><span>Ver recorrido y cambiar tecnología</span></summary><div class="nm-guide-map-content"></div>';
+ const content=map.querySelector('div');
+ for(const selector of ['.nm-tech','.nm-toolbar','.nm-chapters','.nm-files'])content.append($(selector));
+ $('.nm-menu-content').replaceChildren(map);
+}
+function updateNMGuidance(){
+ if(!D.projectBase)return;
+ const s=stage(),list=D.tracks[S.track],group=list.filter(x=>x.chapter===s.chapter),done=S.solved.includes(key())||S.checked.includes(key())||!s.cues.length;
+ $('[data-nm-guide-route]').textContent='Relación N:M · '+(S.track==='nest'?'Nest + TypeORM':'Serverless + Toolbox');
+ const guide=document.createElement('section');guide.className='nm-guidance';
+ const phase=done?2:S.mode==='build'?1:0;
+ const steps=['1 · Mira','2 · Monta','3 · Comprueba'].map((label,i)=>`<li${i===phase?' aria-current="step"':''}>${label}</li>`).join('');
+ const instruction=done?(s.cues.length?'Archivo completado. Revisa la comprobación del paso antes de continuar.':'Lee las instrucciones y realiza la comprobación indicada antes de continuar.'):S.mode==='build'?'Coloca las piezas que aparecen junto al código y comprueba el montaje.':'Sigue la explicación '+(S.cue+1)+' de '+s.cues.length+'. Después montarás este mismo archivo.';
+ const next=list[S.positions[S.track]+1];
+ const label=done?(next?'Continuar: '+next.title:'Elegir qué repasar'):S.mode==='build'?'Comprobar las piezas':S.cue<s.cues.length-1?'Siguiente explicación · '+(S.cue+2)+' de '+s.cues.length:'Montar este archivo';
+ const returning=$('[data-action=return-case]');
+ guide.innerHTML=`<p class="nm-guide-case">${esc(D.chapters[s.chapter])} · Archivo ${group.indexOf(s)+1} de ${group.length}</p>${s.cues.length?`<ol class="nm-guide-stages" aria-label="Cómo trabajar este archivo">${steps}</ol>`:''}<p class="nm-guide-instruction" role="status" aria-live="polite">${esc(instruction)}</p><div class="nm-guide-actions"><button type="button" data-nm-guide-back ${S.positions[S.track]===0&&!returning?'disabled':''}>Anterior</button><button type="button" data-nm-guide-primary>${esc(returning?'Volver al caso':label)}</button></div>`;
+ $('.nm-heading').after(guide);
+ $('[data-nm-guide-back]').onclick=()=>{ $('[data-action=previous]').click(); };
+ $('[data-nm-guide-primary]').onclick=()=>{
+  if(returning){returning.click();return;}
+  if(done){if(next)$('[data-action=next]').click();else $('.nm-guide-map').open=true;}
+  else if(S.mode==='build')$('[data-action=check]').click();
+  else if(S.cue<s.cues.length-1)$('[data-action=next-cue]').click();
+  else{S.cue=0;$('[data-action=build]').click();}
+ };
+}
+
 function render(){
  const before=document.activeElement;
+ const guidedFocus=before?.hasAttribute('data-nm-guide-primary')?'[data-nm-guide-primary]':before?.hasAttribute('data-nm-guide-back')?'[data-nm-guide-back]':'';
  const focus=before&&root.contains(before)?['action','track','chapter','step','cue','slot','piece','block'].filter(k=>before.dataset[k]!==undefined).map(k=>`[data-${k}="${CSS.escape(before.dataset[k])}"]`).join(''):'';
  const top=window.scrollY,s=stage(),list=D.tracks[S.track],chapter=s.chapter;
  S.cue=Math.max(0,Math.min(S.cue,s.cues.length-1));
@@ -145,7 +179,9 @@ function render(){
  }
  $('.nm-app').dataset.mode=S.mode;
  $('.nm-summary').innerHTML=`<b>Paso ${S.positions[S.track]+1} de ${list.length}</b><span>${esc(s.title)}</span><strong>Mostrar menú ⌄</strong>`;
- if(focus)root.querySelector(focus)?.focus({preventScroll:true});
+ updateNMGuidance();
+ if(guidedFocus)root.querySelector(guidedFocus)?.focus({preventScroll:true});
+ else if(focus)root.querySelector(focus)?.focus({preventScroll:true});
  window.scrollTo({top,behavior:'instant'});
  focusCode();syncMenu();resize();
 }
@@ -155,7 +191,7 @@ function focusCode(){
  const a=source.getBoundingClientRect(),b=target.getBoundingClientRect();
  if(b.top<a.top+12||b.bottom>a.bottom-12)source.scrollTop+=b.top-a.top-source.clientHeight*.32;
 }
-function go(index){stop();selected=null;S.positions[S.track]=Math.max(0,Math.min(index,D.tracks[S.track].length-1));S.cue=0;S.mode='observe';S.full=false;save();render();}
+function go(index){stop();const mapWasOpen=D.projectBase&&$('.nm-guide-map').open;if(D.projectBase)$('.nm-guide-map').open=false;selected=null;S.positions[S.track]=Math.max(0,Math.min(index,D.tracks[S.track].length-1));S.cue=0;S.mode='observe';S.full=false;save();render();if(mapWasOpen)$('[data-nm-guide-primary]').focus({preventScroll:true});}
 function setMenu(value){
  menuCollapsed=value;
  const menu=$('.nm-menu'),visible=value&&menu.dataset.pinned==='true';
@@ -171,7 +207,8 @@ async function onClick(event){
  const button=event.target.closest('[data-action]');if(!button)return;
  const a=button.dataset.action;
  if(a==='track'){
-  const previous=stage(),from=S.track;stop();S.track=button.dataset.track;const pairs={nest:{profesional:'entity',asignacion:'entity','obra-inversa':'entity','prof-inversa':'entity','asig-inversas':'entity',registrar:'infra',arrancar:'desplegar',cargar:'leer-datos'},cloud:{infra:'registrar',table:D.nestSimpleRevision?'asig-inversas':'asignacion',entity:D.nestSimpleRevision?'asig-inversas':'asignacion',desplegar:'arrancar','leer-datos':'cargar'}};let counterpart=pairs[from][previous.id]||previous.id;if(previous.id.endsWith('-evento'))counterpart=previous.id.replace(/-evento$/,'-entry');if(previous.id.endsWith('-invoke'))counterpart=previous.id.replace(/-invoke$/,'-curl');const same=D.tracks[S.track].findIndex(x=>x.id===counterpart);S.positions[S.track]=same>=0?same:D.tracks[S.track].findIndex(x=>x.chapter===previous.chapter);S.mode='observe';S.cue=0;selected=null;save();render();return;
+  if(D.projectBase)$('.nm-guide-map').open=false;
+  const previous=stage(),from=S.track;stop();S.track=button.dataset.track;const pairs={nest:{profesional:'entity',asignacion:'entity','obra-inversa':'entity','prof-inversa':'entity','asig-inversas':'entity',registrar:'infra',arrancar:'desplegar',cargar:'leer-datos'},cloud:{infra:'registrar',table:D.nestSimpleRevision?'asig-inversas':'asignacion',entity:D.nestSimpleRevision?'asig-inversas':'asignacion',desplegar:'arrancar','leer-datos':'cargar'}};let counterpart=pairs[from][previous.id]||previous.id;if(previous.id.endsWith('-evento'))counterpart=previous.id.replace(/-evento$/,'-entry');if(previous.id.endsWith('-invoke'))counterpart=previous.id.replace(/-invoke$/,'-curl');const same=D.tracks[S.track].findIndex(x=>x.id===counterpart);S.positions[S.track]=same>=0?same:D.tracks[S.track].findIndex(x=>x.chapter===previous.chapter);S.mode='observe';S.cue=0;selected=null;save();render();if(D.projectBase)$('[data-nm-guide-primary]').focus({preventScroll:true});return;
  }
  if(a==='step')return go(+button.dataset.step);
  if(a==='chapter')return go(D.tracks[S.track].findIndex(x=>x.chapter===+button.dataset.chapter));

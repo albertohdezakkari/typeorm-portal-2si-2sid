@@ -34,7 +34,7 @@ function restore(p){
 restore(estadoInicial);
 const persist=()=>guardar({version:5,caseId:C.id,...(simpleNest?{nestSimpleRevision:D.nestSimpleRevision}:{}),preparationRevision:D.preparationRevision??0,entityAccessRevision:D.entityAccessRevision??0,track,index,frame,mode,full,solved:[...solved],observed:[...observed],answers:structuredClone(answers)});
 function stop(){playing=false;clearTimeout(timer);timer=null;root.querySelectorAll('.p-fly').forEach(x=>x.remove());cancelDrag();}
-function feedback(text,kind=''){ $('[data-feedback]').textContent=text;$('[data-feedback]').dataset.kind=kind; }
+function feedback(text,kind=''){ $('[data-feedback]').textContent=text;$('[data-feedback]').dataset.kind=kind;if(D.projectBase&&kind==='error'&&$('[data-guide-instruction]'))$('[data-guide-instruction]').textContent=text; }
 const isRelation=()=>stage().path==='Modelo entidad–relación';
 function pieces(){return stage().cues.map((c,i)=>({id:String(i),text:c.text})).sort((a,b)=>a.text.localeCompare(b.text));}
 function pieceMatches(step,slot,id){return typeof id==='string'&&(id===String(slot)||(schemaGuide&&step.cues[Number(id)]?.text===step.cues[slot]?.text));}
@@ -222,7 +222,46 @@ function syncExplanationProgress(){
   $('[data-frame]').textContent=frame===total-1?(total===1?'Repetir explicación ↻':'Volver a explicación 1 ↻'):`Siguiente explicación · ${frame+2} de ${total} →`;
  }
 }
-function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.entityAccess?'acceso uniforme con EntityRepository':s.exact?(s.annotated?'modelo de la ficha · comentado':'modelo de la ficha'):'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();}
+function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.entityAccess?'acceso uniforme con EntityRepository':s.exact?(s.annotated?'modelo de la ficha · comentado':'modelo de la ficha'):'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();updateGuidance();}
+function setupGuidance(){
+ if(!D.projectBase)return;
+ root.dataset.guidedCourse='true';
+ const header=document.createElement('section');header.className='p-guidance';
+ header.innerHTML='<div class="p-guide-context"><span data-guide-route></span><details class="p-guide-map"><summary>Ver recorrido y cambiar tecnología</summary><div data-guide-map-content></div></details></div><p class="p-guide-case" data-guide-case></p><div data-guide-heading></div><ol class="p-guide-stages" aria-label="Cómo trabajar este archivo"><li>1 · Mira</li><li>2 · Monta</li><li>3 · Comprueba</li></ol><p class="p-guide-instruction" data-guide-instruction role="status" aria-live="polite"></p><div class="p-guide-actions"><button type="button" class="p-btn" data-guide-back>Anterior</button><button type="button" class="p-btn p-primary" data-guide-primary></button></div>';
+ root.prepend(header);
+ header.querySelector('[data-guide-heading]').append($('.p-heading'));
+ const map=header.querySelector('[data-guide-map-content]');
+ for(const [label,selector]of [['Tecnología','.p-switch'],['Casos y preparación','[data-chapters]'],['Archivos del caso actual','[data-files]']]){const title=document.createElement('p');title.className='p-label';title.textContent=label;map.append(title,$(selector));}
+ $('[data-guide-primary]').onclick=()=>{
+  stop();
+  const returning=$('[data-entity-return],[data-model-return]');if(returning){returning.click();return;}
+  if(solved.has(key())){
+   if(index<D.steps[track].length-1)$('[data-next]').click();else $('.p-guide-map').open=true;
+  }else if(mode==='build')$('[data-check]').click();
+  else if(frame<stage().cues.length-1)$('[data-frame]').click();
+  else $('[data-build]').click();
+ };
+ $('[data-guide-back]').onclick=()=>{ $('[data-back]').click(); };
+}
+function updateGuidance(){
+ if(!D.projectBase||!$('[data-guide-primary]'))return;
+ const s=stage(),list=D.steps[track],group=list.filter(x=>x.chapter===s.chapter),position=group.indexOf(s)+1,done=solved.has(key()),primary=$('[data-guide-primary]');
+ $('[data-guide-route]').textContent='Relación 1:N · '+(track==='nest'?'Nest + TypeORM':'Serverless + Toolbox');
+ $('[data-guide-case]').textContent=(s.chapter===0?'PREPARACIÓN DEL MODELO':'CASO '+s.chapter+' DE 5')+' · '+D.chapters[s.chapter];
+ $('[data-meta]').textContent='Archivo '+position+' de '+group.length+' de este bloque · Paso '+(index+1)+' de '+list.length;
+ const completed=list.filter((_,i)=>solved.has(track+':'+i)).length;$('[data-progress]').textContent=completed+(completed===1?' archivo completado':' archivos completados');
+ const phase=done?2:mode==='build'?1:0;
+ $$('.p-guide-stages li').forEach((el,i)=>{if(i===phase)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');el.dataset.done=String(i<phase);});
+ const missing=s.cues.filter((_,i)=>!answers[key()]?.[i]).length;
+ $('[data-guide-instruction]').textContent=done?(s.scene==='result'?'Montaje correcto. Ejecuta las pruebas de este caso que aparecen debajo antes de continuar.':'Archivo completado. Continúa con el siguiente archivo.'):
+  mode==='build'?(missing?'Coloca las '+missing+' piezas pendientes debajo del código y después comprueba el montaje.':'Todas las piezas están colocadas. Comprueba si el montaje es correcto.'):
+  'Sigue la explicación '+(frame+1)+' de '+s.cues.length+'. Después montarás este mismo archivo con las piezas.';
+ primary.textContent=done?(index===list.length-1?'Elegir qué repasar':list[index+1].chapter!==s.chapter?'Continuar: '+D.chapters[list[index+1].chapter]:'Continuar: '+list[index+1].name):mode==='build'?'Comprobar las piezas':frame<s.cues.length-1?'Siguiente explicación · '+(frame+2)+' de '+s.cues.length:'Montar este archivo';
+ const returning=Boolean($('[data-entity-return],[data-model-return]'));
+ if(returning){primary.textContent='Volver al caso';$('[data-guide-case]').textContent='AYUDA DEL CASO · '+(track==='nest'?'Entities y relaciones':'Table y Entity');$('[data-guide-instruction]').textContent='Revisa el modelo con el dibujo y sus explicaciones. Después vuelve al caso por donde ibas.';}
+ $('[data-guide-back]').textContent='Anterior';$('[data-guide-back]').disabled=index===0;
+}
+
 function renderPractice(){
  if(!D.practice)return;
  let host=$('[data-practice]');
@@ -263,7 +302,7 @@ function renderPractice(){
 }
 
 function render(){renderNav();renderCode();renderScene();controls();renderPractice();}
-function go(i){stop();index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();}
+function go(i){stop();const mapWasOpen=D.projectBase&&$('.p-guide-map').open;if(D.projectBase)$('.p-guide-map').open=false;index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();if(mapWasOpen)$('[data-guide-primary]').focus({preventScroll:true});}
 function fly(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=$('[data-cue] code'),b=isRelation()?$(`[data-er-focus="${frame}"]`):$('[data-code] .p-line[data-active=true]');if(!a||!b)return;const r=root.getBoundingClientRect(),ar=a.getBoundingClientRect(),br=b.getBoundingClientRect(),el=document.createElement('span');el.className='p-fly';el.textContent=stage().cues[frame].text;el.style.left=(ar.left-r.left)+'px';el.style.top=(ar.top-r.top)+'px';root.appendChild(el);const animation=el.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${br.left-ar.left+(isRelation()?0:32)}px,${br.top-ar.top}px)`,opacity:.25}],{duration:850,easing:'cubic-bezier(.4,0,.2,1)'});animation.onfinish=()=>el.remove();}
 function playTick(){render();fly();timer=setTimeout(()=>{if(!playing)return;if(frame<stage().cues.length-1){frame++;playTick();}else{observed.add(key());stop();controls();feedback('Ya has visto el archivo. Pulsa «Ahora lo monto yo».','good');persist();}},2400);}
 $('[data-play]').onclick=()=>{if(playing){stop();controls();persist();return;}mode='observe';if(frame===stage().cues.length-1)frame=0;playing=true;playTick();};
@@ -281,11 +320,12 @@ function place(slot,id){
 $('[data-check]').onclick=()=>{const s=stage(),a=answers[key()]||{},bad=s.cues.findIndex((_,i)=>!pieceMatches(s,i,a[i]));if(bad>=0){frame=bad;renderCode();renderScene();const slot=$(`[data-slot="${bad}"]`);if(slot)slot.dataset.bad=true;feedback(`Revisa la pieza ${bad+1}: ${s.cues[bad].note}`,'error');return;}
 solved.add(key());$$('[data-slot]').forEach(x=>x.dataset.good=true);renderScene();renderNav();controls();$('[data-scene]').classList.remove('p-breathe');void $('[data-scene]').offsetWidth;$('[data-scene]').classList.add('p-breathe');feedback(index===D.steps[track].length-1?'Recorrido completado. Cambia de tecnología y compara el mismo caso.':'Archivo correcto. Sigue con el siguiente y conserva el recorrido.','good');persist();};
 $('[data-next]').onclick=()=>{if(!solved.has(key()))return;if(index<D.steps[track].length-1)go(index+1);};$('[data-back]').onclick=()=>{if(index>0)go(index-1);};
-$$('[data-tech]').forEach(b=>b.onclick=()=>{stop();const chapter=stage().chapter;track=b.dataset.tech;index=D.steps[track].findIndex(s=>s.chapter===chapter);frame=0;mode='observe';full=false;selected=null;render();feedback('Mismo caso y mismos datos. Ahora mira qué archivos cambian.');persist();});
+$$('[data-tech]').forEach(b=>b.onclick=()=>{stop();if(D.projectBase)$('.p-guide-map').open=false;const chapter=stage().chapter;track=b.dataset.tech;index=D.steps[track].findIndex(s=>s.chapter===chapter);frame=0;mode='observe';full=false;selected=null;render();feedback('Mismo caso y mismos datos. Ahora mira qué archivos cambian.');persist();if(D.projectBase)$('[data-guide-primary]').focus({preventScroll:true});});
 $('[data-context-title]').textContent=(D.source.kind==='teacher'?'Ejemplo docente':D.source.label)+' · '+C.title;
 $('[data-context-footer]').textContent='Observa y monta el código de tu ficha. Prueba las operaciones en tu proyecto.';
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();controls();persist();}});
 window.addEventListener('pagehide',()=>{stop();erObserver?.disconnect();persist();});
+setupGuidance();
 render();
 return {
  tecnologia: () => track,
