@@ -68,10 +68,14 @@ for case_id, config in CONFIG.items():
     # Dirigir todos los resultados a su contexto, manteniendo la plantilla validada.
     program=translated(TEMPLATE).replace("OUT=ROOT/'nm'",f"OUT=ROOT/'nm/casos/{case_id}'")
     # La imagen del esquema se genera desde el SVG validado, con las etiquetas propias.
-    program=program[:program.index("logical=ROOT.parent/")]+program[program.index('D=dict(version=1'):]
+    program=re.sub(r"^logical=ROOT.parent/.*?^shutil.copyfile\(logical,OUT/'esquema-logico.svg'\)\n", "", program, flags=re.M|re.S)
     env={'__file__':str(ROOT/'scripts/generar-nm.py'),'__name__':'__nm_generator__'}
     with contextlib.redirect_stdout(io.StringIO()):
         exec(compile(program,'nm-template-'+case_id,'exec'),env)
+    # Conservar la traza histórica usada por los PDF anteriores sin dejar clases
+    # Repository antiguas dentro del proyecto que copia el alumno.
+    archived={('nest/'+path):text for path,text in env['casefiles']['nest'][1]}
+    write(ROOT/f'scripts/plantillas/nm-impreso/{case_id}.json',json.dumps(archived,ensure_ascii=False,indent=2)+'\n')
     data=env['D'];data['context']=ctx;data['nmContext']=metadata
     # Estado final del recorrido 1:N, sin asumir los valores de Arturo.
     data['baseline']={'ids':[7,8,9],'first':{m['property']:m['after'],p['input']:2}}
@@ -91,9 +95,10 @@ for case_id, config in CONFIG.items():
     write(folder/(case_id+'.json'),json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     # El título de la ficha docente CH-13 usa PELICULA, no NOMBRE.
     runtime=translated(RUNTIME).replace('fichas-nm-'+case_id.lower().replace('-','')+'.pdf','fichas-nm.pdf')
-    runtime=runtime.replace('?v=nm-9','?v=nm-10')
+    runtime=runtime.replace('?v=arturo-nm-simple-2','?v=nest-sencillo-todos-1')
     runtime=runtime.replace('/tree/main/nm/codigo/','/tree/main/nm/casos/'+case_id+'/codigo/')
     runtime=runtime.replace("['DATO','NOMBRE'],['DATO','"+m['column']+"']","['DATO','"+ctx['text']['column']+"'],['DATO','"+m['column']+"']")
+    runtime=runtime.replace("['ID','PK'],['NOMBRE',''],['"+m['column']+"','']","['ID','PK'],['"+ctx['text']['column']+"',''],['"+m['column']+"','']")
     write(folder/'taller.js',runtime)
     diagram=translated(SVG)
     # Solo cambia el campo de texto del hijo, no los nombres de padre ni perfiles.
@@ -103,10 +108,11 @@ for case_id, config in CONFIG.items():
     # Encabezados y campos largos mantienen espacio para las insignias PK/FK.
     diagram=diagram.replace('font-size="25"','font-size="21"').replace('font-size="21" font-family="Consolas','font-size="18" font-family="Consolas')
     write(folder/'esquema-logico.svg',diagram)
-    write(folder/'index.html',f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=nm-10"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=nm-10"></script></body></html>\n')
+    write(folder/'index.html',f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=nest-sencillo-todos-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=nest-sencillo-todos-1"></script></body></html>\n')
     write(folder/'README.md',f'# {case_id} · {title} · N:M\n\nContinúa tu proyecto **{ctx["title"]}** ya preparado. No reinstales ni reemplaces el 1:N.\n\nAñade **{person}** (ID, NOMBRE, APELLIDOS, EMAIL) y **Asignacion**, cuya clave compuesta es `(ID_{n["sql"]}, ID_{person.upper()})`, con ROL como dato del vínculo.\n\nEn DynamoDB, ASIGNACIONES tiene PK `{n["sql"]}_ID` y SK `{person.upper()}_ID`; el índice `Por{person}` invierte ambas claves y proyecta ROL.\n\nRecorre los diez apartados del [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm) seleccionando tu correo. Alterna Nest + TypeORM / Serverless + Toolbox. Los directorios `codigo/nest` y `codigo/cloud` contienen la referencia completa, pero cada paso te proporciona el archivo acumulativo que corresponde a ese momento.\n\n[Fichas N:M para imprimir](fichas-nm.pdf) · [Esquema lógico](esquema-logico.svg)\n\n{final_note}\n\nLos seis casos enseñan alta/listado, asignación, lectura en ambas direcciones, cambio de rol y eliminación del vínculo. Se conservan ambos extremos. En Serverless, todos los repositories utilizan `MODELO.build(EntityRepository)`. Cada caso incluye curl y evento/Invoke compatibles con su handler.\n')
     if args.pdf:
         pdfprogram=translated(PDF)
+        pdfprogram=pdfprogram.replace('scripts/plantillas/nm-'+case_id.lower().replace('-','')+'-impreso.json',f'scripts/plantillas/nm-impreso/{case_id}.json')
         pdfprogram=pdfprogram.replace("N=R/'nm'",f"N=R/'nm/casos/{case_id}'")
         pdf_directory='nm-docente' if case_id=='CH-13' else 'nm-alumnado'
         pdfprogram=pdfprogram.replace("O=R.parent/'output/pdf/nm-arturo-fichas.pdf'",f"O=R.parent/'output/pdf/{pdf_directory}/{case_id}-nm.pdf'")
@@ -120,7 +126,7 @@ for case_id, config in CONFIG.items():
 
 write(NM/'contextos.json',json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 rows=['# Recorridos N:M de todo el alumnado','',
-      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. El piloto de Arturo tiene 38 pasos Nest sencillos; los demás mantienen 51. Serverless conserva sus 60 pasos.','',
+      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos. Serverless conserva sus 60 pasos.','',
       '| Caso | Proyecto 1:N existente | Ampliación N:M | Material |',
       '| --- | --- | --- | --- |']
 for case_id,meta in manifest.items():
@@ -129,5 +135,5 @@ for case_id,meta in manifest.items():
     pdf='fichas-nm-ch22.pdf' if case_id=='CH-22' else relative+'/fichas-nm.pdf'
     rows.append(f'| {case_id} | {meta["baselineTitle"]} | {meta["title"]} | [Recorrido]({relative}/) · [PDF]({pdf}) · [Código]({relative}/codigo) |')
 rows+=['','Ejemplo docente adicional: [Cine–Proyección–Técnico](casos/CH-13/) · [PDF](casos/CH-13/fichas-nm.pdf).',
-       '', 'Cada caso incluye Entities de TypeORM, módulo acumulativo, Controller → Service → Repository; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.']
+       '', 'Cada caso incluye Entities de TypeORM completas, módulo acumulativo y Controller → Service → Entity; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.']
 write(NM/'RECORRIDOS.md','\n'.join(rows)+'\n')

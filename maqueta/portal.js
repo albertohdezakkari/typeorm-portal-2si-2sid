@@ -63,8 +63,8 @@
     const simple=track==='nest'&&data.nestSimpleRevision;
     const step = data.steps[track].find(s => s.chapter === operation && s.name === (simple?'Service':'Repository'));
     const op = data.operations.find(x => x.ch === operation);
-    panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', simple?'Selecciona una operación. Todas se añaden al mismo ObrasService, que utiliza las Entities de TypeORM.':'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
-      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller','ObrasController'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div><div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`;
+    panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', simple?'Selecciona una operación. Todas se añaden al mismo '+data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Service, que utiliza las Entities de TypeORM.':'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
+      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller',data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Controller'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div><div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`;
   }
 
   function renderChecks() {
@@ -81,7 +81,7 @@
   }
 
   function renderSimulation() {
-    panel('simulacion').innerHTML = head('Al terminar · siguiente actividad', 'Simulación de examen', 'Aquí se reunirán las dos entregas cuando la actividad esté preparada.') + `<div class="mq-repositories">${[['01','Nest + TypeORM','Entities · Controller · Service · Repository'],['02','Serverless + Toolbox','YAML · Table / Entity · Handler · Service · Repository']].map(([n,title,parts])=>`<article class="mq-simulation"><span class="mq-eyebrow">ENTREGA ${n}</span><h3>${title}</h3><p>${parts}</p><span class="mq-pending">Pendiente de preparar</span></article>`).join('')}</div><p class="mq-note">Vista previa del apartado. Todavía no hay enunciado de examen ni formulario nuevo de entrega.</p>`;
+    panel('simulacion').innerHTML = head('Al terminar · siguiente actividad', 'Simulación de examen', 'Aquí se reunirán las dos entregas cuando la actividad esté preparada.') + `<div class="mq-repositories">${[['01','Nest + TypeORM','Entities · Service · Controller'],['02','Serverless + Toolbox','YAML · Table / Entity · Handler · Service · Repository']].map(([n,title,parts])=>`<article class="mq-simulation"><span class="mq-eyebrow">ENTREGA ${n}</span><h3>${title}</h3><p>${parts}</p><span class="mq-pending">Pendiente de preparar</span></article>`).join('')}</div><p class="mq-note">Vista previa del apartado. Todavía no hay enunciado de examen ni formulario nuevo de entrega.</p>`;
   }
 
   function restore() {
@@ -166,7 +166,7 @@
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=${context.id==='CH-22'?'arturo-simple-1':'entity-1'}`, `preparar/${encodeURIComponent(context.id)}.json?v=${context.id==='CH-22'?'arturo-simple-1':'entity-1'}`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=nest-sencillo-todos-1`, `preparar/${encodeURIComponent(context.id)}.json?v=nest-sencillo-todos-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;

@@ -1,8 +1,8 @@
 {
   "version": 5,
   "source": {
-    "kind": "pdf",
-    "label": "Ficha CH-15",
+    "kind": "pilot",
+    "label": "Versión sencilla · CH-15",
     "sha256": "e4360d8bcdd5e9e5af8ff48bd00613919f5f09569057aceb2839168f0bfa0f7c",
     "pages": 4
   },
@@ -144,27 +144,22 @@
         "chapter": 0,
         "name": "Registrar las Entities",
         "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Empresa } from './empresas/entities/empresa.entity';\nimport { Proyecto } from './proyectos/entities/proyecto.entity';\nimport { CrearListarController } from './proyectos/crear-listar/controller';\nimport { CrearListarService } from './proyectos/crear-listar/service';\nimport { CrearListarRepository } from './proyectos/crear-listar/repository';\nimport { EliminarController } from './proyectos/eliminar/controller';\nimport { EliminarService } from './proyectos/eliminar/service';\nimport { EliminarRepository } from './proyectos/eliminar/repository';\nimport { ModificarHorasEstimadasController } from './proyectos/modificar-horas-estimadas/controller';\nimport { ModificarHorasEstimadasService } from './proyectos/modificar-horas-estimadas/service';\nimport { ModificarHorasEstimadasRepository } from './proyectos/modificar-horas-estimadas/repository';\nimport { TrasladarController } from './proyectos/trasladar/controller';\nimport { TrasladarService } from './proyectos/trasladar/service';\nimport { TrasladarRepository } from './proyectos/trasladar/repository';\nimport { ConsultarEmpresaController } from './empresas/consultar/controller';\nimport { ConsultarEmpresaService } from './empresas/consultar/service';\nimport { ConsultarEmpresaRepository } from './empresas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Empresa, Proyecto])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarHorasEstimadasController,\n    TrasladarController,\n    ConsultarEmpresaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarHorasEstimadasService,\n    ModificarHorasEstimadasRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarEmpresaService,\n    ConsultarEmpresaRepository\n  ]\n})\nexport class TallerModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Empresa } from './empresas/entities/empresa.entity';\nimport { Proyecto } from './proyectos/entities/proyecto.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Empresa, Proyecto])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
         "cues": [
           {
-            "text": "import { Empresa } from './empresas/entities/empresa.entity';",
+            "text": "import { Empresa }",
             "title": "Importar Empresa",
-            "note": "El módulo utiliza la misma clase Empresa que has preparado en entities."
+            "note": "Es la clase que acabas de preparar."
           },
           {
-            "text": "import { Proyecto } from './proyectos/entities/proyecto.entity';",
+            "text": "import { Proyecto }",
             "title": "Importar Proyecto",
-            "note": "El módulo reúne las dos entidades relacionadas."
+            "note": "El módulo reúne las dos Entities."
           },
           {
             "text": "TypeOrmModule.forFeature([Empresa, Proyecto])",
-            "title": "Preparar Repository para cada Entity",
-            "note": "Nest registra los providers que permiten inyectar Repository<Empresa> y Repository<Proyecto>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
-          },
-          {
-            "text": "providers: [",
-            "title": "Registrar nuestros casos de uso",
-            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+            "title": "Preparar las dos Entities",
+            "note": "Permite inyectar sus repositorios de TypeORM. Todavía no hay Service ni Controller registrados."
           }
         ],
         "page": 2,
@@ -173,107 +168,112 @@
       },
       {
         "chapter": 0,
-        "name": "Usarlas en Repository",
-        "path": "src/proyectos/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  crearProyectoRepository(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre, horasEstimadas, empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectosRepository() {\n    return this.proyectos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "name": "Conectar el Service",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n}",
+        "page": 2,
+        "exact": false,
+        "scene": "nest-binding",
         "cues": [
           {
-            "text": "import { Proyecto } from '../entities/proyecto.entity';",
-            "title": "Importar la Entity preparada",
-            "note": "El repository importa la clase Proyecto de su fichero entities/proyecto.entity.ts. No vuelve a definir sus columnas."
+            "text": "@Injectable()",
+            "title": "Un Service de Nest",
+            "note": "Nest podrá crear esta clase y entregársela al Controller."
           },
           {
             "text": "@InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>",
-            "title": "Recibir el Repository de TypeORM",
-            "note": "InjectRepository(Proyecto) pide a Nest el repositorio de esa Entity. proyectos es el nombre de la dependencia; Repository<Proyecto> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+            "title": "Recibir el repositorio de Proyecto",
+            "note": "proyectos ofrece las operaciones de TypeORM sobre la Entity Proyecto; no es una clase Repository que tengamos que crear."
           },
           {
-            "text": "this.proyectos.create({",
-            "title": "Preparar un objeto Proyecto",
-            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
-          },
-          {
-            "text": "empresa: { id: empresaId }",
-            "title": "Usar la relación declarada",
-            "note": "La propiedad empresa existe en la Entity Proyecto. TypeORM traduce empresa.id a la FK ID_EMPRESA al guardar."
-          },
-          {
-            "text": "this.proyectos.save(proyecto)",
-            "title": "Guardar usando la Entity",
-            "note": "save utiliza el mapeo de Proyecto y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia EMPRESA."
-          },
-          {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "Leer con el mismo mapeo",
-            "note": "El QueryBuilder parte de Repository<Proyecto>. getMany devuelve objetos Proyecto, ordenados por id."
+            "text": "@InjectRepository(Empresa) private readonly empresas: Repository<Empresa>",
+            "title": "Recibir el de Empresa",
+            "note": "Este segundo repositorio permitirá leer el registro principal."
           }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "nest-binding"
-      },
-      {
-        "chapter": 1,
-        "name": "Controller",
-        "path": "src/proyectos/crear-listar/controller.ts",
-        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('proyectos')\n  async ejecutar(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyectoService(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectosService();\n  }\n}",
-        "cues": [
-          {
-            "text": "@Post('proyectos')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
-          },
-          {
-            "text": "this.service.crearProyectoService(datos.nombre, datos.horasEstimadas, datos.empresaId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        ]
       },
       {
         "chapter": 1,
         "name": "Service",
-        "path": "src/proyectos/crear-listar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearProyectoService(nombre: string, horasEstimadas: number, empresaId: number) {\n    return this.repository.crearProyectoRepository(nombre, horasEstimadas, empresaId);\n  }\n\n  listarProyectosService() {\n    return this.repository.listarProyectosRepository();\n  }\n}",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  crearProyecto(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre,\n      horasEstimadas,\n      empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectos() {\n    return this.proyectos.find({ order: { id: 'ASC' } });\n  }\n}",
         "cues": [
           {
-            "text": "this.repository.crearProyectoRepository(nombre, horasEstimadas, empresaId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 1,
-        "name": "Repository",
-        "path": "src/proyectos/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  crearProyectoRepository(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre, horasEstimadas, empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectosRepository() {\n    return this.proyectos.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
-        "cues": [
+            "text": "this.proyectos.create({",
+            "title": "Preparar el objeto",
+            "note": "create prepara una Proyecto en memoria; todavía no la guarda."
+          },
           {
             "text": "empresa: { id: empresaId }",
-            "title": "Guardar la referencia",
-            "note": "TypeORM escribe ese ID en ID_EMPRESA; la FK de PostgreSQL exige un registro principal existente."
+            "title": "Usar la relación",
+            "note": "El ID recibido se guarda en ID_EMPRESA mediante la relación de Proyecto."
           },
           {
             "text": "this.proyectos.save(proyecto)",
-            "title": "INSERT en la base",
-            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+            "title": "Guardar el proyecto",
+            "note": "save escribe la fila y devuelve la Proyecto con el ID generado por PostgreSQL."
           },
           {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "SELECT de todas",
-            "note": "Devuelve los registros asociados ordenadas por ID."
+            "text": "this.proyectos.find({ order: { id: 'ASC' } })",
+            "title": "Listar los proyectos",
+            "note": "find lee las filas usando la Entity; order las ordena por ID."
           }
         ],
         "page": 4,
         "exact": false,
-        "scene": "flow"
+        "scene": "service"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/proyectos/proyectos.controller.ts",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ProyectosService } from './proyectos.service';\n\n@Controller()\nexport class ProyectosController {\n  constructor(private readonly service: ProyectosService) {}\n\n  @Post('proyectos')\n  crear(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectos();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('proyectos')",
+            "title": "Ruta de creación",
+            "note": "POST /proyectos ejecuta el método crear."
+          },
+          {
+            "text": "@Body() datos:",
+            "title": "Leer el cuerpo JSON",
+            "note": "Nest coloca en datos las propiedades nombre, horasEstimadas y empresaId."
+          },
+          {
+            "text": "this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId)",
+            "title": "Llamar al mismo Service",
+            "note": "El Controller entrega los tres valores. La lógica y la escritura están en ProyectosService."
+          },
+          {
+            "text": "@Get('proyectos')",
+            "title": "Ruta del listado",
+            "note": "GET /proyectos llama a listarProyectos en ese mismo Service."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "entry"
+      },
+      {
+        "chapter": 1,
+        "name": "Registrar Service y Controller",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Empresa } from './empresas/entities/empresa.entity';\nimport { Proyecto } from './proyectos/entities/proyecto.entity';\nimport { ProyectosService } from './proyectos/proyectos.service';\nimport { ProyectosController } from './proyectos/proyectos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Empresa, Proyecto])],\n  controllers: [ProyectosController],\n  providers: [ProyectosService]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "controllers: [ProyectosController]",
+            "title": "Un Controller",
+            "note": "Este Controller contiene las rutas de proyectos."
+          },
+          {
+            "text": "providers: [ProyectosService]",
+            "title": "Un Service",
+            "note": "Nest entrega ProyectosService al Controller por su constructor."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "nest-module"
       },
       {
         "chapter": 1,
@@ -293,56 +293,52 @@
       },
       {
         "chapter": 2,
+        "name": "Service",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  crearProyecto(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre,\n      horasEstimadas,\n      empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectos() {\n    return this.proyectos.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyecto(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n}",
+        "cues": [
+          {
+            "text": "async eliminarProyecto(proyectoId: number)",
+            "title": "Recibir el ID",
+            "note": "El Controller convierte el parámetro de la ruta en número y lo entrega aquí.",
+            "after": "async eliminarProyecto(proyectoId: number)"
+          },
+          {
+            "text": "await this.proyectos.delete(proyectoId)",
+            "title": "Eliminar solo ese proyecto",
+            "note": "delete utiliza su clave primaria. await espera a que termine antes de responder.",
+            "after": "async eliminarProyecto(proyectoId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 2,
         "name": "Controller",
-        "path": "src/proyectos/eliminar/controller.ts",
-        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number) {\n    return this.service.eliminarProyectoService(proyectoId);\n  }\n}",
+        "path": "src/proyectos/proyectos.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { ProyectosService } from './proyectos.service';\n\n@Controller()\nexport class ProyectosController {\n  constructor(private readonly service: ProyectosService) {}\n\n  @Post('proyectos')\n  crear(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectos();\n  }\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string) {\n    return this.service.eliminarProyecto(Number(proyectoId));\n  }\n}",
         "cues": [
           {
             "text": "@Delete('proyectos/:proyectoId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "ID en la ruta",
+            "note": "DELETE /proyectos/10 proporciona proyectoId = \"10\"."
           },
           {
-            "text": "this.service.eliminarProyectoService(proyectoId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Service",
-        "path": "src/proyectos/eliminar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarProyectoService(proyectoId: number) {\n    return this.repository.eliminarProyectoRepository(proyectoId);\n  }\n}",
-        "cues": [
+            "text": "@HttpCode(204)",
+            "title": "Respuesta sin contenido",
+            "note": "Cuando termina el borrado, Nest responde con HTTP 204."
+          },
           {
-            "text": "this.repository.eliminarProyectoRepository(proyectoId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+            "text": "this.service.eliminarProyecto(Number(proyectoId))",
+            "title": "Enviar un número al Service",
+            "note": "Number convierte el texto de la ruta. No se escribe SQL en el Controller."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Repository",
-        "path": "src/proyectos/eliminar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async eliminarProyectoRepository(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyectos.delete(proyectoId)",
-            "title": "DELETE por ID",
-            "note": "Borra el registro asociado de prueba. Las otras se conservan."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 2,
@@ -362,61 +358,58 @@
       },
       {
         "chapter": 3,
+        "name": "Service",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  crearProyecto(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre,\n      horasEstimadas,\n      empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectos() {\n    return this.proyectos.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyecto(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n\n  async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number) {\n    await this.proyectos.update(proyectoId, { horasEstimadas });\n    return this.proyectos.findOneBy({ id: proyectoId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number)",
+            "title": "Dos valores recibidos",
+            "note": "El ID viene de la ruta y el dedicación del cuerpo JSON.",
+            "after": "async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number)"
+          },
+          {
+            "text": "this.proyectos.update(proyectoId, { horasEstimadas })",
+            "title": "Cambiar un campo",
+            "note": "update selecciona el proyecto por ID y modifica solo horasEstimadas.",
+            "after": "async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number)"
+          },
+          {
+            "text": "return this.proyectos.findOneBy({ id: proyectoId })",
+            "title": "Leer lo actualizado",
+            "note": "findOneBy busca un proyecto cuyo id coincide. return la devuelve al Controller.",
+            "after": "async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 3,
         "name": "Controller",
-        "path": "src/proyectos/modificar-horas-estimadas/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarHorasEstimadasService } from './service';\n\n@Controller()\nexport class ModificarHorasEstimadasController {\n  constructor(private readonly service: ModificarHorasEstimadasService) {}\n\n  @Patch('proyectos/:proyectoId')\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number,\n    @Body() datos: { horasEstimadas: number }) {\n    return this.service.modificarHorasEstimadasService(proyectoId, datos.horasEstimadas);\n  }\n}",
+        "path": "src/proyectos/proyectos.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyectosService } from './proyectos.service';\n\n@Controller()\nexport class ProyectosController {\n  constructor(private readonly service: ProyectosService) {}\n\n  @Post('proyectos')\n  crear(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectos();\n  }\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string) {\n    return this.service.eliminarProyecto(Number(proyectoId));\n  }\n\n  @Patch('proyectos/:proyectoId')\n  modificar(@Param('proyectoId') proyectoId: string, @Body() datos: { horasEstimadas: number }) {\n    return this.service.modificarHorasEstimadas(Number(proyectoId), datos.horasEstimadas);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('proyectos/:proyectoId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de modificación",
+            "note": "PATCH /proyectos/7 identifica el proyecto que se quiere modificar."
           },
           {
-            "text": "this.service.modificarHorasEstimadasService(proyectoId, datos.horasEstimadas)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Service",
-        "path": "src/proyectos/modificar-horas-estimadas/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarHorasEstimadasRepository } from './repository';\n\n@Injectable()\nexport class ModificarHorasEstimadasService {\n  constructor(private readonly repository: ModificarHorasEstimadasRepository) {}\n\n  modificarHorasEstimadasService(proyectoId: number, horasEstimadas: number) {\n    return this.repository.modificarHorasEstimadasRepository(proyectoId, horasEstimadas);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.modificarHorasEstimadasRepository(proyectoId, horasEstimadas)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Repository",
-        "path": "src/proyectos/modificar-horas-estimadas/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class ModificarHorasEstimadasRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async modificarHorasEstimadasRepository(proyectoId: number, horasEstimadas: number) {\n    await this.proyectos.update(proyectoId, { horasEstimadas });\n    return this.proyectos.createQueryBuilder('p')\n      .where('p.id = :proyectoId', { proyectoId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyectos.update(proyectoId, { horasEstimadas })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { horasEstimadas: number }",
+            "title": "Nuevo dedicación",
+            "note": "El cuerpo JSON aporta horasEstimadas."
           },
           {
-            "text": ".where('p.id = :proyectoId', { proyectoId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.modificarHorasEstimadas(Number(proyectoId), datos.horasEstimadas)",
+            "title": "Entregar los dos valores",
+            "note": "La ruta aporta el ID y el cuerpo aporta el dato que cambiará."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 3,
@@ -436,61 +429,58 @@
       },
       {
         "chapter": 4,
+        "name": "Service",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  crearProyecto(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre,\n      horasEstimadas,\n      empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectos() {\n    return this.proyectos.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyecto(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n\n  async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number) {\n    await this.proyectos.update(proyectoId, { horasEstimadas });\n    return this.proyectos.findOneBy({ id: proyectoId });\n  }\n\n  async cambiarEmpresa(proyectoId: number, empresaId: number) {\n    await this.proyectos.update(proyectoId, { empresa: { id: empresaId } });\n    return this.proyectos.findOneBy({ id: proyectoId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async cambiarEmpresa(proyectoId: number, empresaId: number)",
+            "title": "ID de el proyecto y nuevo empresa",
+            "note": "Se reciben dos IDs con funciones diferentes: la fila que cambia y su nueva referencia.",
+            "after": "async cambiarEmpresa(proyectoId: number, empresaId: number)"
+          },
+          {
+            "text": "this.proyectos.update(proyectoId, { empresa: { id: empresaId } })",
+            "title": "Cambiar la relación",
+            "note": "La propiedad empresa está declarada en Proyecto. TypeORM actualiza ID_EMPRESA.",
+            "after": "async cambiarEmpresa(proyectoId: number, empresaId: number)"
+          },
+          {
+            "text": "return this.proyectos.findOneBy({ id: proyectoId })",
+            "title": "Devolver el proyecto",
+            "note": "El resultado vuelve al Controller y Nest lo convierte en JSON.",
+            "after": "async cambiarEmpresa(proyectoId: number, empresaId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 4,
         "name": "Controller",
-        "path": "src/proyectos/trasladar/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('proyectos/:proyectoId/empresa')\n  async ejecutar(@Param('proyectoId', ParseIntPipe) proyectoId: number,\n    @Body() datos: { empresaId: number }) {\n    return this.service.trasladarProyectoService(proyectoId, datos.empresaId);\n  }\n}",
+        "path": "src/proyectos/proyectos.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyectosService } from './proyectos.service';\n\n@Controller()\nexport class ProyectosController {\n  constructor(private readonly service: ProyectosService) {}\n\n  @Post('proyectos')\n  crear(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectos();\n  }\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string) {\n    return this.service.eliminarProyecto(Number(proyectoId));\n  }\n\n  @Patch('proyectos/:proyectoId')\n  modificar(@Param('proyectoId') proyectoId: string, @Body() datos: { horasEstimadas: number }) {\n    return this.service.modificarHorasEstimadas(Number(proyectoId), datos.horasEstimadas);\n  }\n\n  @Patch('proyectos/:proyectoId/empresa')\n  cambiarEmpresa(@Param('proyectoId') proyectoId: string, @Body() datos: { empresaId: number }) {\n    return this.service.cambiarEmpresa(Number(proyectoId), datos.empresaId);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('proyectos/:proyectoId/empresa')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Cambiar la asociación",
+            "note": "La ruta expresa qué proyecto cambiará de empresa."
           },
           {
-            "text": "this.service.trasladarProyectoService(proyectoId, datos.empresaId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Service",
-        "path": "src/proyectos/trasladar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarProyectoService(proyectoId: number, empresaId: number) {\n    return this.repository.trasladarProyectoRepository(proyectoId, empresaId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.trasladarProyectoRepository(proyectoId, empresaId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Repository",
-        "path": "src/proyectos/trasladar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../entities/proyecto.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>\n  ) {}\n\n  async trasladarProyectoRepository(proyectoId: number, empresaId: number) {\n    await this.proyectos.update(proyectoId, { empresa: { id: empresaId } });\n    return this.proyectos.createQueryBuilder('p')\n      .where('p.id = :proyectoId', { proyectoId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyectos.update(proyectoId, { empresa: { id: empresaId } })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { empresaId: number }",
+            "title": "Nueva referencia",
+            "note": "El cuerpo lleva el ID de la empresa de destino."
           },
           {
-            "text": ".where('p.id = :proyectoId', { proyectoId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.cambiarEmpresa(Number(proyectoId), datos.empresaId)",
+            "title": "Continuar en el Service",
+            "note": "Usamos el mismo ProyectosService; no creamos otra clase para esta operación."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 4,
@@ -510,66 +500,64 @@
       },
       {
         "chapter": 5,
+        "name": "Service",
+        "path": "src/proyectos/proyectos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Proyecto } from './entities/proyecto.entity';\nimport { Empresa } from '../empresas/entities/empresa.entity';\n\n@Injectable()\nexport class ProyectosService {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  crearProyecto(nombre: string, horasEstimadas: number, empresaId: number) {\n    const proyecto = this.proyectos.create({\n      nombre,\n      horasEstimadas,\n      empresa: { id: empresaId }\n    });\n    return this.proyectos.save(proyecto);\n  }\n\n  listarProyectos() {\n    return this.proyectos.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyecto(proyectoId: number) {\n    await this.proyectos.delete(proyectoId);\n  }\n\n  async modificarHorasEstimadas(proyectoId: number, horasEstimadas: number) {\n    await this.proyectos.update(proyectoId, { horasEstimadas });\n    return this.proyectos.findOneBy({ id: proyectoId });\n  }\n\n  async cambiarEmpresa(proyectoId: number, empresaId: number) {\n    await this.proyectos.update(proyectoId, { empresa: { id: empresaId } });\n    return this.proyectos.findOneBy({ id: proyectoId });\n  }\n\n  async consultarEmpresa(empresaId: number, minimo: number) {\n    const empresa = await this.empresas.findOneBy({ id: empresaId });\n    const proyectos = await this.proyectos.find({\n      where: {\n        empresa: { id: empresaId },\n        horasEstimadas: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { empresa, proyectos };\n  }\n}",
+        "cues": [
+          {
+            "text": "this.empresas.findOneBy({ id: empresaId })",
+            "title": "Leer la empresa",
+            "note": "Se obtiene el registro principal por su ID.",
+            "after": "this.empresas.findOneBy({ id: empresaId })"
+          },
+          {
+            "text": "empresa: { id: empresaId }",
+            "title": "Filtrar por la relación",
+            "note": "Solo se leen los proyectos que pertenecen al empresa solicitado.",
+            "after": "this.empresas.findOneBy({ id: empresaId })"
+          },
+          {
+            "text": "horasEstimadas: MoreThanOrEqual(minimo)",
+            "title": "HorasEstimadas mayor o igual",
+            "note": "MoreThanOrEqual equivale a >= en SQL. minimo viene de la consulta de la URL.",
+            "after": "this.empresas.findOneBy({ id: empresaId })"
+          },
+          {
+            "text": "return { empresa, proyectos }",
+            "title": "Preparar la respuesta",
+            "note": "El objeto contiene la empresa y la lista de proyectos que cumplen el filtro.",
+            "after": "this.empresas.findOneBy({ id: empresaId })"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 5,
         "name": "Controller",
-        "path": "src/empresas/consultar/controller.ts",
-        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarEmpresaService } from './service';\n\n@Controller()\nexport class ConsultarEmpresaController {\n  constructor(private readonly service: ConsultarEmpresaService) {}\n\n  @Get('empresas/:empresaId/proyectos')\n  async ejecutar(@Param('empresaId', ParseIntPipe) empresaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarEmpresaService(empresaId, minimo);\n  }\n}",
+        "path": "src/proyectos/proyectos.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { ProyectosService } from './proyectos.service';\n\n@Controller()\nexport class ProyectosController {\n  constructor(private readonly service: ProyectosService) {}\n\n  @Post('proyectos')\n  crear(@Body() datos: { nombre: string; horasEstimadas: number; empresaId: number }) {\n    return this.service.crearProyecto(datos.nombre, datos.horasEstimadas, datos.empresaId);\n  }\n\n  @Get('proyectos')\n  listar() {\n    return this.service.listarProyectos();\n  }\n\n  @Delete('proyectos/:proyectoId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string) {\n    return this.service.eliminarProyecto(Number(proyectoId));\n  }\n\n  @Patch('proyectos/:proyectoId')\n  modificar(@Param('proyectoId') proyectoId: string, @Body() datos: { horasEstimadas: number }) {\n    return this.service.modificarHorasEstimadas(Number(proyectoId), datos.horasEstimadas);\n  }\n\n  @Patch('proyectos/:proyectoId/empresa')\n  cambiarEmpresa(@Param('proyectoId') proyectoId: string, @Body() datos: { empresaId: number }) {\n    return this.service.cambiarEmpresa(Number(proyectoId), datos.empresaId);\n  }\n\n  @Get('empresas/:empresaId/proyectos')\n  consultar(@Param('empresaId') empresaId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarEmpresa(Number(empresaId), Number(minimo));\n  }\n}",
         "cues": [
           {
             "text": "@Get('empresas/:empresaId/proyectos')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de la relación",
+            "note": "GET /empresas/2/proyectos solicita los proyectos de la empresa 2."
           },
           {
-            "text": "this.service.consultarEmpresaService(empresaId, minimo)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Service",
-        "path": "src/empresas/consultar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarEmpresaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarEmpresaService {\n  constructor(private readonly repository: ConsultarEmpresaRepository) {}\n\n  consultarEmpresaService(empresaId: number, minimo: number) {\n    return this.repository.consultarEmpresaRepository(empresaId, minimo);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.consultarEmpresaRepository(empresaId, minimo)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Repository",
-        "path": "src/empresas/consultar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../../proyectos/entities/proyecto.entity';\nimport { Empresa } from '../entities/empresa.entity';\n\n@Injectable()\nexport class ConsultarEmpresaRepository {\n  constructor(\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Empresa) private readonly empresas: Repository<Empresa>\n  ) {}\n\n  async consultarEmpresaRepository(empresaId: number, minimo: number) {\n    const empresa = await this.empresas.createQueryBuilder('h')\n      .where('h.id = :empresaId', { empresaId }).getOne();\n    const proyectos = await this.proyectos.createQueryBuilder('p')\n      .innerJoin('p.empresa', 'h')\n      .where('h.id = :empresaId', { empresaId })\n      .andWhere('p.horasEstimadas >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { empresa, proyectos };\n  }\n}",
-        "cues": [
-          {
-            "text": ".innerJoin('p.empresa', 'h')",
-            "title": "JOIN de la relación",
-            "note": "p representa PROYECTO y h representa EMPRESA."
+            "text": "@Query('minimo') minimo = '0'",
+            "title": "Filtro opcional",
+            "note": "?minimo=12001 llega como texto; si no se envía, se usa 0."
           },
           {
-            "text": ".where('h.id = :empresaId', { empresaId })",
-            "title": "Seleccionar el registro principal",
-            "note": "WHERE h.ID = 2. :empresaId es un parámetro."
-          },
-          {
-            "text": ".andWhere('p.horasEstimadas >= :minimo', { minimo })",
-            "title": "Aplicar el mínimo",
-            "note": "AND p.HORAS_ESTIMADAS >= 121. El SQL filtra en PostgreSQL."
+            "text": "this.service.consultarEmpresa(Number(empresaId), Number(minimo))",
+            "title": "Dos números al Service",
+            "note": "El Service consulta las Entities y devuelve el resultado."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "index"
+        "scene": "entry"
       },
       {
         "chapter": 5,
@@ -1342,7 +1330,8 @@
       "result": "201 · Registro 10 creado → GET /proyectos → 200 · aparecen 4 registros",
       "service": "crearProyectoService",
       "repo": "crearProyectoRepository",
-      "command": "PutItemCommand"
+      "command": "PutItemCommand",
+      "nestMethod": "crearProyecto"
     },
     {
       "ch": 2,
@@ -1356,7 +1345,8 @@
       "result": "204 · Registro 10 eliminado → GET /proyectos → 200 · quedan 7, 8 y 9",
       "service": "eliminarProyectoService",
       "repo": "eliminarProyectoRepository",
-      "command": "DeleteItemCommand"
+      "command": "DeleteItemCommand",
+      "nestMethod": "eliminarProyecto"
     },
     {
       "ch": 3,
@@ -1370,7 +1360,8 @@
       "result": "200 · Registro 7 · horasEstimadas = 160 h · empresaId = 1",
       "service": "modificarHorasEstimadasService",
       "repo": "modificarHorasEstimadasRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "modificarHorasEstimadas"
     },
     {
       "ch": 4,
@@ -1384,7 +1375,8 @@
       "result": "200 · Registro 7 · horasEstimadas = 160 h · empresaId pasa de 1 a 2",
       "service": "trasladarProyectoService",
       "repo": "trasladarProyectoRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "cambiarEmpresa"
     },
     {
       "ch": 5,
@@ -1398,7 +1390,8 @@
       "result": "200 · Empresa Delta + registro 7 (160 h). Excluye el 8 (120 h) y el 9 (pertenece al ID 1).",
       "service": "consultarEmpresaService",
       "repo": "consultarEmpresaRepository",
-      "command": "QueryCommand"
+      "command": "QueryCommand",
+      "nestMethod": "consultarEmpresa"
     }
   ],
   "context": {
@@ -1597,5 +1590,44 @@
     "cloud:16",
     "cloud:20",
     "cloud:24"
-  ]
+  ],
+  "originalSource": {
+    "kind": "pdf",
+    "label": "Ficha CH-15",
+    "sha256": "e4360d8bcdd5e9e5af8ff48bd00613919f5f09569057aceb2839168f0bfa0f7c",
+    "pages": 4
+  },
+  "nestSimpleRevision": 1,
+  "legacyNestChapters": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5
+  ],
+  "nestSimpleFiles": {
+    "service": "src/proyectos/proyectos.service.ts",
+    "controller": "src/proyectos/proyectos.controller.ts"
+  }
 }

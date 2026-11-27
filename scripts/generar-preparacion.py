@@ -81,8 +81,8 @@ def generate(source):
 
     def modules(chapter):
         if d.get('nestSimpleRevision'):
-            from arturo_nest_sencillo import module_code
-            return module_code(chapter)
+            from nest_sencillo import module_code
+            return module_code(c,chapter)
         imports = ["import { Module } from '@nestjs/common';", "import { TypeOrmModule } from '@nestjs/typeorm';"]
         for e in (parent,child):
             imports.append(f"import {{ {e['entity']} }} from './{e['file'][4:-3]}';")
@@ -221,7 +221,7 @@ curl -i "{route}"''','Si cambias de terminal, recupera el ID de registro-creado.
     else:
         tracks = replace_strings(tracks, 'registro-creado.json', 'respuesta-registro.json')
     result = dict(version=1,caseId=c['id'],title=c['title'],context=c,fieldGuide=d['fieldGuide'],profile='default',team='equipo01',tracks=tracks)
-    from arturo_nest_sencillo import apply_preparation
+    from nest_sencillo import apply_preparation
     apply_preparation(result,d)
     (ROOT/'preparar'/source.name).write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     return c['id'],len(nest),len(cloud)

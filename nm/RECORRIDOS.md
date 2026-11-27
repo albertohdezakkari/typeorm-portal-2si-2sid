@@ -1,6 +1,6 @@
 # Recorridos N:M de todo el alumnado
 
-En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. El piloto de Arturo tiene 38 pasos Nest sencillos; los demás mantienen 51. Serverless conserva sus 60 pasos.
+En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos. Serverless conserva sus 60 pasos.
 
 | Caso | Proyecto 1:N existente | Ampliación N:M | Material |
 | --- | --- | --- | --- |
@@ -37,4 +37,4 @@ En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si
 
 Ejemplo docente adicional: [Cine–Proyección–Técnico](casos/CH-13/) · [PDF](casos/CH-13/fichas-nm.pdf).
 
-Cada caso incluye Entities de TypeORM, módulo acumulativo, Controller → Service → Repository; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.
+Cada caso incluye Entities de TypeORM completas, módulo acumulativo y Controller → Service → Entity; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.

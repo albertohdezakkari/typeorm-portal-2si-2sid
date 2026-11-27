@@ -1,4 +1,4 @@
-import { montarTaller } from './taller.js?v=arturo-simple-1';
+import { montarTaller } from './taller.js?v=nest-sencillo-todos-1';
 
 const status = document.getElementById('estado');
 const container = document.getElementById('taller');
@@ -25,7 +25,7 @@ window.addEventListener('message', async event => {
   status.textContent = 'Preparando tu taller…';
   try {
     const caseUrl = new URL(`casos/${init.caseId}.json`, location.href);
-    caseUrl.searchParams.set('v', init.caseId==='CH-22'?'arturo-simple-1':'entity-1');
+    caseUrl.searchParams.set('v', 'nest-sencillo-todos-1');
     const [dataResponse, templateResponse] = await Promise.all([
       fetch(caseUrl),
       fetch(new URL('plantilla.html?v=preparacion-1', location.href)),

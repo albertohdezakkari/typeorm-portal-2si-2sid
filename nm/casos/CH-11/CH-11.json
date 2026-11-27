@@ -63,38 +63,6 @@
         "create": null
       },
       {
-        "id": "nosql",
-        "chapter": 0,
-        "title": "La misma relación en DynamoDB",
-        "kind": "mapping",
-        "code": "ASIGNACIONES (RESERVA_ID, HUESPED_ID, ROL)",
-        "path": "",
-        "note": "",
-        "expect": "ASIGNACIONES agrupa por RESERVA_ID. PorHuesped agrupa por HUESPED_ID; ambos conservan las mismas parejas.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "RESERVA_ID",
-            "start": 14,
-            "end": 24,
-            "note": "Primera parte de la PK: identifica la reserva."
-          },
-          {
-            "token": "HUESPED_ID",
-            "start": 26,
-            "end": 36,
-            "note": "Segunda parte de la PK: identifica al huesped dentro de la reserva."
-          },
-          {
-            "token": "ROL",
-            "start": 38,
-            "end": 41,
-            "note": "Dato del vínculo, no del huesped."
-          }
-        ],
-        "create": null
-      },
-      {
         "id": "retomar",
         "chapter": 1,
         "title": "Retoma tu proyecto 1:N",
@@ -128,195 +96,144 @@
       {
         "id": "huesped",
         "chapter": 1,
-        "title": "Crea Huesped",
+        "title": "Crear Huesped Entity completa",
         "kind": "model",
-        "code": "import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';\n\n@Entity({ name: 'HUESPED' })\nexport class Huesped {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n}\n",
+        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'HUESPED' })\nexport class Huesped {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.huesped)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/huespedes/entities/huesped.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reserva, un huesped y un ROL; se conserva Reserva.hotel.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Huesped, Reserva y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Hotel ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'NOMBRE'",
-            "start": 195,
-            "end": 203,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@Entity({ name: 'HUESPED' })",
+            "start": 154,
+            "end": 182,
+            "note": "Esta clase representa la tabla HUESPED."
           },
           {
-            "token": "'APELLIDOS'",
-            "start": 275,
-            "end": 286,
-            "note": "Apellido del huesped."
+            "token": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "start": 208,
+            "end": 247,
+            "note": "ID es la clave primaria. PostgreSQL genera su valor al guardar un huesped."
           },
           {
-            "token": "'EMAIL'",
-            "start": 361,
-            "end": 368,
-            "note": "Correo del huesped."
+            "token": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "start": 266,
+            "end": 323,
+            "note": "nombre se guarda en NOMBRE como texto de hasta 120 caracteres."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 25,
-            "end": 47,
-            "note": "PostgreSQL genera el ID del nuevo huesped."
+            "token": "@Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })",
+            "start": 346,
+            "end": 406,
+            "note": "apellidos se guarda en otra columna de texto."
+          },
+          {
+            "token": "@Column({ name: 'EMAIL', type: 'varchar', length: 180 })",
+            "start": 432,
+            "end": 488,
+            "note": "email se guarda como texto en EMAIL."
+          },
+          {
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.huesped)",
+            "start": 510,
+            "end": 572,
+            "note": "Un huesped tiene varias asignaciones. Cada asignación apunta a su huesped."
           }
         ],
         "create": "mkdir -p src/huespedes/entities\nls -d src/huespedes/entities\ntouch src/huespedes/entities/huesped.entity.ts\ncode src/huespedes/entities/huesped.entity.ts"
-      },
-      {
-        "id": "asignacion",
-        "chapter": 1,
-        "title": "Crea Asignacion y su clave compuesta",
-        "kind": "model",
-        "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Reserva } from '../../reservas/entities/reserva.entity';\nimport { Huesped } from '../../huespedes/entities/huesped.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_RESERVA', type: 'integer' })\n  reservaId!: number;\n\n  @PrimaryColumn({ name: 'ID_HUESPED', type: 'integer' })\n  huespedId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Reserva, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_RESERVA' })\n  reserva!: Reserva;\n\n  @ManyToOne(() => Huesped, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_HUESPED' })\n  huesped!: Huesped;\n}\n",
-        "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reserva, un huesped y un ROL; se conserva Reserva.hotel.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'ID_RESERVA'",
-            "start": 297,
-            "end": 309,
-            "note": "Nombre de la columna SQL que referencia RESERVA."
-          },
-          {
-            "token": "'ID_HUESPED'",
-            "start": 378,
-            "end": 390,
-            "note": "Nombre de la columna SQL que referencia HUESPED."
-          },
-          {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
-          },
-          {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una reserva y a un huesped."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
       },
       {
         "id": "reserva-inversa",
         "chapter": 1,
-        "title": "Conecta Reserva con sus asignaciones",
+        "title": "Ampliar Reserva Entity existente",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Hotel } from '../../hoteles/entities/hotel.entity';\n\n@Entity({ name: 'RESERVA' })\nexport class Reserva {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'NOCHES', type: 'integer' })\n  noches!: number;\n\n  @ManyToOne(() => Hotel, hotel => hotel.reservas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_HOTEL' })\n  hotel!: Hotel;\n  @OneToMany(() => Asignacion, asignacion => asignacion.reserva)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/reservas/entities/reserva.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reserva, un huesped y un ROL; se conserva Reserva.hotel.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Huesped, Reserva y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Hotel ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "ManyToOne",
-            "start": 50,
-            "end": 59,
-            "note": "Cada asignación pertenece a una reserva y a un huesped."
+            "token": "@Entity({ name: 'RESERVA' })",
+            "start": 240,
+            "end": 268,
+            "note": "Conserva la tabla RESERVA y todos sus campos del proyecto 1:N."
           },
           {
-            "token": "'NOMBRE'",
-            "start": 368,
-            "end": 376,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@ManyToOne(() => Hotel, hotel => hotel.reservas, {",
+            "start": 499,
+            "end": 549,
+            "note": "La relación anterior se conserva: cada reserva pertenece a un hotel."
           },
           {
-            "token": "OneToMany",
-            "start": 27,
-            "end": 36,
-            "note": "Colección de vínculos asociados a este registro."
+            "token": "@JoinColumn({ name: 'ID_HOTEL' })",
+            "start": 577,
+            "end": 610,
+            "note": "ID_HOTEL sigue siendo la clave foránea hacia HOTEL."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 61,
-            "end": 83,
-            "note": "PostgreSQL genera el ID del nuevo huesped."
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.reserva)",
+            "start": 630,
+            "end": 692,
+            "note": "Añade la colección de asignaciones de esta reserva. La pareja de IDs se guarda en ASIGNACION."
+          },
+          {
+            "token": "asignaciones!: Asignacion[];",
+            "start": 695,
+            "end": 723,
+            "note": "Los corchetes indican una colección. TypeORM puede relacionar la reserva con varias asignaciones."
           }
         ],
-        "create": "mkdir -p src/reservas/entities\nls -d src/reservas/entities\ntouch src/reservas/entities/reserva.entity.ts\ncode src/reservas/entities/reserva.entity.ts"
-      },
-      {
-        "id": "prof-inversa",
-        "chapter": 1,
-        "title": "Conecta Huesped con sus asignaciones",
-        "kind": "model",
-        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'HUESPED' })\nexport class Huesped {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.huesped)\n  asignaciones!: Asignacion[];\n}\n",
-        "path": "src/huespedes/entities/huesped.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reserva, un huesped y un ROL; se conserva Reserva.hotel.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'NOMBRE'",
-            "start": 282,
-            "end": 290,
-            "note": "Nombre y apellidos se guardan por separado."
-          },
-          {
-            "token": "'APELLIDOS'",
-            "start": 362,
-            "end": 373,
-            "note": "Apellido del huesped."
-          },
-          {
-            "token": "'EMAIL'",
-            "start": 448,
-            "end": 455,
-            "note": "Correo del huesped."
-          },
-          {
-            "token": "OneToMany",
-            "start": 25,
-            "end": 34,
-            "note": "Colección de vínculos asociados a este registro."
-          },
-          {
-            "token": "PrimaryGeneratedColumn",
-            "start": 36,
-            "end": 58,
-            "note": "PostgreSQL genera el ID del nuevo huesped."
-          }
-        ],
-        "create": "mkdir -p src/huespedes/entities\nls -d src/huespedes/entities\ntouch src/huespedes/entities/huesped.entity.ts\ncode src/huespedes/entities/huesped.entity.ts"
+        "create": "code src/reservas/entities/reserva.entity.ts",
+        "updateExisting": true
       },
       {
         "id": "asig-inversas",
         "chapter": 1,
-        "title": "Completa ambos extremos de Asignacion",
+        "title": "Crear Asignacion Entity completa",
         "kind": "model",
         "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Reserva } from '../../reservas/entities/reserva.entity';\nimport { Huesped } from '../../huespedes/entities/huesped.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_RESERVA', type: 'integer' })\n  reservaId!: number;\n\n  @PrimaryColumn({ name: 'ID_HUESPED', type: 'integer' })\n  huespedId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Reserva, reserva => reserva.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_RESERVA' })\n  reserva!: Reserva;\n\n  @ManyToOne(() => Huesped, huesped => huesped.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_HUESPED' })\n  huesped!: Huesped;\n}\n",
         "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reserva, un huesped y un ROL; se conserva Reserva.hotel.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Huesped, Reserva y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Hotel ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'ID_RESERVA'",
-            "start": 297,
-            "end": 309,
-            "note": "Nombre de la columna SQL que referencia RESERVA."
+            "token": "@Entity({ name: 'ASIGNACION' })",
+            "start": 214,
+            "end": 245,
+            "note": "La tabla intermedia guarda qué huesped participa en qué reserva y con qué rol."
           },
           {
-            "token": "'ID_HUESPED'",
-            "start": 378,
-            "end": 390,
-            "note": "Nombre de la columna SQL que referencia HUESPED."
+            "token": "@PrimaryColumn({ name: 'ID_RESERVA', type: 'integer' })",
+            "start": 274,
+            "end": 329,
+            "note": "Primer componente de la clave primaria: el ID de la reserva. Este valor llega de la petición; no se genera automáticamente."
           },
           {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
+            "token": "@PrimaryColumn({ name: 'ID_HUESPED', type: 'integer' })",
+            "start": 355,
+            "end": 410,
+            "note": "Segundo componente. Los dos IDs juntos identifican una única asignación; cada ID por separado puede repetirse."
           },
           {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una reserva y a un huesped."
+            "token": "@Column({ name: 'ROL', type: 'varchar', length: 120 })",
+            "start": 436,
+            "end": 490,
+            "note": "ROL pertenece al vínculo: una persona puede tener roles distintos en reservas distintas."
+          },
+          {
+            "token": "@ManyToOne(() => Reserva, reserva => reserva.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_RESERVA' })",
+            "start": 510,
+            "end": 632,
+            "note": "Cada asignación apunta a una reserva mediante ID_RESERVA. RESTRICT impide borrar esa reserva mientras tenga asignaciones."
+          },
+          {
+            "token": "@ManyToOne(() => Huesped, huesped => huesped.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_HUESPED' })",
+            "start": 657,
+            "end": 779,
+            "note": "La misma fila apunta también al huesped mediante ID_HUESPED. Así se unen ambos extremos."
           }
         ],
         "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
@@ -326,41 +243,17 @@
         "chapter": 1,
         "title": "Registra las cuatro Entities",
         "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { ReservasService } from './reservas/reservas.service';\nimport { ReservasController } from './reservas/reservas.controller';\nimport { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [ReservasController],\n  providers: [ReservasService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Conserva ReservasController y ReservasService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.",
         "expect": "El módulo conserva todos los casos 1:N. Solo añade las nuevas Entities; aún no importa casos N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
-          },
-          {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1476,
-            "end": 1486,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1530,
-            "end": 1541,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 1664,
-            "end": 1673,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])",
+            "start": 499,
+            "end": 562,
+            "note": "Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -436,105 +329,99 @@
         "create": null
       },
       {
-        "id": "crear-listar-repository",
-        "chapter": 3,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Huesped } from '../entities/huesped.entity';\n\n@Injectable()\nexport class HuespedesRepository {\n  constructor(\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuespedRepository(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedesRepository() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n}\n",
-        "path": "src/huespedes/crear-listar/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los huespedes iniciales y a Lucía; no crea asignaciones.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "find",
-            "start": 595,
-            "end": 599,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/huespedes/crear-listar\nls -d src/huespedes/crear-listar\ntouch src/huespedes/crear-listar/repository.ts\ncode src/huespedes/crear-listar/repository.ts"
-      },
-      {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Conecta el Service",
+        "title": "Crear HuespedesService",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { HuespedesRepository } from './repository';\n\n@Injectable()\nexport class HuespedesService {\n  constructor(private readonly repository: HuespedesRepository) {}\n\n  crearHuespedService(nombre: string, apellidos: string, email: string) {\n    return this.repository.crearHuespedRepository(nombre, apellidos, email);\n  }\n\n  listarHuespedesService() {\n    return this.repository.listarHuespedesRepository();\n  }\n}\n",
-        "path": "src/huespedes/crear-listar/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Huesped } from './entities/huesped.entity';\n\n@Injectable()\nexport class HuespedesService {\n  constructor(\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/huespedes/huespedes.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los huespedes iniciales y a Lucía; no crea asignaciones.",
         "focus": "service",
         "cues": [
           {
-            "token": "return",
-            "start": 290,
-            "end": 296,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.huespedes.create({ nombre, apellidos, email })",
+            "start": 424,
+            "end": 475,
+            "note": "Prepara el perfil sin guardarlo todavía."
+          },
+          {
+            "token": "this.huespedes.save(huesped)",
+            "start": 488,
+            "end": 516,
+            "note": "Guarda la Entity y devuelve su ID generado."
+          },
+          {
+            "token": "this.huespedes.find({ order: { id: 'ASC' } })",
+            "start": 556,
+            "end": 601,
+            "note": "Lista el catálogo usando la misma Entity."
           }
         ],
-        "create": "mkdir -p src/huespedes/crear-listar\nls -d src/huespedes/crear-listar\ntouch src/huespedes/crear-listar/service.ts\ncode src/huespedes/crear-listar/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/huespedes\ntouch src/huespedes/huespedes.service.ts\ncode src/huespedes/huespedes.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear HuespedesController",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { HuespedesService } from './service';\n\n@Controller('huespedes')\nexport class HuespedesController {\n  constructor(private readonly service: HuespedesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuespedService(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarHuespedesService();\n  }\n}\n",
-        "path": "src/huespedes/crear-listar/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { HuespedesService } from './huespedes.service';\n\n@Controller('huespedes')\nexport class HuespedesController {\n  constructor(private readonly service: HuespedesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarHuespedes();\n  }\n}",
+        "path": "src/huespedes/huespedes.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los huespedes iniciales y a Lucía; no crea asignaciones.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Body",
-            "start": 249,
-            "end": 254,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
+            "token": "@Controller('huespedes')",
+            "start": 119,
+            "end": 143,
+            "note": "Agrupa las rutas del catálogo de huespedes."
+          },
+          {
+            "token": "@Post()",
+            "start": 243,
+            "end": 250,
+            "note": "POST crea un perfil con nombre, apellidos y correo."
+          },
+          {
+            "token": "this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email)",
+            "start": 341,
+            "end": 410,
+            "note": "Entrega los tres valores al Service."
+          },
+          {
+            "token": "@Get()",
+            "start": 419,
+            "end": 425,
+            "note": "GET utiliza listarHuespedes en ese mismo Service."
           }
         ],
-        "create": "mkdir -p src/huespedes/crear-listar\nls -d src/huespedes/crear-listar\ntouch src/huespedes/crear-listar/controller.ts\ncode src/huespedes/crear-listar/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/huespedes\ntouch src/huespedes/huespedes.controller.ts\ncode src/huespedes/huespedes.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Huespedes una sola vez",
         "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { ReservasService } from './reservas/reservas.service';\nimport { ReservasController } from './reservas/reservas.controller';\nimport { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesService } from './huespedes/huespedes.service';\nimport { HuespedesController } from './huespedes/huespedes.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [ReservasController, HuespedesController],\n  providers: [ReservasService, HuespedesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
+            "token": "controllers: [",
+            "start": 705,
+            "end": 719,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1695,
-            "end": 1705,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1749,
-            "end": 1760,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 1904,
-            "end": 1913,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 763,
+            "end": 775,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -579,171 +466,93 @@
         "create": null
       },
       {
-        "id": "asignar-huesped-repository",
-        "chapter": 4,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\nimport { Reserva } from '../../reservas/entities/reserva.entity';\nimport { Huesped } from '../../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignarHuespedRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  buscarReservaRepository(reservaId: number) {\n    return this.reservas.findOneBy({ id: reservaId });\n  }\n\n  buscarHuespedRepository(huespedId: number) {\n    return this.huespedes.findOneBy({ id: huespedId });\n  }\n\n  async asignarHuespedRepository(reservaId: number, huespedId: number, rol: string) {\n    const asignacion = { reservaId, huespedId, rol };\n    await this.asignaciones.insert(asignacion);\n    return asignacion;\n  }\n}\n",
-        "path": "src/asignaciones/asignar-huesped/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reservaId",
-            "start": 679,
-            "end": 688,
-            "note": "Identifica la reserva de la asociación."
-          },
-          {
-            "token": "huespedId",
-            "start": 786,
-            "end": 795,
-            "note": "Identifica al huesped. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 939,
-            "end": 942,
-            "note": "Es un dato del vínculo; puede cambiar según la reserva."
-          },
-          {
-            "token": "insert",
-            "start": 1036,
-            "end": 1042,
-            "note": "INSERT rechaza una pareja cuya PK compuesta ya existe."
-          },
-          {
-            "token": "find",
-            "start": 725,
-            "end": 729,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/asignar-huesped\nls -d src/asignaciones/asignar-huesped\ntouch src/asignaciones/asignar-huesped/repository.ts\ncode src/asignaciones/asignar-huesped/repository.ts"
-      },
-      {
         "id": "asignar-huesped-service",
         "chapter": 4,
-        "title": "Conecta el Service",
+        "title": "Crear AsignacionesService",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { QueryFailedError } from 'typeorm';\nimport { AsignarHuespedRepository } from './repository';\n\n@Injectable()\nexport class AsignarHuespedService {\n  constructor(private readonly repository: AsignarHuespedRepository) {}\n\n  async asignarHuespedService(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.repository.buscarReservaRepository(reservaId);\n    const huesped = await this.repository.buscarHuespedRepository(huespedId);\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n\n    try {\n      return await this.repository.asignarHuespedRepository(reservaId, huespedId, rol);\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n}\n",
-        "path": "src/asignaciones/asignar-huesped/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
-            "token": "reservaId",
-            "start": 339,
-            "end": 348,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async asignarHuesped(reservaId: number, huespedId: number, rol: string)",
+            "start": 699,
+            "end": 770,
+            "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
-            "token": "huespedId",
-            "start": 358,
-            "end": 367,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.reservas.findOneBy({ id: reservaId })",
+            "start": 799,
+            "end": 841,
+            "note": "Lee la reserva con el repositorio de TypeORM."
           },
           {
-            "token": "await",
-            "start": 412,
-            "end": 417,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.huespedes.findOneBy({ id: huespedId })",
+            "start": 869,
+            "end": 912,
+            "note": "Lee el huesped antes de asociarlo."
           },
           {
-            "token": "return",
-            "start": 675,
-            "end": 681,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 377,
-            "end": 380,
-            "note": "El mismo huesped puede tener otro rol en otra reserva."
+            "token": "this.asignaciones.insert(asignacion)",
+            "start": 1100,
+            "end": 1136,
+            "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-huesped\nls -d src/asignaciones/asignar-huesped\ntouch src/asignaciones/asignar-huesped/service.ts\ncode src/asignaciones/asignar-huesped/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-huesped-entry",
         "chapter": 4,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear AsignacionesController",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignarHuespedService } from './service';\n\n@Controller('reservas/:reservaId/asignaciones')\nexport class AsignarHuespedController {\n  constructor(private readonly service: AsignarHuespedService) {}\n\n  @Post()\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuespedService(Number(reservaId), datos.huespedId, datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/asignar-huesped/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 291,
-            "end": 297,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Post('reservas/:reservaId/asignaciones')",
+            "start": 246,
+            "end": 287,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 330,
-            "end": 335,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "reservaId",
-            "start": 139,
-            "end": 148,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "huespedId",
-            "start": 347,
-            "end": 356,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol)",
+            "start": 401,
+            "end": 475,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-huesped\nls -d src/asignaciones/asignar-huesped\ntouch src/asignaciones/asignar-huesped/controller.ts\ncode src/asignaciones/asignar-huesped/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-huesped-registro",
         "chapter": 4,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Asignaciones una sola vez",
         "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { AsignarHuespedRepository } from './asignaciones/asignar-huesped/repository';\nimport { AsignarHuespedService } from './asignaciones/asignar-huesped/service';\nimport { AsignarHuespedController } from './asignaciones/asignar-huesped/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, AsignarHuespedController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, AsignarHuespedRepository, AsignarHuespedService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { ReservasService } from './reservas/reservas.service';\nimport { ReservasController } from './reservas/reservas.controller';\nimport { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesService } from './huespedes/huespedes.service';\nimport { HuespedesController } from './huespedes/huespedes.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [ReservasController, HuespedesController, AsignacionesController],\n  providers: [ReservasService, HuespedesService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
+            "token": "controllers: [",
+            "start": 861,
+            "end": 875,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1947,
-            "end": 1957,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2001,
-            "end": 2012,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2182,
-            "end": 2191,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 943,
+            "end": 955,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -788,132 +597,58 @@
         "create": null
       },
       {
-        "id": "listar-por-reserva-repository",
-        "chapter": 5,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorReservaRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorReservaRepository(reservaId: number) {\n    return this.asignaciones.find({\n      where: { reservaId },\n      order: { huespedId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reserva/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "La reserva 7 devuelve (7,1,Titular) y (7,2,Acompañante): dos huespedes para una reserva.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reservaId",
-            "start": 404,
-            "end": 413,
-            "note": "Identifica la reserva de la asociación."
-          },
-          {
-            "token": "huespedId",
-            "start": 504,
-            "end": 513,
-            "note": "Identifica al huesped. El par completo identifica la asignación."
-          },
-          {
-            "token": "find",
-            "start": 454,
-            "end": 458,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-reserva\nls -d src/asignaciones/listar-por-reserva\ntouch src/asignaciones/listar-por-reserva/repository.ts\ncode src/asignaciones/listar-por-reserva/repository.ts"
-      },
-      {
         "id": "listar-por-reserva-service",
         "chapter": 5,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorReserva al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorReservaRepository } from './repository';\n\n@Injectable()\nexport class ListarPorReservaService {\n  constructor(private readonly repository: ListarPorReservaRepository) {}\n\n  listarAsignacionesPorReservaService(reservaId: number) {\n    return this.repository.listarAsignacionesPorReservaRepository(reservaId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reserva/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La reserva 7 devuelve (7,1,Titular) y (7,2,Acompañante): dos huespedes para una reserva.",
         "focus": "service",
         "cues": [
           {
-            "token": "reservaId",
-            "start": 271,
-            "end": 280,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "listarPorReserva(reservaId: number)",
+            "start": 1392,
+            "end": 1427,
+            "note": "Recibe un ID de reserva."
           },
           {
-            "token": "return",
-            "start": 296,
-            "end": 302,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } })",
+            "start": 1441,
+            "end": 1518,
+            "note": "Filtra las asignaciones por reserva y ordena por huesped."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-reserva\nls -d src/asignaciones/listar-por-reserva\ntouch src/asignaciones/listar-por-reserva/service.ts\ncode src/asignaciones/listar-por-reserva/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-reserva-entry",
         "chapter": 5,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorReserva al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorReservaService } from './service';\n\n@Controller('reservas/:reservaId/asignaciones')\nexport class ListarPorReservaController {\n  constructor(private readonly service: ListarPorReservaService) {}\n\n  @Get()\n  listar(@Param('reservaId') reservaId: string) {\n    return this.service.listarAsignacionesPorReservaService(Number(reservaId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reserva/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La reserva 7 devuelve (7,1,Titular) y (7,2,Acompañante): dos huespedes para una reserva.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 288,
-            "end": 294,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('reservas/:reservaId/asignaciones')",
+            "start": 489,
+            "end": 529,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "reservaId",
-            "start": 134,
-            "end": 143,
-            "note": "Primera parte de la clave compuesta."
+            "token": "this.service.listarPorReserva(Number(reservaId))",
+            "start": 601,
+            "end": 649,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-reserva\nls -d src/asignaciones/listar-por-reserva\ntouch src/asignaciones/listar-por-reserva/controller.ts\ncode src/asignaciones/listar-por-reserva/controller.ts"
-      },
-      {
-        "id": "listar-por-reserva-registro",
-        "chapter": 5,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { AsignarHuespedRepository } from './asignaciones/asignar-huesped/repository';\nimport { AsignarHuespedService } from './asignaciones/asignar-huesped/service';\nimport { AsignarHuespedController } from './asignaciones/asignar-huesped/controller';\nimport { ListarPorReservaRepository } from './asignaciones/listar-por-reserva/repository';\nimport { ListarPorReservaService } from './asignaciones/listar-por-reserva/service';\nimport { ListarPorReservaController } from './asignaciones/listar-por-reserva/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, AsignarHuespedController, ListarPorReservaController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, AsignarHuespedRepository, AsignarHuespedService, ListarPorReservaRepository, ListarPorReservaService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
-          },
-          {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2214,
-            "end": 2224,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2268,
-            "end": 2279,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2477,
-            "end": 2486,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-reserva-ejecutar",
@@ -949,138 +684,58 @@
         "create": null
       },
       {
-        "id": "listar-por-huesped-repository",
-        "chapter": 6,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorHuespedRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorHuespedRepository(huespedId: number) {\n    return this.asignaciones.find({\n      where: { huespedId },\n      order: { reservaId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-huesped/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "El huesped 1 devuelve las reservas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reservaId",
-            "start": 504,
-            "end": 513,
-            "note": "Identifica la reserva de la asociación."
-          },
-          {
-            "token": "huespedId",
-            "start": 404,
-            "end": 413,
-            "note": "Identifica al huesped. El par completo identifica la asignación."
-          },
-          {
-            "token": "PorHuesped",
-            "start": 229,
-            "end": 239,
-            "note": "Usa la segunda organización de los mismos vínculos."
-          },
-          {
-            "token": "find",
-            "start": 454,
-            "end": 458,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-huesped\nls -d src/asignaciones/listar-por-huesped\ntouch src/asignaciones/listar-por-huesped/repository.ts\ncode src/asignaciones/listar-por-huesped/repository.ts"
-      },
-      {
         "id": "listar-por-huesped-service",
         "chapter": 6,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorHuesped al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorHuespedRepository } from './repository';\n\n@Injectable()\nexport class ListarPorHuespedService {\n  constructor(private readonly repository: ListarPorHuespedRepository) {}\n\n  listarAsignacionesPorHuespedService(huespedId: number) {\n    return this.repository.listarAsignacionesPorHuespedRepository(huespedId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-huesped/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El huesped 1 devuelve las reservas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "service",
         "cues": [
           {
-            "token": "huespedId",
-            "start": 271,
-            "end": 280,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "listarPorHuesped(huespedId: number)",
+            "start": 1527,
+            "end": 1562,
+            "note": "Recibe un ID de huesped."
           },
           {
-            "token": "return",
-            "start": 296,
-            "end": 302,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } })",
+            "start": 1576,
+            "end": 1653,
+            "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-huesped\nls -d src/asignaciones/listar-por-huesped\ntouch src/asignaciones/listar-por-huesped/service.ts\ncode src/asignaciones/listar-por-huesped/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-huesped-entry",
         "chapter": 6,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorHuesped al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorHuespedService } from './service';\n\n@Controller('huespedes/:huespedId/asignaciones')\nexport class ListarPorHuespedController {\n  constructor(private readonly service: ListarPorHuespedService) {}\n\n  @Get()\n  listar(@Param('huespedId') huespedId: string) {\n    return this.service.listarAsignacionesPorHuespedService(Number(huespedId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-huesped/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El huesped 1 devuelve las reservas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 289,
-            "end": 295,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('huespedes/:huespedId/asignaciones')",
+            "start": 658,
+            "end": 699,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "huespedId",
-            "start": 135,
-            "end": 144,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.listarPorHuesped(Number(huespedId))",
+            "start": 771,
+            "end": 819,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-huesped\nls -d src/asignaciones/listar-por-huesped\ntouch src/asignaciones/listar-por-huesped/controller.ts\ncode src/asignaciones/listar-por-huesped/controller.ts"
-      },
-      {
-        "id": "listar-por-huesped-registro",
-        "chapter": 6,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { AsignarHuespedRepository } from './asignaciones/asignar-huesped/repository';\nimport { AsignarHuespedService } from './asignaciones/asignar-huesped/service';\nimport { AsignarHuespedController } from './asignaciones/asignar-huesped/controller';\nimport { ListarPorReservaRepository } from './asignaciones/listar-por-reserva/repository';\nimport { ListarPorReservaService } from './asignaciones/listar-por-reserva/service';\nimport { ListarPorReservaController } from './asignaciones/listar-por-reserva/controller';\nimport { ListarPorHuespedRepository } from './asignaciones/listar-por-huesped/repository';\nimport { ListarPorHuespedService } from './asignaciones/listar-por-huesped/service';\nimport { ListarPorHuespedController } from './asignaciones/listar-por-huesped/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, AsignarHuespedController, ListarPorReservaController, ListarPorHuespedController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, AsignarHuespedRepository, AsignarHuespedService, ListarPorReservaRepository, ListarPorReservaService, ListarPorHuespedRepository, ListarPorHuespedService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
-          },
-          {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2481,
-            "end": 2491,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2535,
-            "end": 2546,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2772,
-            "end": 2781,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-huesped-ejecutar",
@@ -1116,168 +771,64 @@
         "create": null
       },
       {
-        "id": "modificar-rol-repository",
-        "chapter": 7,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ModificarRolRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  async modificarRolRepository(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    return resultado.affected;\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".update(",
-            "start": 488,
-            "end": 496,
-            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
-          },
-          {
-            "token": "reservaId",
-            "start": 390,
-            "end": 399,
-            "note": "Identifica la reserva de la asociación."
-          },
-          {
-            "token": "huespedId",
-            "start": 409,
-            "end": 418,
-            "note": "Identifica al huesped. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 428,
-            "end": 431,
-            "note": "Es un dato del vínculo; puede cambiar según la reserva."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.ts\ncode src/asignaciones/modificar-rol/repository.ts"
-      },
-      {
         "id": "modificar-rol-service",
         "chapter": 7,
-        "title": "Conecta el Service",
+        "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { Injectable, NotFoundException } from '@nestjs/common';\nimport { ModificarRolRepository } from './repository';\n\n@Injectable()\nexport class ModificarRolService {\n  constructor(private readonly repository: ModificarRolRepository) {}\n\n  async modificarRolService(reservaId: number, huespedId: number, rol: string) {\n    const modificadas = await this.repository.modificarRolRepository(reservaId, huespedId, rol);\n    if (!modificadas) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
-            "token": "reservaId",
-            "start": 268,
-            "end": 277,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async modificarRol(reservaId: number, huespedId: number, rol: string)",
+            "start": 1662,
+            "end": 1731,
+            "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
-            "token": "huespedId",
-            "start": 287,
-            "end": 296,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.asignaciones.update({ reservaId, huespedId }, { rol })",
+            "start": 1762,
+            "end": 1821,
+            "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
-            "token": "await",
-            "start": 345,
-            "end": 350,
-            "note": "Espera el resultado antes de seguir o devolverlo."
-          },
-          {
-            "token": "return",
-            "start": 500,
-            "end": 506,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 306,
-            "end": 309,
-            "note": "El mismo huesped puede tener otro rol en otra reserva."
+            "token": "if (!resultado.affected)",
+            "start": 1827,
+            "end": 1851,
+            "note": "Si no había esa pareja, devuelve 404."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/service.ts\ncode src/asignaciones/modificar-rol/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "modificar-rol-entry",
         "chapter": 7,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Patch } from '@nestjs/common';\nimport { ModificarRolService } from './service';\n\n@Controller('reservas/:reservaId/asignaciones/:huespedId')\nexport class ModificarRolController {\n  constructor(private readonly service: ModificarRolService) {}\n\n  @Patch()\n  modificar(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string, @Body() datos: { rol: string }) {\n    return this.service.modificarRolService(Number(reservaId), Number(huespedId), datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 300,
-            "end": 306,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Patch('reservas/:reservaId/asignaciones/:huespedId')",
+            "start": 835,
+            "end": 888,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 378,
-            "end": 383,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "reservaId",
-            "start": 138,
-            "end": 147,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "huespedId",
-            "start": 162,
-            "end": 171,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol)",
+            "start": 1031,
+            "end": 1105,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/controller.ts\ncode src/asignaciones/modificar-rol/controller.ts"
-      },
-      {
-        "id": "modificar-rol-registro",
-        "chapter": 7,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { AsignarHuespedRepository } from './asignaciones/asignar-huesped/repository';\nimport { AsignarHuespedService } from './asignaciones/asignar-huesped/service';\nimport { AsignarHuespedController } from './asignaciones/asignar-huesped/controller';\nimport { ListarPorReservaRepository } from './asignaciones/listar-por-reserva/repository';\nimport { ListarPorReservaService } from './asignaciones/listar-por-reserva/service';\nimport { ListarPorReservaController } from './asignaciones/listar-por-reserva/controller';\nimport { ListarPorHuespedRepository } from './asignaciones/listar-por-huesped/repository';\nimport { ListarPorHuespedService } from './asignaciones/listar-por-huesped/service';\nimport { ListarPorHuespedController } from './asignaciones/listar-por-huesped/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, AsignarHuespedController, ListarPorReservaController, ListarPorHuespedController, ModificarRolController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, AsignarHuespedRepository, AsignarHuespedService, ListarPorReservaRepository, ListarPorReservaService, ListarPorHuespedRepository, ListarPorHuespedService, ModificarRolRepository, ModificarRolService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
-          },
-          {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2721,
-            "end": 2731,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2775,
-            "end": 2786,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3036,
-            "end": 3045,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -1319,144 +870,58 @@
         "create": null
       },
       {
-        "id": "eliminar-asignacion-repository",
-        "chapter": 8,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class EliminarAsignacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  eliminarAsignacionRepository(reservaId: number, huespedId: number) {\n    return this.asignaciones.delete({ reservaId, huespedId });\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reservas y los huespedes.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".delete(",
-            "start": 464,
-            "end": 472,
-            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
-          },
-          {
-            "token": "reservaId",
-            "start": 396,
-            "end": 405,
-            "note": "Identifica la reserva de la asociación."
-          },
-          {
-            "token": "huespedId",
-            "start": 415,
-            "end": 424,
-            "note": "Identifica al huesped. El par completo identifica la asignación."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.ts\ncode src/asignaciones/eliminar-asignacion/repository.ts"
-      },
-      {
         "id": "eliminar-asignacion-service",
         "chapter": 8,
-        "title": "Conecta el Service",
+        "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarAsignacionRepository } from './repository';\n\n@Injectable()\nexport class EliminarAsignacionService {\n  constructor(private readonly repository: EliminarAsignacionRepository) {}\n\n  async eliminarAsignacionService(reservaId: number, huespedId: number) {\n    await this.repository.eliminarAsignacionRepository(reservaId, huespedId);\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n\n  async eliminarAsignacion(reservaId: number, huespedId: number) {\n    await this.asignaciones.delete({ reservaId, huespedId });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reservas y los huespedes.",
         "focus": "service",
         "cues": [
           {
-            "token": "reservaId",
-            "start": 273,
-            "end": 282,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async eliminarAsignacion(reservaId: number, huespedId: number)",
+            "start": 1957,
+            "end": 2019,
+            "note": "Ambos IDs identifican el vínculo."
           },
           {
-            "token": "huespedId",
-            "start": 292,
-            "end": 301,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
-          },
-          {
-            "token": "await",
-            "start": 317,
-            "end": 322,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.asignaciones.delete({ reservaId, huespedId })",
+            "start": 2032,
+            "end": 2082,
+            "note": "Borra el vínculo; conserva Reserva y Huesped."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/service.ts\ncode src/asignaciones/eliminar-asignacion/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "eliminar-asignacion-entry",
         "chapter": 8,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Controller, Delete, HttpCode, Param } from '@nestjs/common';\nimport { EliminarAsignacionService } from './service';\n\n@Controller('reservas/:reservaId/asignaciones/:huespedId')\nexport class EliminarAsignacionController {\n  constructor(private readonly service: EliminarAsignacionService) {}\n\n  @Delete()\n  @HttpCode(204)\n  eliminar(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string) {\n    return this.service.eliminarAsignacionService(Number(reservaId), Number(huespedId));\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n\n  @Delete('reservas/:reservaId/asignaciones/:huespedId')\n  @HttpCode(204)\n  eliminar(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string) {\n    return this.service.eliminarAsignacion(Number(reservaId), Number(huespedId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reservas y los huespedes.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 340,
-            "end": 346,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Delete('reservas/:reservaId/asignaciones/:huespedId')",
+            "start": 1132,
+            "end": 1186,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "reservaId",
-            "start": 149,
-            "end": 158,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "huespedId",
-            "start": 173,
-            "end": 182,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.eliminarAsignacion(Number(reservaId), Number(huespedId))",
+            "start": 1306,
+            "end": 1375,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/controller.ts\ncode src/asignaciones/eliminar-asignacion/controller.ts"
-      },
-      {
-        "id": "eliminar-asignacion-registro",
-        "chapter": 8,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Huesped } from './huespedes/entities/huesped.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { HuespedesRepository } from './huespedes/crear-listar/repository';\nimport { HuespedesService } from './huespedes/crear-listar/service';\nimport { HuespedesController } from './huespedes/crear-listar/controller';\nimport { AsignarHuespedRepository } from './asignaciones/asignar-huesped/repository';\nimport { AsignarHuespedService } from './asignaciones/asignar-huesped/service';\nimport { AsignarHuespedController } from './asignaciones/asignar-huesped/controller';\nimport { ListarPorReservaRepository } from './asignaciones/listar-por-reserva/repository';\nimport { ListarPorReservaService } from './asignaciones/listar-por-reserva/service';\nimport { ListarPorReservaController } from './asignaciones/listar-por-reserva/controller';\nimport { ListarPorHuespedRepository } from './asignaciones/listar-por-huesped/repository';\nimport { ListarPorHuespedService } from './asignaciones/listar-por-huesped/service';\nimport { ListarPorHuespedController } from './asignaciones/listar-por-huesped/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { EliminarAsignacionRepository } from './asignaciones/eliminar-asignacion/repository';\nimport { EliminarAsignacionService } from './asignaciones/eliminar-asignacion/service';\nimport { EliminarAsignacionController } from './asignaciones/eliminar-asignacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hotel } from './hoteles/entities/hotel.entity';\nimport { Reserva } from './reservas/entities/reserva.entity';\nimport { CrearListarController } from './reservas/crear-listar/controller';\nimport { CrearListarService } from './reservas/crear-listar/service';\nimport { CrearListarRepository } from './reservas/crear-listar/repository';\nimport { EliminarController } from './reservas/eliminar/controller';\nimport { EliminarService } from './reservas/eliminar/service';\nimport { EliminarRepository } from './reservas/eliminar/repository';\nimport { ModificarNochesController } from './reservas/modificar-noches/controller';\nimport { ModificarNochesService } from './reservas/modificar-noches/service';\nimport { ModificarNochesRepository } from './reservas/modificar-noches/repository';\nimport { TrasladarController } from './reservas/trasladar/controller';\nimport { TrasladarService } from './reservas/trasladar/service';\nimport { TrasladarRepository } from './reservas/trasladar/repository';\nimport { ConsultarHotelController } from './hoteles/consultar/controller';\nimport { ConsultarHotelService } from './hoteles/consultar/service';\nimport { ConsultarHotelRepository } from './hoteles/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hotel, Reserva, Huesped, Asignacion])],\n  controllers: [HuespedesController, AsignarHuespedController, ListarPorReservaController, ListarPorHuespedController, ModificarRolController, EliminarAsignacionController, CrearListarController, EliminarController, ModificarNochesController, TrasladarController, ConsultarHotelController],\n  providers: [HuespedesRepository, HuespedesService, AsignarHuespedRepository, AsignarHuespedService, ListarPorReservaRepository, ListarPorReservaService, ListarPorHuespedRepository, ListarPorHuespedService, ModificarRolRepository, ModificarRolService, EliminarAsignacionRepository, EliminarAsignacionService, CrearListarService, EliminarService, ModificarNochesService, TrasladarService, ConsultarHotelService, CrearListarRepository, EliminarRepository, ModificarNochesRepository, TrasladarRepository, ConsultarHotelRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Huesped",
-            "start": 9,
-            "end": 16,
-            "note": "Entidad del perfil del huesped."
-          },
-          {
-            "token": "Asignacion",
-            "start": 72,
-            "end": 82,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2997,
-            "end": 3007,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 3051,
-            "end": 3062,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3342,
-            "end": 3351,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3425,6 +2890,179 @@
       "hotelId": 2
     }
   },
+  "legacyNestIds": [
+    "situacion",
+    "logico",
+    "nosql",
+    "retomar",
+    "huesped",
+    "asignacion",
+    "reserva-inversa",
+    "prof-inversa",
+    "asig-inversas",
+    "registrar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-repository",
+    "crear-listar-service",
+    "crear-listar-entry",
+    "crear-listar-registro",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-huesped-repository",
+    "asignar-huesped-service",
+    "asignar-huesped-entry",
+    "asignar-huesped-registro",
+    "asignar-huesped-ejecutar",
+    "asignar-huesped-curl",
+    "listar-por-reserva-repository",
+    "listar-por-reserva-service",
+    "listar-por-reserva-entry",
+    "listar-por-reserva-registro",
+    "listar-por-reserva-ejecutar",
+    "listar-por-reserva-curl",
+    "listar-por-huesped-repository",
+    "listar-por-huesped-service",
+    "listar-por-huesped-entry",
+    "listar-por-huesped-registro",
+    "listar-por-huesped-ejecutar",
+    "listar-por-huesped-curl",
+    "modificar-rol-repository",
+    "modificar-rol-service",
+    "modificar-rol-entry",
+    "modificar-rol-registro",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-repository",
+    "eliminar-asignacion-service",
+    "eliminar-asignacion-entry",
+    "eliminar-asignacion-registro",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestSimpleRevision": 2,
+  "nestRetainedIds": [
+    "situacion",
+    "logico",
+    "retomar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-huesped-ejecutar",
+    "asignar-huesped-curl",
+    "listar-por-reserva-ejecutar",
+    "listar-por-reserva-curl",
+    "listar-por-huesped-ejecutar",
+    "listar-por-huesped-curl",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestPreviousIds": {
+    "0": [
+      "situacion",
+      "logico",
+      "nosql",
+      "retomar",
+      "huesped",
+      "asignacion",
+      "reserva-inversa",
+      "prof-inversa",
+      "asig-inversas",
+      "registrar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-repository",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-huesped-repository",
+      "asignar-huesped-service",
+      "asignar-huesped-entry",
+      "asignar-huesped-registro",
+      "asignar-huesped-ejecutar",
+      "asignar-huesped-curl",
+      "listar-por-reserva-repository",
+      "listar-por-reserva-service",
+      "listar-por-reserva-entry",
+      "listar-por-reserva-registro",
+      "listar-por-reserva-ejecutar",
+      "listar-por-reserva-curl",
+      "listar-por-huesped-repository",
+      "listar-por-huesped-service",
+      "listar-por-huesped-entry",
+      "listar-por-huesped-registro",
+      "listar-por-huesped-ejecutar",
+      "listar-por-huesped-curl",
+      "modificar-rol-repository",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-registro",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-repository",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-registro",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestRetainedByRevision": {
+    "0": [
+      "situacion",
+      "logico",
+      "retomar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-huesped-ejecutar",
+      "asignar-huesped-curl",
+      "listar-por-reserva-ejecutar",
+      "listar-por-reserva-curl",
+      "listar-por-huesped-ejecutar",
+      "listar-por-huesped-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestStepAliases": {
+    "nosql": "logico",
+    "asignacion": "asig-inversas",
+    "prof-inversa": "huesped"
+  },
+  "retiredNestDirectories": [
+    "src/reservas/crear-listar/",
+    "src/reservas/eliminar/",
+    "src/reservas/modificar-noches/",
+    "src/reservas/trasladar/",
+    "src/hoteles/consultar/",
+    "src/huespedes/crear-listar/",
+    "src/asignaciones/asignar-huesped/",
+    "src/asignaciones/listar-por-reserva/",
+    "src/asignaciones/listar-por-huesped/",
+    "src/asignaciones/modificar-rol/",
+    "src/asignaciones/eliminar-asignacion/"
+  ],
   "context": {
     "id": "CH-11",
     "title": "Hotel → Reserva",

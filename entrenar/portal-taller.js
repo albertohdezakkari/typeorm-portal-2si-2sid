@@ -30,7 +30,7 @@
         binding: `${digest}:${request}`,
         state: readState(key),
         tabsLayout: document.getElementById('workspace').dataset.tabsLayout,
-        canPrepare: caseData.id === 'CH-22',
+        canPrepare: true,
         loaded: false,
         target: null,
       };
@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=arturo-simple-1';
+      frame.src = 'entrenar/?v=nest-sencillo-todos-1';
       // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
       if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {

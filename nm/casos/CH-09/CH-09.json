@@ -63,38 +63,6 @@
         "create": null
       },
       {
-        "id": "nosql",
-        "chapter": 0,
-        "title": "La misma relación en DynamoDB",
-        "kind": "mapping",
-        "code": "ASIGNACIONES (REPARACION_ID, MECANICO_ID, ROL)",
-        "path": "",
-        "note": "",
-        "expect": "ASIGNACIONES agrupa por REPARACION_ID. PorMecanico agrupa por MECANICO_ID; ambos conservan las mismas parejas.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "REPARACION_ID",
-            "start": 14,
-            "end": 27,
-            "note": "Primera parte de la PK: identifica la reparacion."
-          },
-          {
-            "token": "MECANICO_ID",
-            "start": 29,
-            "end": 40,
-            "note": "Segunda parte de la PK: identifica al mecanico dentro de la reparacion."
-          },
-          {
-            "token": "ROL",
-            "start": 42,
-            "end": 45,
-            "note": "Dato del vínculo, no del mecanico."
-          }
-        ],
-        "create": null
-      },
-      {
         "id": "retomar",
         "chapter": 1,
         "title": "Retoma tu proyecto 1:N",
@@ -128,195 +96,144 @@
       {
         "id": "mecanico",
         "chapter": 1,
-        "title": "Crea Mecanico",
+        "title": "Crear Mecanico Entity completa",
         "kind": "model",
-        "code": "import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';\n\n@Entity({ name: 'MECANICO' })\nexport class Mecanico {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n}\n",
+        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'MECANICO' })\nexport class Mecanico {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.mecanico)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/mecanicos/entities/mecanico.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reparacion, un mecanico y un ROL; se conserva Reparacion.taller.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Mecanico, Reparacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Taller ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'NOMBRE'",
-            "start": 197,
-            "end": 205,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@Entity({ name: 'MECANICO' })",
+            "start": 154,
+            "end": 183,
+            "note": "Esta clase representa la tabla MECANICO."
           },
           {
-            "token": "'APELLIDOS'",
-            "start": 277,
-            "end": 288,
-            "note": "Apellido del mecanico."
+            "token": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "start": 210,
+            "end": 249,
+            "note": "ID es la clave primaria. PostgreSQL genera su valor al guardar un mecanico."
           },
           {
-            "token": "'EMAIL'",
-            "start": 363,
-            "end": 370,
-            "note": "Correo del mecanico."
+            "token": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "start": 268,
+            "end": 325,
+            "note": "nombre se guarda en NOMBRE como texto de hasta 120 caracteres."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 25,
-            "end": 47,
-            "note": "PostgreSQL genera el ID del nuevo mecanico."
+            "token": "@Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })",
+            "start": 348,
+            "end": 408,
+            "note": "apellidos se guarda en otra columna de texto."
+          },
+          {
+            "token": "@Column({ name: 'EMAIL', type: 'varchar', length: 180 })",
+            "start": 434,
+            "end": 490,
+            "note": "email se guarda como texto en EMAIL."
+          },
+          {
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.mecanico)",
+            "start": 512,
+            "end": 575,
+            "note": "Un mecanico tiene varias asignaciones. Cada asignación apunta a su mecanico."
           }
         ],
         "create": "mkdir -p src/mecanicos/entities\nls -d src/mecanicos/entities\ntouch src/mecanicos/entities/mecanico.entity.ts\ncode src/mecanicos/entities/mecanico.entity.ts"
-      },
-      {
-        "id": "asignacion",
-        "chapter": 1,
-        "title": "Crea Asignacion y su clave compuesta",
-        "kind": "model",
-        "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Reparacion } from '../../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../../mecanicos/entities/mecanico.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_REPARACION', type: 'integer' })\n  reparacionId!: number;\n\n  @PrimaryColumn({ name: 'ID_MECANICO', type: 'integer' })\n  mecanicoId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Reparacion, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_REPARACION' })\n  reparacion!: Reparacion;\n\n  @ManyToOne(() => Mecanico, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_MECANICO' })\n  mecanico!: Mecanico;\n}\n",
-        "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reparacion, un mecanico y un ROL; se conserva Reparacion.taller.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'ID_REPARACION'",
-            "start": 309,
-            "end": 324,
-            "note": "Nombre de la columna SQL que referencia REPARACION."
-          },
-          {
-            "token": "'ID_MECANICO'",
-            "start": 396,
-            "end": 409,
-            "note": "Nombre de la columna SQL que referencia MECANICO."
-          },
-          {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
-          },
-          {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una reparacion y a un mecanico."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
       },
       {
         "id": "reparacion-inversa",
         "chapter": 1,
-        "title": "Conecta Reparacion con sus asignaciones",
+        "title": "Ampliar Reparacion Entity existente",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Taller } from '../../talleres/entities/taller.entity';\n\n@Entity({ name: 'REPARACION' })\nexport class Reparacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'COSTE_CENTIMOS', type: 'integer' })\n  costeCentimos!: number;\n\n  @ManyToOne(() => Taller, taller => taller.reparaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TALLER' })\n  taller!: Taller;\n  @OneToMany(() => Asignacion, asignacion => asignacion.reparacion)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/reparaciones/entities/reparacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reparacion, un mecanico y un ROL; se conserva Reparacion.taller.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Mecanico, Reparacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Taller ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "ManyToOne",
-            "start": 50,
-            "end": 59,
-            "note": "Cada asignación pertenece a una reparacion y a un mecanico."
+            "token": "@Entity({ name: 'REPARACION' })",
+            "start": 243,
+            "end": 274,
+            "note": "Conserva la tabla REPARACION y todos sus campos del proyecto 1:N."
           },
           {
-            "token": "'NOMBRE'",
-            "start": 377,
-            "end": 385,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@ManyToOne(() => Taller, taller => taller.reparaciones, {",
+            "start": 523,
+            "end": 580,
+            "note": "La relación anterior se conserva: cada reparacion pertenece a un taller."
           },
           {
-            "token": "OneToMany",
-            "start": 27,
-            "end": 36,
-            "note": "Colección de vínculos asociados a este registro."
+            "token": "@JoinColumn({ name: 'ID_TALLER' })",
+            "start": 608,
+            "end": 642,
+            "note": "ID_TALLER sigue siendo la clave foránea hacia TALLER."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 61,
-            "end": 83,
-            "note": "PostgreSQL genera el ID del nuevo mecanico."
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.reparacion)",
+            "start": 664,
+            "end": 729,
+            "note": "Añade la colección de asignaciones de esta reparacion. La pareja de IDs se guarda en ASIGNACION."
+          },
+          {
+            "token": "asignaciones!: Asignacion[];",
+            "start": 732,
+            "end": 760,
+            "note": "Los corchetes indican una colección. TypeORM puede relacionar la reparacion con varias asignaciones."
           }
         ],
-        "create": "mkdir -p src/reparaciones/entities\nls -d src/reparaciones/entities\ntouch src/reparaciones/entities/reparacion.entity.ts\ncode src/reparaciones/entities/reparacion.entity.ts"
-      },
-      {
-        "id": "prof-inversa",
-        "chapter": 1,
-        "title": "Conecta Mecanico con sus asignaciones",
-        "kind": "model",
-        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'MECANICO' })\nexport class Mecanico {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.mecanico)\n  asignaciones!: Asignacion[];\n}\n",
-        "path": "src/mecanicos/entities/mecanico.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reparacion, un mecanico y un ROL; se conserva Reparacion.taller.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'NOMBRE'",
-            "start": 284,
-            "end": 292,
-            "note": "Nombre y apellidos se guardan por separado."
-          },
-          {
-            "token": "'APELLIDOS'",
-            "start": 364,
-            "end": 375,
-            "note": "Apellido del mecanico."
-          },
-          {
-            "token": "'EMAIL'",
-            "start": 450,
-            "end": 457,
-            "note": "Correo del mecanico."
-          },
-          {
-            "token": "OneToMany",
-            "start": 25,
-            "end": 34,
-            "note": "Colección de vínculos asociados a este registro."
-          },
-          {
-            "token": "PrimaryGeneratedColumn",
-            "start": 36,
-            "end": 58,
-            "note": "PostgreSQL genera el ID del nuevo mecanico."
-          }
-        ],
-        "create": "mkdir -p src/mecanicos/entities\nls -d src/mecanicos/entities\ntouch src/mecanicos/entities/mecanico.entity.ts\ncode src/mecanicos/entities/mecanico.entity.ts"
+        "create": "code src/reparaciones/entities/reparacion.entity.ts",
+        "updateExisting": true
       },
       {
         "id": "asig-inversas",
         "chapter": 1,
-        "title": "Completa ambos extremos de Asignacion",
+        "title": "Crear Asignacion Entity completa",
         "kind": "model",
         "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Reparacion } from '../../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../../mecanicos/entities/mecanico.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_REPARACION', type: 'integer' })\n  reparacionId!: number;\n\n  @PrimaryColumn({ name: 'ID_MECANICO', type: 'integer' })\n  mecanicoId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Reparacion, reparacion => reparacion.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_REPARACION' })\n  reparacion!: Reparacion;\n\n  @ManyToOne(() => Mecanico, mecanico => mecanico.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_MECANICO' })\n  mecanico!: Mecanico;\n}\n",
         "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una reparacion, un mecanico y un ROL; se conserva Reparacion.taller.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Mecanico, Reparacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Taller ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'ID_REPARACION'",
-            "start": 309,
-            "end": 324,
-            "note": "Nombre de la columna SQL que referencia REPARACION."
+            "token": "@Entity({ name: 'ASIGNACION' })",
+            "start": 226,
+            "end": 257,
+            "note": "La tabla intermedia guarda qué mecanico participa en qué reparacion y con qué rol."
           },
           {
-            "token": "'ID_MECANICO'",
-            "start": 396,
-            "end": 409,
-            "note": "Nombre de la columna SQL que referencia MECANICO."
+            "token": "@PrimaryColumn({ name: 'ID_REPARACION', type: 'integer' })",
+            "start": 286,
+            "end": 344,
+            "note": "Primer componente de la clave primaria: el ID de la reparacion. Este valor llega de la petición; no se genera automáticamente."
           },
           {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
+            "token": "@PrimaryColumn({ name: 'ID_MECANICO', type: 'integer' })",
+            "start": 373,
+            "end": 429,
+            "note": "Segundo componente. Los dos IDs juntos identifican una única asignación; cada ID por separado puede repetirse."
           },
           {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una reparacion y a un mecanico."
+            "token": "@Column({ name: 'ROL', type: 'varchar', length: 120 })",
+            "start": 456,
+            "end": 510,
+            "note": "ROL pertenece al vínculo: una persona puede tener roles distintos en reparaciones distintas."
+          },
+          {
+            "token": "@ManyToOne(() => Reparacion, reparacion => reparacion.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_REPARACION' })",
+            "start": 530,
+            "end": 664,
+            "note": "Cada asignación apunta a una reparacion mediante ID_REPARACION. RESTRICT impide borrar esa reparacion mientras tenga asignaciones."
+          },
+          {
+            "token": "@ManyToOne(() => Mecanico, mecanico => mecanico.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_MECANICO' })",
+            "start": 695,
+            "end": 821,
+            "note": "La misma fila apunta también al mecanico mediante ID_MECANICO. Así se unen ambos extremos."
           }
         ],
         "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
@@ -326,41 +243,17 @@
         "chapter": 1,
         "title": "Registra las cuatro Entities",
         "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { ReparacionesService } from './reparaciones/reparaciones.service';\nimport { ReparacionesController } from './reparaciones/reparaciones.controller';\nimport { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [ReparacionesController],\n  providers: [ReparacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Conserva ReparacionesController y ReparacionesService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.",
         "expect": "El módulo conserva todos los casos 1:N. Solo añade las nuevas Entities; aún no importa casos N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
-          },
-          {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1590,
-            "end": 1600,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1649,
-            "end": 1660,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 1791,
-            "end": 1800,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])",
+            "start": 538,
+            "end": 606,
+            "note": "Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -436,105 +329,99 @@
         "create": null
       },
       {
-        "id": "crear-listar-repository",
-        "chapter": 3,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Mecanico } from '../entities/mecanico.entity';\n\n@Injectable()\nexport class MecanicosRepository {\n  constructor(\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanicoRepository(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicosRepository() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n}\n",
-        "path": "src/mecanicos/crear-listar/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los mecanicos iniciales y a Lucía; no crea asignaciones.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "find",
-            "start": 602,
-            "end": 606,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/mecanicos/crear-listar\nls -d src/mecanicos/crear-listar\ntouch src/mecanicos/crear-listar/repository.ts\ncode src/mecanicos/crear-listar/repository.ts"
-      },
-      {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Conecta el Service",
+        "title": "Crear MecanicosService",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { MecanicosRepository } from './repository';\n\n@Injectable()\nexport class MecanicosService {\n  constructor(private readonly repository: MecanicosRepository) {}\n\n  crearMecanicoService(nombre: string, apellidos: string, email: string) {\n    return this.repository.crearMecanicoRepository(nombre, apellidos, email);\n  }\n\n  listarMecanicosService() {\n    return this.repository.listarMecanicosRepository();\n  }\n}\n",
-        "path": "src/mecanicos/crear-listar/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Mecanico } from './entities/mecanico.entity';\n\n@Injectable()\nexport class MecanicosService {\n  constructor(\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/mecanicos/mecanicos.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los mecanicos iniciales y a Lucía; no crea asignaciones.",
         "focus": "service",
         "cues": [
           {
-            "token": "return",
-            "start": 291,
-            "end": 297,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.mecanicos.create({ nombre, apellidos, email })",
+            "start": 430,
+            "end": 481,
+            "note": "Prepara el perfil sin guardarlo todavía."
+          },
+          {
+            "token": "this.mecanicos.save(mecanico)",
+            "start": 494,
+            "end": 523,
+            "note": "Guarda la Entity y devuelve su ID generado."
+          },
+          {
+            "token": "this.mecanicos.find({ order: { id: 'ASC' } })",
+            "start": 563,
+            "end": 608,
+            "note": "Lista el catálogo usando la misma Entity."
           }
         ],
-        "create": "mkdir -p src/mecanicos/crear-listar\nls -d src/mecanicos/crear-listar\ntouch src/mecanicos/crear-listar/service.ts\ncode src/mecanicos/crear-listar/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/mecanicos\ntouch src/mecanicos/mecanicos.service.ts\ncode src/mecanicos/mecanicos.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear MecanicosController",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MecanicosService } from './service';\n\n@Controller('mecanicos')\nexport class MecanicosController {\n  constructor(private readonly service: MecanicosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanicoService(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarMecanicosService();\n  }\n}\n",
-        "path": "src/mecanicos/crear-listar/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MecanicosService } from './mecanicos.service';\n\n@Controller('mecanicos')\nexport class MecanicosController {\n  constructor(private readonly service: MecanicosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarMecanicos();\n  }\n}",
+        "path": "src/mecanicos/mecanicos.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los mecanicos iniciales y a Lucía; no crea asignaciones.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Body",
-            "start": 249,
-            "end": 254,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
+            "token": "@Controller('mecanicos')",
+            "start": 119,
+            "end": 143,
+            "note": "Agrupa las rutas del catálogo de mecanicos."
+          },
+          {
+            "token": "@Post()",
+            "start": 243,
+            "end": 250,
+            "note": "POST crea un perfil con nombre, apellidos y correo."
+          },
+          {
+            "token": "this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email)",
+            "start": 341,
+            "end": 411,
+            "note": "Entrega los tres valores al Service."
+          },
+          {
+            "token": "@Get()",
+            "start": 420,
+            "end": 426,
+            "note": "GET utiliza listarMecanicos en ese mismo Service."
           }
         ],
-        "create": "mkdir -p src/mecanicos/crear-listar\nls -d src/mecanicos/crear-listar\ntouch src/mecanicos/crear-listar/controller.ts\ncode src/mecanicos/crear-listar/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/mecanicos\ntouch src/mecanicos/mecanicos.controller.ts\ncode src/mecanicos/mecanicos.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Mecanicos una sola vez",
         "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { ReparacionesService } from './reparaciones/reparaciones.service';\nimport { ReparacionesController } from './reparaciones/reparaciones.controller';\nimport { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosService } from './mecanicos/mecanicos.service';\nimport { MecanicosController } from './mecanicos/mecanicos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [ReparacionesController, MecanicosController],\n  providers: [ReparacionesService, MecanicosService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
+            "token": "controllers: [",
+            "start": 749,
+            "end": 763,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1809,
-            "end": 1819,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1868,
-            "end": 1879,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2031,
-            "end": 2040,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 811,
+            "end": 823,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -579,171 +466,93 @@
         "create": null
       },
       {
-        "id": "asignar-mecanico-repository",
-        "chapter": 4,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\nimport { Reparacion } from '../../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignarMecanicoRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  buscarReparacionRepository(reparacionId: number) {\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n\n  buscarMecanicoRepository(mecanicoId: number) {\n    return this.mecanicos.findOneBy({ id: mecanicoId });\n  }\n\n  async asignarMecanicoRepository(reparacionId: number, mecanicoId: number, rol: string) {\n    const asignacion = { reparacionId, mecanicoId, rol };\n    await this.asignaciones.insert(asignacion);\n    return asignacion;\n  }\n}\n",
-        "path": "src/asignaciones/asignar-mecanico/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reparacionId",
-            "start": 707,
-            "end": 719,
-            "note": "Identifica la reparacion de la asociación."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 825,
-            "end": 835,
-            "note": "Identifica al mecanico. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 985,
-            "end": 988,
-            "note": "Es un dato del vínculo; puede cambiar según la reparacion."
-          },
-          {
-            "token": "insert",
-            "start": 1086,
-            "end": 1092,
-            "note": "INSERT rechaza una pareja cuya PK compuesta ya existe."
-          },
-          {
-            "token": "find",
-            "start": 760,
-            "end": 764,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/asignar-mecanico\nls -d src/asignaciones/asignar-mecanico\ntouch src/asignaciones/asignar-mecanico/repository.ts\ncode src/asignaciones/asignar-mecanico/repository.ts"
-      },
-      {
         "id": "asignar-mecanico-service",
         "chapter": 4,
-        "title": "Conecta el Service",
+        "title": "Crear AsignacionesService",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { QueryFailedError } from 'typeorm';\nimport { AsignarMecanicoRepository } from './repository';\n\n@Injectable()\nexport class AsignarMecanicoService {\n  constructor(private readonly repository: AsignarMecanicoRepository) {}\n\n  async asignarMecanicoService(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.repository.buscarReparacionRepository(reparacionId);\n    const mecanico = await this.repository.buscarMecanicoRepository(mecanicoId);\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n\n    try {\n      return await this.repository.asignarMecanicoRepository(reparacionId, mecanicoId, rol);\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n}\n",
-        "path": "src/asignaciones/asignar-mecanico/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
-            "token": "reparacionId",
-            "start": 343,
-            "end": 355,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string)",
+            "start": 723,
+            "end": 799,
+            "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
-            "token": "mecanicoId",
-            "start": 365,
-            "end": 375,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.reparaciones.findOneBy({ id: reparacionId })",
+            "start": 831,
+            "end": 880,
+            "note": "Lee la reparacion con el repositorio de TypeORM."
           },
           {
-            "token": "await",
-            "start": 423,
-            "end": 428,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.mecanicos.findOneBy({ id: mecanicoId })",
+            "start": 909,
+            "end": 953,
+            "note": "Lee el mecanico antes de asociarlo."
           },
           {
-            "token": "return",
-            "start": 703,
-            "end": 709,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 385,
-            "end": 388,
-            "note": "El mismo mecanico puede tener otro rol en otra reparacion."
+            "token": "this.asignaciones.insert(asignacion)",
+            "start": 1153,
+            "end": 1189,
+            "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-mecanico\nls -d src/asignaciones/asignar-mecanico\ntouch src/asignaciones/asignar-mecanico/service.ts\ncode src/asignaciones/asignar-mecanico/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-mecanico-entry",
         "chapter": 4,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear AsignacionesController",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignarMecanicoService } from './service';\n\n@Controller('reparaciones/:reparacionId/asignaciones')\nexport class AsignarMecanicoController {\n  constructor(private readonly service: AsignarMecanicoService) {}\n\n  @Post()\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanicoService(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/asignar-mecanico/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 301,
-            "end": 307,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Post('reparaciones/:reparacionId/asignaciones')",
+            "start": 246,
+            "end": 294,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 346,
-            "end": 351,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "reparacionId",
-            "start": 144,
-            "end": 156,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 363,
-            "end": 373,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol)",
+            "start": 415,
+            "end": 494,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-mecanico\nls -d src/asignaciones/asignar-mecanico\ntouch src/asignaciones/asignar-mecanico/controller.ts\ncode src/asignaciones/asignar-mecanico/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-mecanico-registro",
         "chapter": 4,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Asignaciones una sola vez",
         "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { AsignarMecanicoRepository } from './asignaciones/asignar-mecanico/repository';\nimport { AsignarMecanicoService } from './asignaciones/asignar-mecanico/service';\nimport { AsignarMecanicoController } from './asignaciones/asignar-mecanico/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, AsignarMecanicoController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, AsignarMecanicoRepository, AsignarMecanicoService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { ReparacionesService } from './reparaciones/reparaciones.service';\nimport { ReparacionesController } from './reparaciones/reparaciones.controller';\nimport { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosService } from './mecanicos/mecanicos.service';\nimport { MecanicosController } from './mecanicos/mecanicos.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [ReparacionesController, MecanicosController, AsignacionesController],\n  providers: [ReparacionesService, MecanicosService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
+            "token": "controllers: [",
+            "start": 905,
+            "end": 919,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2067,
-            "end": 2077,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2126,
-            "end": 2137,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2316,
-            "end": 2325,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 991,
+            "end": 1003,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -788,132 +597,58 @@
         "create": null
       },
       {
-        "id": "listar-por-reparacion-repository",
-        "chapter": 5,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorReparacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorReparacionRepository(reparacionId: number) {\n    return this.asignaciones.find({\n      where: { reparacionId },\n      order: { mecanicoId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reparacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "La reparacion 7 devuelve (7,1,Diagnóstico) y (7,2,Reparación): dos mecanicos para una reparacion.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reparacionId",
-            "start": 410,
-            "end": 422,
-            "note": "Identifica la reparacion de la asociación."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 516,
-            "end": 526,
-            "note": "Identifica al mecanico. El par completo identifica la asignación."
-          },
-          {
-            "token": "find",
-            "start": 463,
-            "end": 467,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-reparacion\nls -d src/asignaciones/listar-por-reparacion\ntouch src/asignaciones/listar-por-reparacion/repository.ts\ncode src/asignaciones/listar-por-reparacion/repository.ts"
-      },
-      {
         "id": "listar-por-reparacion-service",
         "chapter": 5,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorReparacion al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorReparacionRepository } from './repository';\n\n@Injectable()\nexport class ListarPorReparacionService {\n  constructor(private readonly repository: ListarPorReparacionRepository) {}\n\n  listarAsignacionesPorReparacionService(reparacionId: number) {\n    return this.repository.listarAsignacionesPorReparacionRepository(reparacionId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reparacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La reparacion 7 devuelve (7,1,Diagnóstico) y (7,2,Reparación): dos mecanicos para una reparacion.",
         "focus": "service",
         "cues": [
           {
-            "token": "reparacionId",
-            "start": 283,
-            "end": 295,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "listarPorReparacion(reparacionId: number)",
+            "start": 1449,
+            "end": 1490,
+            "note": "Recibe un ID de reparacion."
           },
           {
-            "token": "return",
-            "start": 311,
-            "end": 317,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } })",
+            "start": 1504,
+            "end": 1585,
+            "note": "Filtra las asignaciones por reparacion y ordena por mecanico."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-reparacion\nls -d src/asignaciones/listar-por-reparacion\ntouch src/asignaciones/listar-por-reparacion/service.ts\ncode src/asignaciones/listar-por-reparacion/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-reparacion-entry",
         "chapter": 5,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorReparacion al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorReparacionService } from './service';\n\n@Controller('reparaciones/:reparacionId/asignaciones')\nexport class ListarPorReparacionController {\n  constructor(private readonly service: ListarPorReparacionService) {}\n\n  @Get()\n  listar(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarAsignacionesPorReparacionService(Number(reparacionId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-reparacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La reparacion 7 devuelve (7,1,Diagnóstico) y (7,2,Reparación): dos mecanicos para una reparacion.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 304,
-            "end": 310,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('reparaciones/:reparacionId/asignaciones')",
+            "start": 508,
+            "end": 555,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "reparacionId",
-            "start": 141,
-            "end": 153,
-            "note": "Primera parte de la clave compuesta."
+            "token": "this.service.listarPorReparacion(Number(reparacionId))",
+            "start": 636,
+            "end": 690,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-reparacion\nls -d src/asignaciones/listar-por-reparacion\ntouch src/asignaciones/listar-por-reparacion/controller.ts\ncode src/asignaciones/listar-por-reparacion/controller.ts"
-      },
-      {
-        "id": "listar-por-reparacion-registro",
-        "chapter": 5,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { AsignarMecanicoRepository } from './asignaciones/asignar-mecanico/repository';\nimport { AsignarMecanicoService } from './asignaciones/asignar-mecanico/service';\nimport { AsignarMecanicoController } from './asignaciones/asignar-mecanico/controller';\nimport { ListarPorReparacionRepository } from './asignaciones/listar-por-reparacion/repository';\nimport { ListarPorReparacionService } from './asignaciones/listar-por-reparacion/service';\nimport { ListarPorReparacionController } from './asignaciones/listar-por-reparacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, AsignarMecanicoController, ListarPorReparacionController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, AsignarMecanicoRepository, AsignarMecanicoService, ListarPorReparacionRepository, ListarPorReparacionService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
-          },
-          {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2352,
-            "end": 2362,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2411,
-            "end": 2422,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2632,
-            "end": 2641,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-reparacion-ejecutar",
@@ -949,138 +684,58 @@
         "create": null
       },
       {
-        "id": "listar-por-mecanico-repository",
-        "chapter": 6,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorMecanicoRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorMecanicoRepository(mecanicoId: number) {\n    return this.asignaciones.find({\n      where: { mecanicoId },\n      order: { reparacionId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-mecanico/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "El mecanico 1 devuelve las reparaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "reparacionId",
-            "start": 508,
-            "end": 520,
-            "note": "Identifica la reparacion de la asociación."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 406,
-            "end": 416,
-            "note": "Identifica al mecanico. El par completo identifica la asignación."
-          },
-          {
-            "token": "PorMecanico",
-            "start": 229,
-            "end": 240,
-            "note": "Usa la segunda organización de los mismos vínculos."
-          },
-          {
-            "token": "find",
-            "start": 457,
-            "end": 461,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-mecanico\nls -d src/asignaciones/listar-por-mecanico\ntouch src/asignaciones/listar-por-mecanico/repository.ts\ncode src/asignaciones/listar-por-mecanico/repository.ts"
-      },
-      {
         "id": "listar-por-mecanico-service",
         "chapter": 6,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorMecanico al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorMecanicoRepository } from './repository';\n\n@Injectable()\nexport class ListarPorMecanicoService {\n  constructor(private readonly repository: ListarPorMecanicoRepository) {}\n\n  listarAsignacionesPorMecanicoService(mecanicoId: number) {\n    return this.repository.listarAsignacionesPorMecanicoRepository(mecanicoId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-mecanico/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El mecanico 1 devuelve las reparaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "service",
         "cues": [
           {
-            "token": "mecanicoId",
-            "start": 275,
-            "end": 285,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "listarPorMecanico(mecanicoId: number)",
+            "start": 1594,
+            "end": 1631,
+            "note": "Recibe un ID de mecanico."
           },
           {
-            "token": "return",
-            "start": 301,
-            "end": 307,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } })",
+            "start": 1645,
+            "end": 1726,
+            "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-mecanico\nls -d src/asignaciones/listar-por-mecanico\ntouch src/asignaciones/listar-por-mecanico/service.ts\ncode src/asignaciones/listar-por-mecanico/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-mecanico-entry",
         "chapter": 6,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorMecanico al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorMecanicoService } from './service';\n\n@Controller('mecanicos/:mecanicoId/asignaciones')\nexport class ListarPorMecanicoController {\n  constructor(private readonly service: ListarPorMecanicoService) {}\n\n  @Get()\n  listar(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarAsignacionesPorMecanicoService(Number(mecanicoId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-mecanico/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El mecanico 1 devuelve las reparaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 293,
-            "end": 299,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('mecanicos/:mecanicoId/asignaciones')",
+            "start": 699,
+            "end": 741,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "mecanicoId",
-            "start": 136,
-            "end": 146,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.listarPorMecanico(Number(mecanicoId))",
+            "start": 816,
+            "end": 866,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-mecanico\nls -d src/asignaciones/listar-por-mecanico\ntouch src/asignaciones/listar-por-mecanico/controller.ts\ncode src/asignaciones/listar-por-mecanico/controller.ts"
-      },
-      {
-        "id": "listar-por-mecanico-registro",
-        "chapter": 6,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { AsignarMecanicoRepository } from './asignaciones/asignar-mecanico/repository';\nimport { AsignarMecanicoService } from './asignaciones/asignar-mecanico/service';\nimport { AsignarMecanicoController } from './asignaciones/asignar-mecanico/controller';\nimport { ListarPorReparacionRepository } from './asignaciones/listar-por-reparacion/repository';\nimport { ListarPorReparacionService } from './asignaciones/listar-por-reparacion/service';\nimport { ListarPorReparacionController } from './asignaciones/listar-por-reparacion/controller';\nimport { ListarPorMecanicoRepository } from './asignaciones/listar-por-mecanico/repository';\nimport { ListarPorMecanicoService } from './asignaciones/listar-por-mecanico/service';\nimport { ListarPorMecanicoController } from './asignaciones/listar-por-mecanico/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, AsignarMecanicoController, ListarPorReparacionController, ListarPorMecanicoController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, AsignarMecanicoRepository, AsignarMecanicoService, ListarPorReparacionRepository, ListarPorReparacionService, ListarPorMecanicoRepository, ListarPorMecanicoService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
-          },
-          {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2625,
-            "end": 2635,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2684,
-            "end": 2695,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2934,
-            "end": 2943,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-mecanico-ejecutar",
@@ -1116,168 +771,64 @@
         "create": null
       },
       {
-        "id": "modificar-rol-repository",
-        "chapter": 7,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ModificarRolRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  async modificarRolRepository(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    return resultado.affected;\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".update(",
-            "start": 492,
-            "end": 500,
-            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
-          },
-          {
-            "token": "reparacionId",
-            "start": 390,
-            "end": 402,
-            "note": "Identifica la reparacion de la asociación."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 412,
-            "end": 422,
-            "note": "Identifica al mecanico. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 432,
-            "end": 435,
-            "note": "Es un dato del vínculo; puede cambiar según la reparacion."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.ts\ncode src/asignaciones/modificar-rol/repository.ts"
-      },
-      {
         "id": "modificar-rol-service",
         "chapter": 7,
-        "title": "Conecta el Service",
+        "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { Injectable, NotFoundException } from '@nestjs/common';\nimport { ModificarRolRepository } from './repository';\n\n@Injectable()\nexport class ModificarRolService {\n  constructor(private readonly repository: ModificarRolRepository) {}\n\n  async modificarRolService(reparacionId: number, mecanicoId: number, rol: string) {\n    const modificadas = await this.repository.modificarRolRepository(reparacionId, mecanicoId, rol);\n    if (!modificadas) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
-            "token": "reparacionId",
-            "start": 268,
-            "end": 280,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async modificarRol(reparacionId: number, mecanicoId: number, rol: string)",
+            "start": 1735,
+            "end": 1808,
+            "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
-            "token": "mecanicoId",
-            "start": 290,
-            "end": 300,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.asignaciones.update({ reparacionId, mecanicoId }, { rol })",
+            "start": 1839,
+            "end": 1902,
+            "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
-            "token": "await",
-            "start": 349,
-            "end": 354,
-            "note": "Espera el resultado antes de seguir o devolverlo."
-          },
-          {
-            "token": "return",
-            "start": 508,
-            "end": 514,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 310,
-            "end": 313,
-            "note": "El mismo mecanico puede tener otro rol en otra reparacion."
+            "token": "if (!resultado.affected)",
+            "start": 1908,
+            "end": 1932,
+            "note": "Si no había esa pareja, devuelve 404."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/service.ts\ncode src/asignaciones/modificar-rol/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "modificar-rol-entry",
         "chapter": 7,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Patch } from '@nestjs/common';\nimport { ModificarRolService } from './service';\n\n@Controller('reparaciones/:reparacionId/asignaciones/:mecanicoId')\nexport class ModificarRolController {\n  constructor(private readonly service: ModificarRolService) {}\n\n  @Patch()\n  modificar(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string, @Body() datos: { rol: string }) {\n    return this.service.modificarRolService(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 308,
-            "end": 314,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')",
+            "start": 882,
+            "end": 943,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 394,
-            "end": 399,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "reparacionId",
-            "start": 142,
-            "end": 154,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 169,
-            "end": 179,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol)",
+            "start": 1094,
+            "end": 1172,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/controller.ts\ncode src/asignaciones/modificar-rol/controller.ts"
-      },
-      {
-        "id": "modificar-rol-registro",
-        "chapter": 7,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { AsignarMecanicoRepository } from './asignaciones/asignar-mecanico/repository';\nimport { AsignarMecanicoService } from './asignaciones/asignar-mecanico/service';\nimport { AsignarMecanicoController } from './asignaciones/asignar-mecanico/controller';\nimport { ListarPorReparacionRepository } from './asignaciones/listar-por-reparacion/repository';\nimport { ListarPorReparacionService } from './asignaciones/listar-por-reparacion/service';\nimport { ListarPorReparacionController } from './asignaciones/listar-por-reparacion/controller';\nimport { ListarPorMecanicoRepository } from './asignaciones/listar-por-mecanico/repository';\nimport { ListarPorMecanicoService } from './asignaciones/listar-por-mecanico/service';\nimport { ListarPorMecanicoController } from './asignaciones/listar-por-mecanico/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, AsignarMecanicoController, ListarPorReparacionController, ListarPorMecanicoController, ModificarRolController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, AsignarMecanicoRepository, AsignarMecanicoService, ListarPorReparacionRepository, ListarPorReparacionService, ListarPorMecanicoRepository, ListarPorMecanicoService, ModificarRolRepository, ModificarRolService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
-          },
-          {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2865,
-            "end": 2875,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2924,
-            "end": 2935,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3198,
-            "end": 3207,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -1319,144 +870,58 @@
         "create": null
       },
       {
-        "id": "eliminar-asignacion-repository",
-        "chapter": 8,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class EliminarAsignacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  eliminarAsignacionRepository(reparacionId: number, mecanicoId: number) {\n    return this.asignaciones.delete({ reparacionId, mecanicoId });\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reparaciones y los mecanicos.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".delete(",
-            "start": 468,
-            "end": 476,
-            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
-          },
-          {
-            "token": "reparacionId",
-            "start": 396,
-            "end": 408,
-            "note": "Identifica la reparacion de la asociación."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 418,
-            "end": 428,
-            "note": "Identifica al mecanico. El par completo identifica la asignación."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.ts\ncode src/asignaciones/eliminar-asignacion/repository.ts"
-      },
-      {
         "id": "eliminar-asignacion-service",
         "chapter": 8,
-        "title": "Conecta el Service",
+        "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarAsignacionRepository } from './repository';\n\n@Injectable()\nexport class EliminarAsignacionService {\n  constructor(private readonly repository: EliminarAsignacionRepository) {}\n\n  async eliminarAsignacionService(reparacionId: number, mecanicoId: number) {\n    await this.repository.eliminarAsignacionRepository(reparacionId, mecanicoId);\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n\n  async eliminarAsignacion(reparacionId: number, mecanicoId: number) {\n    await this.asignaciones.delete({ reparacionId, mecanicoId });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reparaciones y los mecanicos.",
         "focus": "service",
         "cues": [
           {
-            "token": "reparacionId",
-            "start": 273,
-            "end": 285,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async eliminarAsignacion(reparacionId: number, mecanicoId: number)",
+            "start": 2042,
+            "end": 2108,
+            "note": "Ambos IDs identifican el vínculo."
           },
           {
-            "token": "mecanicoId",
-            "start": 295,
-            "end": 305,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
-          },
-          {
-            "token": "await",
-            "start": 321,
-            "end": 326,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.asignaciones.delete({ reparacionId, mecanicoId })",
+            "start": 2121,
+            "end": 2175,
+            "note": "Borra el vínculo; conserva Reparacion y Mecanico."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/service.ts\ncode src/asignaciones/eliminar-asignacion/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "eliminar-asignacion-entry",
         "chapter": 8,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Controller, Delete, HttpCode, Param } from '@nestjs/common';\nimport { EliminarAsignacionService } from './service';\n\n@Controller('reparaciones/:reparacionId/asignaciones/:mecanicoId')\nexport class EliminarAsignacionController {\n  constructor(private readonly service: EliminarAsignacionService) {}\n\n  @Delete()\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string) {\n    return this.service.eliminarAsignacionService(Number(reparacionId), Number(mecanicoId));\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n\n  @Delete('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string) {\n    return this.service.eliminarAsignacion(Number(reparacionId), Number(mecanicoId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las reparaciones y los mecanicos.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 348,
-            "end": 354,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Delete('reparaciones/:reparacionId/asignaciones/:mecanicoId')",
+            "start": 1199,
+            "end": 1261,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "reparacionId",
-            "start": 153,
-            "end": 165,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "mecanicoId",
-            "start": 180,
-            "end": 190,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.eliminarAsignacion(Number(reparacionId), Number(mecanicoId))",
+            "start": 1389,
+            "end": 1462,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/controller.ts\ncode src/asignaciones/eliminar-asignacion/controller.ts"
-      },
-      {
-        "id": "eliminar-asignacion-registro",
-        "chapter": 8,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Mecanico } from './mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { MecanicosRepository } from './mecanicos/crear-listar/repository';\nimport { MecanicosService } from './mecanicos/crear-listar/service';\nimport { MecanicosController } from './mecanicos/crear-listar/controller';\nimport { AsignarMecanicoRepository } from './asignaciones/asignar-mecanico/repository';\nimport { AsignarMecanicoService } from './asignaciones/asignar-mecanico/service';\nimport { AsignarMecanicoController } from './asignaciones/asignar-mecanico/controller';\nimport { ListarPorReparacionRepository } from './asignaciones/listar-por-reparacion/repository';\nimport { ListarPorReparacionService } from './asignaciones/listar-por-reparacion/service';\nimport { ListarPorReparacionController } from './asignaciones/listar-por-reparacion/controller';\nimport { ListarPorMecanicoRepository } from './asignaciones/listar-por-mecanico/repository';\nimport { ListarPorMecanicoService } from './asignaciones/listar-por-mecanico/service';\nimport { ListarPorMecanicoController } from './asignaciones/listar-por-mecanico/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { EliminarAsignacionRepository } from './asignaciones/eliminar-asignacion/repository';\nimport { EliminarAsignacionService } from './asignaciones/eliminar-asignacion/service';\nimport { EliminarAsignacionController } from './asignaciones/eliminar-asignacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './talleres/entities/taller.entity';\nimport { Reparacion } from './reparaciones/entities/reparacion.entity';\nimport { CrearListarController } from './reparaciones/crear-listar/controller';\nimport { CrearListarService } from './reparaciones/crear-listar/service';\nimport { CrearListarRepository } from './reparaciones/crear-listar/repository';\nimport { EliminarController } from './reparaciones/eliminar/controller';\nimport { EliminarService } from './reparaciones/eliminar/service';\nimport { EliminarRepository } from './reparaciones/eliminar/repository';\nimport { ModificarCosteCentimosController } from './reparaciones/modificar-coste-centimos/controller';\nimport { ModificarCosteCentimosService } from './reparaciones/modificar-coste-centimos/service';\nimport { ModificarCosteCentimosRepository } from './reparaciones/modificar-coste-centimos/repository';\nimport { TrasladarController } from './reparaciones/trasladar/controller';\nimport { TrasladarService } from './reparaciones/trasladar/service';\nimport { TrasladarRepository } from './reparaciones/trasladar/repository';\nimport { ConsultarTallerController } from './talleres/consultar/controller';\nimport { ConsultarTallerService } from './talleres/consultar/service';\nimport { ConsultarTallerRepository } from './talleres/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion, Mecanico, Asignacion])],\n  controllers: [MecanicosController, AsignarMecanicoController, ListarPorReparacionController, ListarPorMecanicoController, ModificarRolController, EliminarAsignacionController, CrearListarController, EliminarController, ModificarCosteCentimosController, TrasladarController, ConsultarTallerController],\n  providers: [MecanicosRepository, MecanicosService, AsignarMecanicoRepository, AsignarMecanicoService, ListarPorReparacionRepository, ListarPorReparacionService, ListarPorMecanicoRepository, ListarPorMecanicoService, ModificarRolRepository, ModificarRolService, EliminarAsignacionRepository, EliminarAsignacionService, CrearListarService, EliminarService, ModificarCosteCentimosService, TrasladarService, ConsultarTallerService, CrearListarRepository, EliminarRepository, ModificarCosteCentimosRepository, TrasladarRepository, ConsultarTallerRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Mecanico",
-            "start": 9,
-            "end": 17,
-            "note": "Entidad del perfil del mecanico."
-          },
-          {
-            "token": "Asignacion",
-            "start": 74,
-            "end": 84,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 3141,
-            "end": 3151,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 3200,
-            "end": 3211,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3504,
-            "end": 3513,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3425,6 +2890,179 @@
       "tallerId": 2
     }
   },
+  "legacyNestIds": [
+    "situacion",
+    "logico",
+    "nosql",
+    "retomar",
+    "mecanico",
+    "asignacion",
+    "reparacion-inversa",
+    "prof-inversa",
+    "asig-inversas",
+    "registrar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-repository",
+    "crear-listar-service",
+    "crear-listar-entry",
+    "crear-listar-registro",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-mecanico-repository",
+    "asignar-mecanico-service",
+    "asignar-mecanico-entry",
+    "asignar-mecanico-registro",
+    "asignar-mecanico-ejecutar",
+    "asignar-mecanico-curl",
+    "listar-por-reparacion-repository",
+    "listar-por-reparacion-service",
+    "listar-por-reparacion-entry",
+    "listar-por-reparacion-registro",
+    "listar-por-reparacion-ejecutar",
+    "listar-por-reparacion-curl",
+    "listar-por-mecanico-repository",
+    "listar-por-mecanico-service",
+    "listar-por-mecanico-entry",
+    "listar-por-mecanico-registro",
+    "listar-por-mecanico-ejecutar",
+    "listar-por-mecanico-curl",
+    "modificar-rol-repository",
+    "modificar-rol-service",
+    "modificar-rol-entry",
+    "modificar-rol-registro",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-repository",
+    "eliminar-asignacion-service",
+    "eliminar-asignacion-entry",
+    "eliminar-asignacion-registro",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestSimpleRevision": 2,
+  "nestRetainedIds": [
+    "situacion",
+    "logico",
+    "retomar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-mecanico-ejecutar",
+    "asignar-mecanico-curl",
+    "listar-por-reparacion-ejecutar",
+    "listar-por-reparacion-curl",
+    "listar-por-mecanico-ejecutar",
+    "listar-por-mecanico-curl",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestPreviousIds": {
+    "0": [
+      "situacion",
+      "logico",
+      "nosql",
+      "retomar",
+      "mecanico",
+      "asignacion",
+      "reparacion-inversa",
+      "prof-inversa",
+      "asig-inversas",
+      "registrar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-repository",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-mecanico-repository",
+      "asignar-mecanico-service",
+      "asignar-mecanico-entry",
+      "asignar-mecanico-registro",
+      "asignar-mecanico-ejecutar",
+      "asignar-mecanico-curl",
+      "listar-por-reparacion-repository",
+      "listar-por-reparacion-service",
+      "listar-por-reparacion-entry",
+      "listar-por-reparacion-registro",
+      "listar-por-reparacion-ejecutar",
+      "listar-por-reparacion-curl",
+      "listar-por-mecanico-repository",
+      "listar-por-mecanico-service",
+      "listar-por-mecanico-entry",
+      "listar-por-mecanico-registro",
+      "listar-por-mecanico-ejecutar",
+      "listar-por-mecanico-curl",
+      "modificar-rol-repository",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-registro",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-repository",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-registro",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestRetainedByRevision": {
+    "0": [
+      "situacion",
+      "logico",
+      "retomar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-mecanico-ejecutar",
+      "asignar-mecanico-curl",
+      "listar-por-reparacion-ejecutar",
+      "listar-por-reparacion-curl",
+      "listar-por-mecanico-ejecutar",
+      "listar-por-mecanico-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestStepAliases": {
+    "nosql": "logico",
+    "asignacion": "asig-inversas",
+    "prof-inversa": "mecanico"
+  },
+  "retiredNestDirectories": [
+    "src/reparaciones/crear-listar/",
+    "src/reparaciones/eliminar/",
+    "src/reparaciones/modificar-coste-centimos/",
+    "src/reparaciones/trasladar/",
+    "src/talleres/consultar/",
+    "src/mecanicos/crear-listar/",
+    "src/asignaciones/asignar-mecanico/",
+    "src/asignaciones/listar-por-reparacion/",
+    "src/asignaciones/listar-por-mecanico/",
+    "src/asignaciones/modificar-rol/",
+    "src/asignaciones/eliminar-asignacion/"
+  ],
   "context": {
     "id": "CH-09",
     "title": "Taller → Reparacion",

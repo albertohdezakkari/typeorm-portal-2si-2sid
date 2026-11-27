@@ -1,8 +1,8 @@
 {
   "version": 5,
   "source": {
-    "kind": "teacher",
-    "label": "Ejemplo docente · Cine → Proyeccion"
+    "kind": "pilot",
+    "label": "Versión sencilla · CH-13"
   },
   "chapters": [
     "Preparar el modelo",
@@ -142,27 +142,22 @@
         "chapter": 0,
         "name": "Registrar las Entities",
         "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\nimport { CrearListarController } from './proyecciones/crear-listar/controller';\nimport { CrearListarService } from './proyecciones/crear-listar/service';\nimport { CrearListarRepository } from './proyecciones/crear-listar/repository';\nimport { EliminarController } from './proyecciones/eliminar/controller';\nimport { EliminarService } from './proyecciones/eliminar/service';\nimport { EliminarRepository } from './proyecciones/eliminar/repository';\nimport { ModificarDuracionMinutosController } from './proyecciones/modificar-duracion-minutos/controller';\nimport { ModificarDuracionMinutosService } from './proyecciones/modificar-duracion-minutos/service';\nimport { ModificarDuracionMinutosRepository } from './proyecciones/modificar-duracion-minutos/repository';\nimport { TrasladarController } from './proyecciones/trasladar/controller';\nimport { TrasladarService } from './proyecciones/trasladar/service';\nimport { TrasladarRepository } from './proyecciones/trasladar/repository';\nimport { ConsultarCineController } from './cines/consultar/controller';\nimport { ConsultarCineService } from './cines/consultar/service';\nimport { ConsultarCineRepository } from './cines/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarDuracionMinutosController,\n    TrasladarController,\n    ConsultarCineController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarDuracionMinutosService,\n    ModificarDuracionMinutosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarCineService,\n    ConsultarCineRepository\n  ]\n})\nexport class TallerModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
         "cues": [
           {
-            "text": "import { Cine } from './cines/entities/cine.entity';",
+            "text": "import { Cine }",
             "title": "Importar Cine",
-            "note": "El módulo utiliza la misma clase Cine que has preparado en entities."
+            "note": "Es la clase que acabas de preparar."
           },
           {
-            "text": "import { Proyeccion } from './proyecciones/entities/proyeccion.entity';",
+            "text": "import { Proyeccion }",
             "title": "Importar Proyeccion",
-            "note": "El módulo reúne las dos entidades relacionadas."
+            "note": "El módulo reúne las dos Entities."
           },
           {
             "text": "TypeOrmModule.forFeature([Cine, Proyeccion])",
-            "title": "Preparar Repository para cada Entity",
-            "note": "Nest registra los providers que permiten inyectar Repository<Cine> y Repository<Proyeccion>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
-          },
-          {
-            "text": "providers: [",
-            "title": "Registrar nuestros casos de uso",
-            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+            "title": "Preparar las dos Entities",
+            "note": "Permite inyectar sus repositorios de TypeORM. Todavía no hay Service ni Controller registrados."
           }
         ],
         "page": 2,
@@ -171,107 +166,112 @@
       },
       {
         "chapter": 0,
-        "name": "Usarlas en Repository",
-        "path": "src/proyecciones/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  crearProyeccionRepository(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula, duracionMinutos, cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyeccionesRepository() {\n    return this.proyecciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "name": "Conectar el Service",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n}",
+        "page": 2,
+        "exact": false,
+        "scene": "nest-binding",
         "cues": [
           {
-            "text": "import { Proyeccion } from '../entities/proyeccion.entity';",
-            "title": "Importar la Entity preparada",
-            "note": "El repository importa la clase Proyeccion de su fichero entities/proyeccion.entity.ts. No vuelve a definir sus columnas."
+            "text": "@Injectable()",
+            "title": "Un Service de Nest",
+            "note": "Nest podrá crear esta clase y entregársela al Controller."
           },
           {
             "text": "@InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>",
-            "title": "Recibir el Repository de TypeORM",
-            "note": "InjectRepository(Proyeccion) pide a Nest el repositorio de esa Entity. proyecciones es el nombre de la dependencia; Repository<Proyeccion> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+            "title": "Recibir el repositorio de Proyeccion",
+            "note": "proyecciones ofrece las operaciones de TypeORM sobre la Entity Proyeccion; no es una clase Repository que tengamos que crear."
           },
           {
-            "text": "this.proyecciones.create({",
-            "title": "Preparar un objeto Proyeccion",
-            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
-          },
-          {
-            "text": "cine: { id: cineId }",
-            "title": "Usar la relación declarada",
-            "note": "La propiedad cine existe en la Entity Proyeccion. TypeORM traduce cine.id a la FK ID_CINE al guardar."
-          },
-          {
-            "text": "this.proyecciones.save(proyeccion)",
-            "title": "Guardar usando la Entity",
-            "note": "save utiliza el mapeo de Proyeccion y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia CINE."
-          },
-          {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "Leer con el mismo mapeo",
-            "note": "El QueryBuilder parte de Repository<Proyeccion>. getMany devuelve objetos Proyeccion, ordenados por id."
+            "text": "@InjectRepository(Cine) private readonly cines: Repository<Cine>",
+            "title": "Recibir el de Cine",
+            "note": "Este segundo repositorio permitirá leer el registro principal."
           }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "nest-binding"
-      },
-      {
-        "chapter": 1,
-        "name": "Controller",
-        "path": "src/proyecciones/crear-listar/controller.ts",
-        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('proyecciones')\n  async ejecutar(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccionService(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyeccionesService();\n  }\n}",
-        "cues": [
-          {
-            "text": "@Post('proyecciones')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
-          },
-          {
-            "text": "this.service.crearProyeccionService(datos.pelicula, datos.duracionMinutos, datos.cineId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        ]
       },
       {
         "chapter": 1,
         "name": "Service",
-        "path": "src/proyecciones/crear-listar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearProyeccionService(pelicula: string, duracionMinutos: number, cineId: number) {\n    return this.repository.crearProyeccionRepository(pelicula, duracionMinutos, cineId);\n  }\n\n  listarProyeccionesService() {\n    return this.repository.listarProyeccionesRepository();\n  }\n}",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ order: { id: 'ASC' } });\n  }\n}",
         "cues": [
           {
-            "text": "this.repository.crearProyeccionRepository(pelicula, duracionMinutos, cineId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 1,
-        "name": "Repository",
-        "path": "src/proyecciones/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  crearProyeccionRepository(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula, duracionMinutos, cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyeccionesRepository() {\n    return this.proyecciones.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
-        "cues": [
+            "text": "this.proyecciones.create({",
+            "title": "Preparar el objeto",
+            "note": "create prepara una Proyeccion en memoria; todavía no la guarda."
+          },
           {
             "text": "cine: { id: cineId }",
-            "title": "Guardar la referencia",
-            "note": "TypeORM escribe ese ID en ID_CINE; la FK de PostgreSQL exige un registro principal existente."
+            "title": "Usar la relación",
+            "note": "El ID recibido se guarda en ID_CINE mediante la relación de Proyeccion."
           },
           {
             "text": "this.proyecciones.save(proyeccion)",
-            "title": "INSERT en la base",
-            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+            "title": "Guardar la proyeccion",
+            "note": "save escribe la fila y devuelve la Proyeccion con el ID generado por PostgreSQL."
           },
           {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "SELECT de todas",
-            "note": "Devuelve los registros asociados ordenadas por ID."
+            "text": "this.proyecciones.find({ order: { id: 'ASC' } })",
+            "title": "Listar las proyecciones",
+            "note": "find lee las filas usando la Entity; order las ordena por ID."
           }
         ],
         "page": 4,
         "exact": false,
-        "scene": "flow"
+        "scene": "service"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/proyecciones/proyecciones.controller.ts",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('proyecciones')",
+            "title": "Ruta de creación",
+            "note": "POST /proyecciones ejecuta el método crear."
+          },
+          {
+            "text": "@Body() datos:",
+            "title": "Leer el cuerpo JSON",
+            "note": "Nest coloca en datos las propiedades pelicula, duracionMinutos y cineId."
+          },
+          {
+            "text": "this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId)",
+            "title": "Llamar al mismo Service",
+            "note": "El Controller entrega los tres valores. La lógica y la escritura están en ProyeccionesService."
+          },
+          {
+            "text": "@Get('proyecciones')",
+            "title": "Ruta del listado",
+            "note": "GET /proyecciones llama a listarProyecciones en ese mismo Service."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "entry"
+      },
+      {
+        "chapter": 1,
+        "name": "Registrar Service y Controller",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\nimport { ProyeccionesService } from './proyecciones/proyecciones.service';\nimport { ProyeccionesController } from './proyecciones/proyecciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  controllers: [ProyeccionesController],\n  providers: [ProyeccionesService]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "controllers: [ProyeccionesController]",
+            "title": "Un Controller",
+            "note": "Este Controller contiene las rutas de proyecciones."
+          },
+          {
+            "text": "providers: [ProyeccionesService]",
+            "title": "Un Service",
+            "note": "Nest entrega ProyeccionesService al Controller por su constructor."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "nest-module"
       },
       {
         "chapter": 1,
@@ -291,56 +291,52 @@
       },
       {
         "chapter": 2,
+        "name": "Service",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n}",
+        "cues": [
+          {
+            "text": "async eliminarProyeccion(proyeccionId: number)",
+            "title": "Recibir el ID",
+            "note": "El Controller convierte el parámetro de la ruta en número y lo entrega aquí.",
+            "after": "async eliminarProyeccion(proyeccionId: number)"
+          },
+          {
+            "text": "await this.proyecciones.delete(proyeccionId)",
+            "title": "Eliminar solo esa proyeccion",
+            "note": "delete utiliza su clave primaria. await espera a que termine antes de responder.",
+            "after": "async eliminarProyeccion(proyeccionId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 2,
         "name": "Controller",
-        "path": "src/proyecciones/eliminar/controller.ts",
-        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number) {\n    return this.service.eliminarProyeccionService(proyeccionId);\n  }\n}",
+        "path": "src/proyecciones/proyecciones.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n}",
         "cues": [
           {
             "text": "@Delete('proyecciones/:proyeccionId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "ID en la ruta",
+            "note": "DELETE /proyecciones/10 proporciona proyeccionId = \"10\"."
           },
           {
-            "text": "this.service.eliminarProyeccionService(proyeccionId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Service",
-        "path": "src/proyecciones/eliminar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarProyeccionService(proyeccionId: number) {\n    return this.repository.eliminarProyeccionRepository(proyeccionId);\n  }\n}",
-        "cues": [
+            "text": "@HttpCode(204)",
+            "title": "Respuesta sin contenido",
+            "note": "Cuando termina el borrado, Nest responde con HTTP 204."
+          },
           {
-            "text": "this.repository.eliminarProyeccionRepository(proyeccionId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+            "text": "this.service.eliminarProyeccion(Number(proyeccionId))",
+            "title": "Enviar un número al Service",
+            "note": "Number convierte el texto de la ruta. No se escribe SQL en el Controller."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Repository",
-        "path": "src/proyecciones/eliminar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async eliminarProyeccionRepository(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyecciones.delete(proyeccionId)",
-            "title": "DELETE por ID",
-            "note": "Borra el registro asociado de prueba. Las otras se conservan."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 2,
@@ -360,61 +356,58 @@
       },
       {
         "chapter": 3,
+        "name": "Service",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number)",
+            "title": "Dos valores recibidos",
+            "note": "El ID viene de la ruta y el duración del cuerpo JSON.",
+            "after": "async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number)"
+          },
+          {
+            "text": "this.proyecciones.update(proyeccionId, { duracionMinutos })",
+            "title": "Cambiar un campo",
+            "note": "update selecciona la proyeccion por ID y modifica solo duracionMinutos.",
+            "after": "async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number)"
+          },
+          {
+            "text": "return this.proyecciones.findOneBy({ id: proyeccionId })",
+            "title": "Leer lo actualizado",
+            "note": "findOneBy busca una proyeccion cuyo id coincide. return la devuelve al Controller.",
+            "after": "async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 3,
         "name": "Controller",
-        "path": "src/proyecciones/modificar-duracion-minutos/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarDuracionMinutosService } from './service';\n\n@Controller()\nexport class ModificarDuracionMinutosController {\n  constructor(private readonly service: ModificarDuracionMinutosService) {}\n\n  @Patch('proyecciones/:proyeccionId')\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number,\n    @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutosService(proyeccionId, datos.duracionMinutos);\n  }\n}",
+        "path": "src/proyecciones/proyecciones.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('proyecciones/:proyeccionId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de modificación",
+            "note": "PATCH /proyecciones/7 identifica la proyeccion que se quiere modificar."
           },
           {
-            "text": "this.service.modificarDuracionMinutosService(proyeccionId, datos.duracionMinutos)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Service",
-        "path": "src/proyecciones/modificar-duracion-minutos/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarDuracionMinutosRepository } from './repository';\n\n@Injectable()\nexport class ModificarDuracionMinutosService {\n  constructor(private readonly repository: ModificarDuracionMinutosRepository) {}\n\n  modificarDuracionMinutosService(proyeccionId: number, duracionMinutos: number) {\n    return this.repository.modificarDuracionMinutosRepository(proyeccionId, duracionMinutos);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.modificarDuracionMinutosRepository(proyeccionId, duracionMinutos)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Repository",
-        "path": "src/proyecciones/modificar-duracion-minutos/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class ModificarDuracionMinutosRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async modificarDuracionMinutosRepository(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.createQueryBuilder('p')\n      .where('p.id = :proyeccionId', { proyeccionId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyecciones.update(proyeccionId, { duracionMinutos })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { duracionMinutos: number }",
+            "title": "Nuevo duración",
+            "note": "El cuerpo JSON aporta duracionMinutos."
           },
           {
-            "text": ".where('p.id = :proyeccionId', { proyeccionId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos)",
+            "title": "Entregar los dos valores",
+            "note": "La ruta aporta el ID y el cuerpo aporta el dato que cambiará."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 3,
@@ -434,61 +427,58 @@
       },
       {
         "chapter": 4,
+        "name": "Service",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async cambiarCine(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async cambiarCine(proyeccionId: number, cineId: number)",
+            "title": "ID de la proyeccion y nuevo cine",
+            "note": "Se reciben dos IDs con funciones diferentes: la fila que cambia y su nueva referencia.",
+            "after": "async cambiarCine(proyeccionId: number, cineId: number)"
+          },
+          {
+            "text": "this.proyecciones.update(proyeccionId, { cine: { id: cineId } })",
+            "title": "Cambiar la relación",
+            "note": "La propiedad cine está declarada en Proyeccion. TypeORM actualiza ID_CINE.",
+            "after": "async cambiarCine(proyeccionId: number, cineId: number)"
+          },
+          {
+            "text": "return this.proyecciones.findOneBy({ id: proyeccionId })",
+            "title": "Devolver la proyeccion",
+            "note": "El resultado vuelve al Controller y Nest lo convierte en JSON.",
+            "after": "async cambiarCine(proyeccionId: number, cineId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 4,
         "name": "Controller",
-        "path": "src/proyecciones/trasladar/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  async ejecutar(@Param('proyeccionId', ParseIntPipe) proyeccionId: number,\n    @Body() datos: { cineId: number }) {\n    return this.service.trasladarProyeccionService(proyeccionId, datos.cineId);\n  }\n}",
+        "path": "src/proyecciones/proyecciones.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  cambiarCine(@Param('proyeccionId') proyeccionId: string, @Body() datos: { cineId: number }) {\n    return this.service.cambiarCine(Number(proyeccionId), datos.cineId);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('proyecciones/:proyeccionId/cine')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Cambiar la asociación",
+            "note": "La ruta expresa qué proyeccion cambiará de cine."
           },
           {
-            "text": "this.service.trasladarProyeccionService(proyeccionId, datos.cineId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Service",
-        "path": "src/proyecciones/trasladar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarProyeccionService(proyeccionId: number, cineId: number) {\n    return this.repository.trasladarProyeccionRepository(proyeccionId, cineId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.trasladarProyeccionRepository(proyeccionId, cineId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Repository",
-        "path": "src/proyecciones/trasladar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../entities/proyeccion.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>\n  ) {}\n\n  async trasladarProyeccionRepository(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.createQueryBuilder('p')\n      .where('p.id = :proyeccionId', { proyeccionId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.proyecciones.update(proyeccionId, { cine: { id: cineId } })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { cineId: number }",
+            "title": "Nueva referencia",
+            "note": "El cuerpo lleva el ID del cine de destino."
           },
           {
-            "text": ".where('p.id = :proyeccionId', { proyeccionId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.cambiarCine(Number(proyeccionId), datos.cineId)",
+            "title": "Continuar en el Service",
+            "note": "Usamos el mismo ProyeccionesService; no creamos otra clase para esta operación."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 4,
@@ -508,66 +498,64 @@
       },
       {
         "chapter": 5,
+        "name": "Service",
+        "path": "src/proyecciones/proyecciones.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async cambiarCine(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async consultarCine(cineId: number, minimo: number) {\n    const cine = await this.cines.findOneBy({ id: cineId });\n    const proyecciones = await this.proyecciones.find({\n      where: {\n        cine: { id: cineId },\n        duracionMinutos: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { cine, proyecciones };\n  }\n}",
+        "cues": [
+          {
+            "text": "this.cines.findOneBy({ id: cineId })",
+            "title": "Leer el cine",
+            "note": "Se obtiene el registro principal por su ID.",
+            "after": "this.cines.findOneBy({ id: cineId })"
+          },
+          {
+            "text": "cine: { id: cineId }",
+            "title": "Filtrar por la relación",
+            "note": "Solo se leen las proyecciones que pertenecen al cine solicitado.",
+            "after": "this.cines.findOneBy({ id: cineId })"
+          },
+          {
+            "text": "duracionMinutos: MoreThanOrEqual(minimo)",
+            "title": "DuracionMinutos mayor o igual",
+            "note": "MoreThanOrEqual equivale a >= en SQL. minimo viene de la consulta de la URL.",
+            "after": "this.cines.findOneBy({ id: cineId })"
+          },
+          {
+            "text": "return { cine, proyecciones }",
+            "title": "Preparar la respuesta",
+            "note": "El objeto contiene el cine y la lista de proyecciones que cumplen el filtro.",
+            "after": "this.cines.findOneBy({ id: cineId })"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 5,
         "name": "Controller",
-        "path": "src/cines/consultar/controller.ts",
-        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarCineService } from './service';\n\n@Controller()\nexport class ConsultarCineController {\n  constructor(private readonly service: ConsultarCineService) {}\n\n  @Get('cines/:cineId/proyecciones')\n  async ejecutar(@Param('cineId', ParseIntPipe) cineId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarCineService(cineId, minimo);\n  }\n}",
+        "path": "src/proyecciones/proyecciones.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  cambiarCine(@Param('proyeccionId') proyeccionId: string, @Body() datos: { cineId: number }) {\n    return this.service.cambiarCine(Number(proyeccionId), datos.cineId);\n  }\n\n  @Get('cines/:cineId/proyecciones')\n  consultar(@Param('cineId') cineId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarCine(Number(cineId), Number(minimo));\n  }\n}",
         "cues": [
           {
             "text": "@Get('cines/:cineId/proyecciones')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de la relación",
+            "note": "GET /cines/2/proyecciones solicita las proyecciones del cine 2."
           },
           {
-            "text": "this.service.consultarCineService(cineId, minimo)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Service",
-        "path": "src/cines/consultar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarCineRepository } from './repository';\n\n@Injectable()\nexport class ConsultarCineService {\n  constructor(private readonly repository: ConsultarCineRepository) {}\n\n  consultarCineService(cineId: number, minimo: number) {\n    return this.repository.consultarCineRepository(cineId, minimo);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.consultarCineRepository(cineId, minimo)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Repository",
-        "path": "src/cines/consultar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from '../../proyecciones/entities/proyeccion.entity';\nimport { Cine } from '../entities/cine.entity';\n\n@Injectable()\nexport class ConsultarCineRepository {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  async consultarCineRepository(cineId: number, minimo: number) {\n    const cine = await this.cines.createQueryBuilder('h')\n      .where('h.id = :cineId', { cineId }).getOne();\n    const proyecciones = await this.proyecciones.createQueryBuilder('p')\n      .innerJoin('p.cine', 'h')\n      .where('h.id = :cineId', { cineId })\n      .andWhere('p.duracionMinutos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { cine, proyecciones };\n  }\n}",
-        "cues": [
-          {
-            "text": ".innerJoin('p.cine', 'h')",
-            "title": "JOIN de la relación",
-            "note": "p representa PROYECCION y h representa CINE."
+            "text": "@Query('minimo') minimo = '0'",
+            "title": "Filtro opcional",
+            "note": "?minimo=12001 llega como texto; si no se envía, se usa 0."
           },
           {
-            "text": ".where('h.id = :cineId', { cineId })",
-            "title": "Seleccionar el registro principal",
-            "note": "WHERE h.ID = 2. :cineId es un parámetro."
-          },
-          {
-            "text": ".andWhere('p.duracionMinutos >= :minimo', { minimo })",
-            "title": "Aplicar el mínimo",
-            "note": "AND p.DURACION_MINUTOS >= 126. El SQL filtra en PostgreSQL."
+            "text": "this.service.consultarCine(Number(cineId), Number(minimo))",
+            "title": "Dos números al Service",
+            "note": "El Service consulta las Entities y devuelve el resultado."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "index"
+        "scene": "entry"
       },
       {
         "chapter": 5,
@@ -1335,12 +1323,13 @@
       "verb": "POST",
       "route": "/proyecciones",
       "request": "POST /proyecciones\n{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}",
-      "fields": "nombre, duracionMinutos, cineId",
-      "args": "nombre, duracionMinutos, cineId",
+      "fields": "pelicula, duracionMinutos, cineId",
+      "args": "pelicula, duracionMinutos, cineId",
       "result": "201 · Registro 10 creado → GET /proyecciones → 200 · aparecen 4 registros",
       "service": "crearProyeccionService",
       "repo": "crearProyeccionRepository",
-      "command": "PutItemCommand"
+      "command": "PutItemCommand",
+      "nestMethod": "crearProyeccion"
     },
     {
       "ch": 2,
@@ -1354,7 +1343,8 @@
       "result": "204 · Registro 10 eliminado → GET /proyecciones → 200 · quedan 7, 8 y 9",
       "service": "eliminarProyeccionService",
       "repo": "eliminarProyeccionRepository",
-      "command": "DeleteItemCommand"
+      "command": "DeleteItemCommand",
+      "nestMethod": "eliminarProyeccion"
     },
     {
       "ch": 3,
@@ -1368,7 +1358,8 @@
       "result": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
       "service": "modificarDuracionMinutosService",
       "repo": "modificarDuracionMinutosRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "modificarDuracionMinutos"
     },
     {
       "ch": 4,
@@ -1382,7 +1373,8 @@
       "result": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
       "service": "trasladarProyeccionService",
       "repo": "trasladarProyeccionRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "cambiarCine"
     },
     {
       "ch": 5,
@@ -1396,7 +1388,8 @@
       "result": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
       "service": "consultarCineService",
       "repo": "consultarCineRepository",
-      "command": "QueryCommand"
+      "command": "QueryCommand",
+      "nestMethod": "consultarCine"
     }
   ],
   "context": {
@@ -1595,5 +1588,42 @@
     "cloud:16",
     "cloud:20",
     "cloud:24"
-  ]
+  ],
+  "originalSource": {
+    "kind": "teacher",
+    "label": "Ejemplo docente · Cine → Proyeccion"
+  },
+  "nestSimpleRevision": 1,
+  "legacyNestChapters": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5
+  ],
+  "nestSimpleFiles": {
+    "service": "src/proyecciones/proyecciones.service.ts",
+    "controller": "src/proyecciones/proyecciones.controller.ts"
+  }
 }

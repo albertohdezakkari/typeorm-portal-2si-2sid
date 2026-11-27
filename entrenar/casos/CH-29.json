@@ -1,8 +1,8 @@
 {
   "version": 5,
   "source": {
-    "kind": "pdf",
-    "label": "Ficha CH-29",
+    "kind": "pilot",
+    "label": "Versión sencilla · CH-29",
     "sha256": "47aedccab4ab3e93a0f170b2b6552af8534a01ede4f32dc3e5aa91b8bdeb196f",
     "pages": 4
   },
@@ -144,27 +144,22 @@
         "chapter": 0,
         "name": "Registrar las Entities",
         "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './granjas/entities/granja.entity';\nimport { Cosecha } from './cosechas/entities/cosecha.entity';\nimport { CrearListarController } from './cosechas/crear-listar/controller';\nimport { CrearListarService } from './cosechas/crear-listar/service';\nimport { CrearListarRepository } from './cosechas/crear-listar/repository';\nimport { EliminarController } from './cosechas/eliminar/controller';\nimport { EliminarService } from './cosechas/eliminar/service';\nimport { EliminarRepository } from './cosechas/eliminar/repository';\nimport { ModificarKilosController } from './cosechas/modificar-kilos/controller';\nimport { ModificarKilosService } from './cosechas/modificar-kilos/service';\nimport { ModificarKilosRepository } from './cosechas/modificar-kilos/repository';\nimport { TrasladarController } from './cosechas/trasladar/controller';\nimport { TrasladarService } from './cosechas/trasladar/service';\nimport { TrasladarRepository } from './cosechas/trasladar/repository';\nimport { ConsultarGranjaController } from './granjas/consultar/controller';\nimport { ConsultarGranjaService } from './granjas/consultar/service';\nimport { ConsultarGranjaRepository } from './granjas/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  controllers: [\n    CrearListarController,\n    EliminarController,\n    ModificarKilosController,\n    TrasladarController,\n    ConsultarGranjaController\n  ],\n  providers: [\n    CrearListarService,\n    CrearListarRepository,\n    EliminarService,\n    EliminarRepository,\n    ModificarKilosService,\n    ModificarKilosRepository,\n    TrasladarService,\n    TrasladarRepository,\n    ConsultarGranjaService,\n    ConsultarGranjaRepository\n  ]\n})\nexport class TallerModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './granjas/entities/granja.entity';\nimport { Cosecha } from './cosechas/entities/cosecha.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
         "cues": [
           {
-            "text": "import { Granja } from './granjas/entities/granja.entity';",
+            "text": "import { Granja }",
             "title": "Importar Granja",
-            "note": "El módulo utiliza la misma clase Granja que has preparado en entities."
+            "note": "Es la clase que acabas de preparar."
           },
           {
-            "text": "import { Cosecha } from './cosechas/entities/cosecha.entity';",
+            "text": "import { Cosecha }",
             "title": "Importar Cosecha",
-            "note": "El módulo reúne las dos entidades relacionadas."
+            "note": "El módulo reúne las dos Entities."
           },
           {
             "text": "TypeOrmModule.forFeature([Granja, Cosecha])",
-            "title": "Preparar Repository para cada Entity",
-            "note": "Nest registra los providers que permiten inyectar Repository<Granja> y Repository<Cosecha>. La conexión PostgreSQL del proyecto base debe estar configurada previamente."
-          },
-          {
-            "text": "providers: [",
-            "title": "Registrar nuestros casos de uso",
-            "note": "Nuestros services y repositories son providers de Nest. Reciben las dependencias registradas mediante sus constructores."
+            "title": "Preparar las dos Entities",
+            "note": "Permite inyectar sus repositorios de TypeORM. Todavía no hay Service ni Controller registrados."
           }
         ],
         "page": 2,
@@ -173,107 +168,112 @@
       },
       {
         "chapter": 0,
-        "name": "Usarlas en Repository",
-        "path": "src/cosechas/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  crearCosechaRepository(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre, kilos, granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechasRepository() {\n    return this.cosechas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
+        "name": "Conectar el Service",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n}",
+        "page": 2,
+        "exact": false,
+        "scene": "nest-binding",
         "cues": [
           {
-            "text": "import { Cosecha } from '../entities/cosecha.entity';",
-            "title": "Importar la Entity preparada",
-            "note": "El repository importa la clase Cosecha de su fichero entities/cosecha.entity.ts. No vuelve a definir sus columnas."
+            "text": "@Injectable()",
+            "title": "Un Service de Nest",
+            "note": "Nest podrá crear esta clase y entregársela al Controller."
           },
           {
             "text": "@InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>",
-            "title": "Recibir el Repository de TypeORM",
-            "note": "InjectRepository(Cosecha) pide a Nest el repositorio de esa Entity. cosechas es el nombre de la dependencia; Repository<Cosecha> indica el tipo. Nuestra clase CrearListarRepository utiliza ese repositorio de TypeORM."
+            "title": "Recibir el repositorio de Cosecha",
+            "note": "cosechas ofrece las operaciones de TypeORM sobre la Entity Cosecha; no es una clase Repository que tengamos que crear."
           },
           {
-            "text": "this.cosechas.create({",
-            "title": "Preparar un objeto Cosecha",
-            "note": "create prepara el objeto en memoria. Todavía no escribe una fila en PostgreSQL."
-          },
-          {
-            "text": "granja: { id: granjaId }",
-            "title": "Usar la relación declarada",
-            "note": "La propiedad granja existe en la Entity Cosecha. TypeORM traduce granja.id a la FK ID_GRANJA al guardar."
-          },
-          {
-            "text": "this.cosechas.save(cosecha)",
-            "title": "Guardar usando la Entity",
-            "note": "save utiliza el mapeo de Cosecha y escribe la fila. PostgreSQL genera el ID y comprueba la FK hacia GRANJA."
-          },
-          {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "Leer con el mismo mapeo",
-            "note": "El QueryBuilder parte de Repository<Cosecha>. getMany devuelve objetos Cosecha, ordenados por id."
+            "text": "@InjectRepository(Granja) private readonly granjas: Repository<Granja>",
+            "title": "Recibir el de Granja",
+            "note": "Este segundo repositorio permitirá leer el registro principal."
           }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "nest-binding"
-      },
-      {
-        "chapter": 1,
-        "name": "Controller",
-        "path": "src/cosechas/crear-listar/controller.ts",
-        "code": "import { Controller, Post, Get, Body } from '@nestjs/common';\nimport { CrearListarService } from './service';\n\n@Controller()\nexport class CrearListarController {\n  constructor(private readonly service: CrearListarService) {}\n\n  @Post('cosechas')\n  async ejecutar(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosechaService(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechasService();\n  }\n}",
-        "cues": [
-          {
-            "text": "@Post('cosechas')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
-          },
-          {
-            "text": "this.service.crearCosechaService(datos.nombre, datos.kilos, datos.granjaId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        ]
       },
       {
         "chapter": 1,
         "name": "Service",
-        "path": "src/cosechas/crear-listar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { CrearListarRepository } from './repository';\n\n@Injectable()\nexport class CrearListarService {\n  constructor(private readonly repository: CrearListarRepository) {}\n\n  crearCosechaService(nombre: string, kilos: number, granjaId: number) {\n    return this.repository.crearCosechaRepository(nombre, kilos, granjaId);\n  }\n\n  listarCosechasService() {\n    return this.repository.listarCosechasRepository();\n  }\n}",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ order: { id: 'ASC' } });\n  }\n}",
         "cues": [
           {
-            "text": "this.repository.crearCosechaRepository(nombre, kilos, granjaId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 1,
-        "name": "Repository",
-        "path": "src/cosechas/crear-listar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class CrearListarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  crearCosechaRepository(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre, kilos, granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechasRepository() {\n    return this.cosechas.createQueryBuilder('p')\n      .orderBy('p.id', 'ASC').getMany();\n  }\n}",
-        "cues": [
+            "text": "this.cosechas.create({",
+            "title": "Preparar el objeto",
+            "note": "create prepara una Cosecha en memoria; todavía no la guarda."
+          },
           {
             "text": "granja: { id: granjaId }",
-            "title": "Guardar la referencia",
-            "note": "TypeORM escribe ese ID en ID_GRANJA; la FK de PostgreSQL exige un registro principal existente."
+            "title": "Usar la relación",
+            "note": "El ID recibido se guarda en ID_GRANJA mediante la relación de Cosecha."
           },
           {
             "text": "this.cosechas.save(cosecha)",
-            "title": "INSERT en la base",
-            "note": "PostgreSQL genera el ID. create solo construye el objeto."
+            "title": "Guardar la cosecha",
+            "note": "save escribe la fila y devuelve la Cosecha con el ID generado por PostgreSQL."
           },
           {
-            "text": ".orderBy('p.id', 'ASC').getMany()",
-            "title": "SELECT de todas",
-            "note": "Devuelve los registros asociados ordenadas por ID."
+            "text": "this.cosechas.find({ order: { id: 'ASC' } })",
+            "title": "Listar las cosechas",
+            "note": "find lee las filas usando la Entity; order las ordena por ID."
           }
         ],
         "page": 4,
         "exact": false,
-        "scene": "flow"
+        "scene": "service"
+      },
+      {
+        "chapter": 1,
+        "name": "Controller",
+        "path": "src/cosechas/cosechas.controller.ts",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post('cosechas')",
+            "title": "Ruta de creación",
+            "note": "POST /cosechas ejecuta el método crear."
+          },
+          {
+            "text": "@Body() datos:",
+            "title": "Leer el cuerpo JSON",
+            "note": "Nest coloca en datos las propiedades nombre, kilos y granjaId."
+          },
+          {
+            "text": "this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId)",
+            "title": "Llamar al mismo Service",
+            "note": "El Controller entrega los tres valores. La lógica y la escritura están en CosechasService."
+          },
+          {
+            "text": "@Get('cosechas')",
+            "title": "Ruta del listado",
+            "note": "GET /cosechas llama a listarCosechas en ese mismo Service."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "entry"
+      },
+      {
+        "chapter": 1,
+        "name": "Registrar Service y Controller",
+        "path": "src/taller.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './granjas/entities/granja.entity';\nimport { Cosecha } from './cosechas/entities/cosecha.entity';\nimport { CosechasService } from './cosechas/cosechas.service';\nimport { CosechasController } from './cosechas/cosechas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  controllers: [CosechasController],\n  providers: [CosechasService]\n})\nexport class TallerModule {}",
+        "cues": [
+          {
+            "text": "controllers: [CosechasController]",
+            "title": "Un Controller",
+            "note": "Este Controller contiene las rutas de cosechas."
+          },
+          {
+            "text": "providers: [CosechasService]",
+            "title": "Un Service",
+            "note": "Nest entrega CosechasService al Controller por su constructor."
+          }
+        ],
+        "page": 3,
+        "exact": false,
+        "scene": "nest-module"
       },
       {
         "chapter": 1,
@@ -293,56 +293,52 @@
       },
       {
         "chapter": 2,
+        "name": "Service",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n}",
+        "cues": [
+          {
+            "text": "async eliminarCosecha(cosechaId: number)",
+            "title": "Recibir el ID",
+            "note": "El Controller convierte el parámetro de la ruta en número y lo entrega aquí.",
+            "after": "async eliminarCosecha(cosechaId: number)"
+          },
+          {
+            "text": "await this.cosechas.delete(cosechaId)",
+            "title": "Eliminar solo esa cosecha",
+            "note": "delete utiliza su clave primaria. await espera a que termine antes de responder.",
+            "after": "async eliminarCosecha(cosechaId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 2,
         "name": "Controller",
-        "path": "src/cosechas/eliminar/controller.ts",
-        "code": "import { Controller, Delete, Param, ParseIntPipe, HttpCode } from '@nestjs/common';\nimport { EliminarService } from './service';\n\n@Controller()\nexport class EliminarController {\n  constructor(private readonly service: EliminarService) {}\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number) {\n    return this.service.eliminarCosechaService(cosechaId);\n  }\n}",
+        "path": "src/cosechas/cosechas.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n}",
         "cues": [
           {
             "text": "@Delete('cosechas/:cosechaId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "ID en la ruta",
+            "note": "DELETE /cosechas/10 proporciona cosechaId = \"10\"."
           },
           {
-            "text": "this.service.eliminarCosechaService(cosechaId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Service",
-        "path": "src/cosechas/eliminar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarRepository } from './repository';\n\n@Injectable()\nexport class EliminarService {\n  constructor(private readonly repository: EliminarRepository) {}\n\n  eliminarCosechaService(cosechaId: number) {\n    return this.repository.eliminarCosechaRepository(cosechaId);\n  }\n}",
-        "cues": [
+            "text": "@HttpCode(204)",
+            "title": "Respuesta sin contenido",
+            "note": "Cuando termina el borrado, Nest responde con HTTP 204."
+          },
           {
-            "text": "this.repository.eliminarCosechaRepository(cosechaId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
+            "text": "this.service.eliminarCosecha(Number(cosechaId))",
+            "title": "Enviar un número al Service",
+            "note": "Number convierte el texto de la ruta. No se escribe SQL en el Controller."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 2,
-        "name": "Repository",
-        "path": "src/cosechas/eliminar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class EliminarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async eliminarCosechaRepository(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.cosechas.delete(cosechaId)",
-            "title": "DELETE por ID",
-            "note": "Borra el registro asociado de prueba. Las otras se conservan."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 2,
@@ -362,61 +358,58 @@
       },
       {
         "chapter": 3,
+        "name": "Service",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async modificarKilos(cosechaId: number, kilos: number)",
+            "title": "Dos valores recibidos",
+            "note": "El ID viene de la ruta y el producción del cuerpo JSON.",
+            "after": "async modificarKilos(cosechaId: number, kilos: number)"
+          },
+          {
+            "text": "this.cosechas.update(cosechaId, { kilos })",
+            "title": "Cambiar un campo",
+            "note": "update selecciona la cosecha por ID y modifica solo kilos.",
+            "after": "async modificarKilos(cosechaId: number, kilos: number)"
+          },
+          {
+            "text": "return this.cosechas.findOneBy({ id: cosechaId })",
+            "title": "Leer lo actualizado",
+            "note": "findOneBy busca una cosecha cuyo id coincide. return la devuelve al Controller.",
+            "after": "async modificarKilos(cosechaId: number, kilos: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 3,
         "name": "Controller",
-        "path": "src/cosechas/modificar-kilos/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { ModificarKilosService } from './service';\n\n@Controller()\nexport class ModificarKilosController {\n  constructor(private readonly service: ModificarKilosService) {}\n\n  @Patch('cosechas/:cosechaId')\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number,\n    @Body() datos: { kilos: number }) {\n    return this.service.modificarKilosService(cosechaId, datos.kilos);\n  }\n}",
+        "path": "src/cosechas/cosechas.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('cosechas/:cosechaId')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de modificación",
+            "note": "PATCH /cosechas/7 identifica la cosecha que se quiere modificar."
           },
           {
-            "text": "this.service.modificarKilosService(cosechaId, datos.kilos)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Service",
-        "path": "src/cosechas/modificar-kilos/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ModificarKilosRepository } from './repository';\n\n@Injectable()\nexport class ModificarKilosService {\n  constructor(private readonly repository: ModificarKilosRepository) {}\n\n  modificarKilosService(cosechaId: number, kilos: number) {\n    return this.repository.modificarKilosRepository(cosechaId, kilos);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.modificarKilosRepository(cosechaId, kilos)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 3,
-        "name": "Repository",
-        "path": "src/cosechas/modificar-kilos/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class ModificarKilosRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async modificarKilosRepository(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.createQueryBuilder('p')\n      .where('p.id = :cosechaId', { cosechaId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.cosechas.update(cosechaId, { kilos })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { kilos: number }",
+            "title": "Nuevo producción",
+            "note": "El cuerpo JSON aporta kilos."
           },
           {
-            "text": ".where('p.id = :cosechaId', { cosechaId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.modificarKilos(Number(cosechaId), datos.kilos)",
+            "title": "Entregar los dos valores",
+            "note": "La ruta aporta el ID y el cuerpo aporta el dato que cambiará."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 3,
@@ -436,61 +429,58 @@
       },
       {
         "chapter": 4,
+        "name": "Service",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async cambiarGranja(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n}",
+        "cues": [
+          {
+            "text": "async cambiarGranja(cosechaId: number, granjaId: number)",
+            "title": "ID de la cosecha y nuevo granja",
+            "note": "Se reciben dos IDs con funciones diferentes: la fila que cambia y su nueva referencia.",
+            "after": "async cambiarGranja(cosechaId: number, granjaId: number)"
+          },
+          {
+            "text": "this.cosechas.update(cosechaId, { granja: { id: granjaId } })",
+            "title": "Cambiar la relación",
+            "note": "La propiedad granja está declarada en Cosecha. TypeORM actualiza ID_GRANJA.",
+            "after": "async cambiarGranja(cosechaId: number, granjaId: number)"
+          },
+          {
+            "text": "return this.cosechas.findOneBy({ id: cosechaId })",
+            "title": "Devolver la cosecha",
+            "note": "El resultado vuelve al Controller y Nest lo convierte en JSON.",
+            "after": "async cambiarGranja(cosechaId: number, granjaId: number)"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 4,
         "name": "Controller",
-        "path": "src/cosechas/trasladar/controller.ts",
-        "code": "import { Controller, Patch, Param, ParseIntPipe, Body } from '@nestjs/common';\nimport { TrasladarService } from './service';\n\n@Controller()\nexport class TrasladarController {\n  constructor(private readonly service: TrasladarService) {}\n\n  @Patch('cosechas/:cosechaId/granja')\n  async ejecutar(@Param('cosechaId', ParseIntPipe) cosechaId: number,\n    @Body() datos: { granjaId: number }) {\n    return this.service.trasladarCosechaService(cosechaId, datos.granjaId);\n  }\n}",
+        "path": "src/cosechas/cosechas.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n\n  @Patch('cosechas/:cosechaId/granja')\n  cambiarGranja(@Param('cosechaId') cosechaId: string, @Body() datos: { granjaId: number }) {\n    return this.service.cambiarGranja(Number(cosechaId), datos.granjaId);\n  }\n}",
         "cues": [
           {
             "text": "@Patch('cosechas/:cosechaId/granja')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Cambiar la asociación",
+            "note": "La ruta expresa qué cosecha cambiará de granja."
           },
           {
-            "text": "this.service.trasladarCosechaService(cosechaId, datos.granjaId)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Service",
-        "path": "src/cosechas/trasladar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { TrasladarRepository } from './repository';\n\n@Injectable()\nexport class TrasladarService {\n  constructor(private readonly repository: TrasladarRepository) {}\n\n  trasladarCosechaService(cosechaId: number, granjaId: number) {\n    return this.repository.trasladarCosechaRepository(cosechaId, granjaId);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.trasladarCosechaRepository(cosechaId, granjaId)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 4,
-        "name": "Repository",
-        "path": "src/cosechas/trasladar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../entities/cosecha.entity';\n\n@Injectable()\nexport class TrasladarRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>\n  ) {}\n\n  async trasladarCosechaRepository(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.createQueryBuilder('p')\n      .where('p.id = :cosechaId', { cosechaId }).getOne();\n  }\n}",
-        "cues": [
-          {
-            "text": "this.cosechas.update(cosechaId, { granja: { id: granjaId } })",
-            "title": "UPDATE de un campo",
-            "note": "Conserva el ID y los otros atributos. PostgreSQL comprueba la FK al trasladar."
+            "text": "@Body() datos: { granjaId: number }",
+            "title": "Nueva referencia",
+            "note": "El cuerpo lleva el ID de la granja de destino."
           },
           {
-            "text": ".where('p.id = :cosechaId', { cosechaId }).getOne()",
-            "title": "Leer la ficha modificada",
-            "note": "Un parámetro lleva el ID; getOne devuelve un registro asociado."
+            "text": "this.service.cambiarGranja(Number(cosechaId), datos.granjaId)",
+            "title": "Continuar en el Service",
+            "note": "Usamos el mismo CosechasService; no creamos otra clase para esta operación."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "flow"
+        "scene": "entry"
       },
       {
         "chapter": 4,
@@ -510,66 +500,64 @@
       },
       {
         "chapter": 5,
+        "name": "Service",
+        "path": "src/cosechas/cosechas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async cambiarGranja(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async consultarGranja(granjaId: number, minimo: number) {\n    const granja = await this.granjas.findOneBy({ id: granjaId });\n    const cosechas = await this.cosechas.find({\n      where: {\n        granja: { id: granjaId },\n        kilos: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { granja, cosechas };\n  }\n}",
+        "cues": [
+          {
+            "text": "this.granjas.findOneBy({ id: granjaId })",
+            "title": "Leer la granja",
+            "note": "Se obtiene el registro principal por su ID.",
+            "after": "this.granjas.findOneBy({ id: granjaId })"
+          },
+          {
+            "text": "granja: { id: granjaId }",
+            "title": "Filtrar por la relación",
+            "note": "Solo se leen las cosechas que pertenecen al granja solicitado.",
+            "after": "this.granjas.findOneBy({ id: granjaId })"
+          },
+          {
+            "text": "kilos: MoreThanOrEqual(minimo)",
+            "title": "Kilos mayor o igual",
+            "note": "MoreThanOrEqual equivale a >= en SQL. minimo viene de la consulta de la URL.",
+            "after": "this.granjas.findOneBy({ id: granjaId })"
+          },
+          {
+            "text": "return { granja, cosechas }",
+            "title": "Preparar la respuesta",
+            "note": "El objeto contiene la granja y la lista de cosechas que cumplen el filtro.",
+            "after": "this.granjas.findOneBy({ id: granjaId })"
+          }
+        ],
+        "page": 4,
+        "exact": false,
+        "scene": "service"
+      },
+      {
+        "chapter": 5,
         "name": "Controller",
-        "path": "src/granjas/consultar/controller.ts",
-        "code": "import { Controller, Get, Param, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';\nimport { ConsultarGranjaService } from './service';\n\n@Controller()\nexport class ConsultarGranjaController {\n  constructor(private readonly service: ConsultarGranjaService) {}\n\n  @Get('granjas/:granjaId/cosechas')\n  async ejecutar(@Param('granjaId', ParseIntPipe) granjaId: number,\n    @Query('minimo', new DefaultValuePipe(0), ParseIntPipe) minimo: number) {\n    return this.service.consultarGranjaService(granjaId, minimo);\n  }\n}",
+        "path": "src/cosechas/cosechas.controller.ts",
+        "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n\n  @Patch('cosechas/:cosechaId/granja')\n  cambiarGranja(@Param('cosechaId') cosechaId: string, @Body() datos: { granjaId: number }) {\n    return this.service.cambiarGranja(Number(cosechaId), datos.granjaId);\n  }\n\n  @Get('granjas/:granjaId/cosechas')\n  consultar(@Param('granjaId') granjaId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarGranja(Number(granjaId), Number(minimo));\n  }\n}",
         "cues": [
           {
             "text": "@Get('granjas/:granjaId/cosechas')",
-            "title": "Ruta → controller",
-            "note": "Nest dirige esta petición al método ejecutar."
+            "title": "Ruta de la relación",
+            "note": "GET /granjas/2/cosechas solicita las cosechas de la granja 2."
           },
           {
-            "text": "this.service.consultarGranjaService(granjaId, minimo)",
-            "title": "Entrar en negocio",
-            "note": "El controller entrega los mismos datos al service."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Service",
-        "path": "src/granjas/consultar/service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ConsultarGranjaRepository } from './repository';\n\n@Injectable()\nexport class ConsultarGranjaService {\n  constructor(private readonly repository: ConsultarGranjaRepository) {}\n\n  consultarGranjaService(granjaId: number, minimo: number) {\n    return this.repository.consultarGranjaRepository(granjaId, minimo);\n  }\n}",
-        "cues": [
-          {
-            "text": "this.repository.consultarGranjaRepository(granjaId, minimo)",
-            "title": "Delegar la persistencia",
-            "note": "El service coordina el caso. El repository conoce TypeORM y la base de datos."
-          }
-        ],
-        "page": 4,
-        "exact": false,
-        "scene": "flow"
-      },
-      {
-        "chapter": 5,
-        "name": "Repository",
-        "path": "src/granjas/consultar/repository.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from '../../cosechas/entities/cosecha.entity';\nimport { Granja } from '../entities/granja.entity';\n\n@Injectable()\nexport class ConsultarGranjaRepository {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  async consultarGranjaRepository(granjaId: number, minimo: number) {\n    const granja = await this.granjas.createQueryBuilder('h')\n      .where('h.id = :granjaId', { granjaId }).getOne();\n    const cosechas = await this.cosechas.createQueryBuilder('p')\n      .innerJoin('p.granja', 'h')\n      .where('h.id = :granjaId', { granjaId })\n      .andWhere('p.kilos >= :minimo', { minimo })\n      .orderBy('p.id', 'ASC').getMany();\n    return { granja, cosechas };\n  }\n}",
-        "cues": [
-          {
-            "text": ".innerJoin('p.granja', 'h')",
-            "title": "JOIN de la relación",
-            "note": "p representa COSECHA y h representa GRANJA."
+            "text": "@Query('minimo') minimo = '0'",
+            "title": "Filtro opcional",
+            "note": "?minimo=12001 llega como texto; si no se envía, se usa 0."
           },
           {
-            "text": ".where('h.id = :granjaId', { granjaId })",
-            "title": "Seleccionar el registro principal",
-            "note": "WHERE h.ID = 2. :granjaId es un parámetro."
-          },
-          {
-            "text": ".andWhere('p.kilos >= :minimo', { minimo })",
-            "title": "Aplicar el mínimo",
-            "note": "AND p.KILOS >= 221. El SQL filtra en PostgreSQL."
+            "text": "this.service.consultarGranja(Number(granjaId), Number(minimo))",
+            "title": "Dos números al Service",
+            "note": "El Service consulta las Entities y devuelve el resultado."
           }
         ],
-        "page": 4,
+        "page": 3,
         "exact": false,
-        "scene": "index"
+        "scene": "entry"
       },
       {
         "chapter": 5,
@@ -1342,7 +1330,8 @@
       "result": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
       "service": "crearCosechaService",
       "repo": "crearCosechaRepository",
-      "command": "PutItemCommand"
+      "command": "PutItemCommand",
+      "nestMethod": "crearCosecha"
     },
     {
       "ch": 2,
@@ -1356,7 +1345,8 @@
       "result": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
       "service": "eliminarCosechaService",
       "repo": "eliminarCosechaRepository",
-      "command": "DeleteItemCommand"
+      "command": "DeleteItemCommand",
+      "nestMethod": "eliminarCosecha"
     },
     {
       "ch": 3,
@@ -1370,7 +1360,8 @@
       "result": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
       "service": "modificarKilosService",
       "repo": "modificarKilosRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "modificarKilos"
     },
     {
       "ch": 4,
@@ -1384,7 +1375,8 @@
       "result": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
       "service": "trasladarCosechaService",
       "repo": "trasladarCosechaRepository",
-      "command": "UpdateItemCommand"
+      "command": "UpdateItemCommand",
+      "nestMethod": "cambiarGranja"
     },
     {
       "ch": 5,
@@ -1398,7 +1390,8 @@
       "result": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
       "service": "consultarGranjaService",
       "repo": "consultarGranjaRepository",
-      "command": "QueryCommand"
+      "command": "QueryCommand",
+      "nestMethod": "consultarGranja"
     }
   ],
   "context": {
@@ -1597,5 +1590,44 @@
     "cloud:16",
     "cloud:20",
     "cloud:24"
-  ]
+  ],
+  "originalSource": {
+    "kind": "pdf",
+    "label": "Ficha CH-29",
+    "sha256": "47aedccab4ab3e93a0f170b2b6552af8534a01ede4f32dc3e5aa91b8bdeb196f",
+    "pages": 4
+  },
+  "nestSimpleRevision": 1,
+  "legacyNestChapters": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5
+  ],
+  "nestSimpleFiles": {
+    "service": "src/cosechas/cosechas.service.ts",
+    "controller": "src/cosechas/cosechas.controller.ts"
+  }
 }

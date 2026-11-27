@@ -63,38 +63,6 @@
         "create": null
       },
       {
-        "id": "nosql",
-        "chapter": 0,
-        "title": "La misma relación en DynamoDB",
-        "kind": "mapping",
-        "code": "ASIGNACIONES (PUBLICACION_ID, AUTOR_ID, ROL)",
-        "path": "",
-        "note": "",
-        "expect": "ASIGNACIONES agrupa por PUBLICACION_ID. PorAutor agrupa por AUTOR_ID; ambos conservan las mismas parejas.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "PUBLICACION_ID",
-            "start": 14,
-            "end": 28,
-            "note": "Primera parte de la PK: identifica la publicacion."
-          },
-          {
-            "token": "AUTOR_ID",
-            "start": 30,
-            "end": 38,
-            "note": "Segunda parte de la PK: identifica al autor dentro de la publicacion."
-          },
-          {
-            "token": "ROL",
-            "start": 40,
-            "end": 43,
-            "note": "Dato del vínculo, no del autor."
-          }
-        ],
-        "create": null
-      },
-      {
         "id": "retomar",
         "chapter": 1,
         "title": "Retoma tu proyecto 1:N",
@@ -128,195 +96,144 @@
       {
         "id": "autor",
         "chapter": 1,
-        "title": "Crea Autor",
+        "title": "Crear Autor Entity completa",
         "kind": "model",
-        "code": "import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';\n\n@Entity({ name: 'AUTOR' })\nexport class Autor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n}\n",
+        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'AUTOR' })\nexport class Autor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.autor)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/autores/entities/autor.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una publicacion, un autor y un ROL; se conserva Publicacion.editorial.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Autor, Publicacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Editorial ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'NOMBRE'",
-            "start": 191,
-            "end": 199,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@Entity({ name: 'AUTOR' })",
+            "start": 154,
+            "end": 180,
+            "note": "Esta clase representa la tabla AUTOR."
           },
           {
-            "token": "'APELLIDOS'",
-            "start": 271,
-            "end": 282,
-            "note": "Apellido del autor."
+            "token": "@PrimaryGeneratedColumn({ name: 'ID' })",
+            "start": 204,
+            "end": 243,
+            "note": "ID es la clave primaria. PostgreSQL genera su valor al guardar un autor."
           },
           {
-            "token": "'EMAIL'",
-            "start": 357,
-            "end": 364,
-            "note": "Correo del autor."
+            "token": "@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",
+            "start": 262,
+            "end": 319,
+            "note": "nombre se guarda en NOMBRE como texto de hasta 120 caracteres."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 25,
-            "end": 47,
-            "note": "PostgreSQL genera el ID del nuevo autor."
+            "token": "@Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })",
+            "start": 342,
+            "end": 402,
+            "note": "apellidos se guarda en otra columna de texto."
+          },
+          {
+            "token": "@Column({ name: 'EMAIL', type: 'varchar', length: 180 })",
+            "start": 428,
+            "end": 484,
+            "note": "email se guarda como texto en EMAIL."
+          },
+          {
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.autor)",
+            "start": 506,
+            "end": 566,
+            "note": "Un autor tiene varias asignaciones. Cada asignación apunta a su autor."
           }
         ],
         "create": "mkdir -p src/autores/entities\nls -d src/autores/entities\ntouch src/autores/entities/autor.entity.ts\ncode src/autores/entities/autor.entity.ts"
-      },
-      {
-        "id": "asignacion",
-        "chapter": 1,
-        "title": "Crea Asignacion y su clave compuesta",
-        "kind": "model",
-        "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Publicacion } from '../../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../../autores/entities/autor.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_PUBLICACION', type: 'integer' })\n  publicacionId!: number;\n\n  @PrimaryColumn({ name: 'ID_AUTOR', type: 'integer' })\n  autorId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Publicacion, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_PUBLICACION' })\n  publicacion!: Publicacion;\n\n  @ManyToOne(() => Autor, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_AUTOR' })\n  autor!: Autor;\n}\n",
-        "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una publicacion, un autor y un ROL; se conserva Publicacion.editorial.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'ID_PUBLICACION'",
-            "start": 304,
-            "end": 320,
-            "note": "Nombre de la columna SQL que referencia PUBLICACION."
-          },
-          {
-            "token": "'ID_AUTOR'",
-            "start": 393,
-            "end": 403,
-            "note": "Nombre de la columna SQL que referencia AUTOR."
-          },
-          {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
-          },
-          {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una publicacion y a un autor."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
       },
       {
         "id": "publicacion-inversa",
         "chapter": 1,
-        "title": "Conecta Publicacion con sus asignaciones",
+        "title": "Ampliar Publicacion Entity existente",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Editorial } from '../../editoriales/entities/editorial.entity';\n\n@Entity({ name: 'PUBLICACION' })\nexport class Publicacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PAGINAS', type: 'integer' })\n  paginas!: number;\n\n  @ManyToOne(() => Editorial, editorial => editorial.publicaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_EDITORIAL' })\n  editorial!: Editorial;\n  @OneToMany(() => Asignacion, asignacion => asignacion.publicacion)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/publicaciones/entities/publicacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una publicacion, un autor y un ROL; se conserva Publicacion.editorial.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Autor, Publicacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Editorial ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "ManyToOne",
-            "start": 50,
-            "end": 59,
-            "note": "Cada asignación pertenece a una publicacion y a un autor."
+            "token": "@Entity({ name: 'PUBLICACION' })",
+            "start": 252,
+            "end": 284,
+            "note": "Conserva la tabla PUBLICACION y todos sus campos del proyecto 1:N."
           },
           {
-            "token": "'NOMBRE'",
-            "start": 388,
-            "end": 396,
-            "note": "Nombre y apellidos se guardan por separado."
+            "token": "@ManyToOne(() => Editorial, editorial => editorial.publicaciones, {",
+            "start": 521,
+            "end": 588,
+            "note": "La relación anterior se conserva: cada publicacion pertenece a una editorial."
           },
           {
-            "token": "OneToMany",
-            "start": 27,
-            "end": 36,
-            "note": "Colección de vínculos asociados a este registro."
+            "token": "@JoinColumn({ name: 'ID_EDITORIAL' })",
+            "start": 616,
+            "end": 653,
+            "note": "ID_EDITORIAL sigue siendo la clave foránea hacia EDITORIAL."
           },
           {
-            "token": "PrimaryGeneratedColumn",
-            "start": 61,
-            "end": 83,
-            "note": "PostgreSQL genera el ID del nuevo autor."
+            "token": "@OneToMany(() => Asignacion, asignacion => asignacion.publicacion)",
+            "start": 681,
+            "end": 747,
+            "note": "Añade la colección de asignaciones de esta publicacion. La pareja de IDs se guarda en ASIGNACION."
+          },
+          {
+            "token": "asignaciones!: Asignacion[];",
+            "start": 750,
+            "end": 778,
+            "note": "Los corchetes indican una colección. TypeORM puede relacionar la publicacion con varias asignaciones."
           }
         ],
-        "create": "mkdir -p src/publicaciones/entities\nls -d src/publicaciones/entities\ntouch src/publicaciones/entities/publicacion.entity.ts\ncode src/publicaciones/entities/publicacion.entity.ts"
-      },
-      {
-        "id": "prof-inversa",
-        "chapter": 1,
-        "title": "Conecta Autor con sus asignaciones",
-        "kind": "model",
-        "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'AUTOR' })\nexport class Autor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.autor)\n  asignaciones!: Asignacion[];\n}\n",
-        "path": "src/autores/entities/autor.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una publicacion, un autor y un ROL; se conserva Publicacion.editorial.",
-        "focus": "model",
-        "cues": [
-          {
-            "token": "'NOMBRE'",
-            "start": 278,
-            "end": 286,
-            "note": "Nombre y apellidos se guardan por separado."
-          },
-          {
-            "token": "'APELLIDOS'",
-            "start": 358,
-            "end": 369,
-            "note": "Apellido del autor."
-          },
-          {
-            "token": "'EMAIL'",
-            "start": 444,
-            "end": 451,
-            "note": "Correo del autor."
-          },
-          {
-            "token": "OneToMany",
-            "start": 25,
-            "end": 34,
-            "note": "Colección de vínculos asociados a este registro."
-          },
-          {
-            "token": "PrimaryGeneratedColumn",
-            "start": 36,
-            "end": 58,
-            "note": "PostgreSQL genera el ID del nuevo autor."
-          }
-        ],
-        "create": "mkdir -p src/autores/entities\nls -d src/autores/entities\ntouch src/autores/entities/autor.entity.ts\ncode src/autores/entities/autor.entity.ts"
+        "create": "code src/publicaciones/entities/publicacion.entity.ts",
+        "updateExisting": true
       },
       {
         "id": "asig-inversas",
         "chapter": 1,
-        "title": "Completa ambos extremos de Asignacion",
+        "title": "Crear Asignacion Entity completa",
         "kind": "model",
         "code": "import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';\nimport { Publicacion } from '../../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../../autores/entities/autor.entity';\n\n@Entity({ name: 'ASIGNACION' })\nexport class Asignacion {\n  @PrimaryColumn({ name: 'ID_PUBLICACION', type: 'integer' })\n  publicacionId!: number;\n\n  @PrimaryColumn({ name: 'ID_AUTOR', type: 'integer' })\n  autorId!: number;\n\n  @Column({ name: 'ROL', type: 'varchar', length: 120 })\n  rol!: string;\n\n  @ManyToOne(() => Publicacion, publicacion => publicacion.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_PUBLICACION' })\n  publicacion!: Publicacion;\n\n  @ManyToOne(() => Autor, autor => autor.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_AUTOR' })\n  autor!: Autor;\n}\n",
         "path": "src/asignaciones/entities/asignacion.entity.ts",
-        "note": "Copia el archivo completo. Las inversas se añaden cuando ya existe Asignacion. Compila cuando hayas terminado de registrar los modelos.",
-        "expect": "Cada asignación tiene una publicacion, un autor y un ROL; se conserva Publicacion.editorial.",
+        "note": "Prepara estos tres archivos completos antes de compilar: Autor, Publicacion y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Editorial ya está preparado en el 1:N.",
+        "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
           {
-            "token": "'ID_PUBLICACION'",
-            "start": 304,
-            "end": 320,
-            "note": "Nombre de la columna SQL que referencia PUBLICACION."
+            "token": "@Entity({ name: 'ASIGNACION' })",
+            "start": 221,
+            "end": 252,
+            "note": "La tabla intermedia guarda qué autor participa en qué publicacion y con qué rol."
           },
           {
-            "token": "'ID_AUTOR'",
-            "start": 393,
-            "end": 403,
-            "note": "Nombre de la columna SQL que referencia AUTOR."
+            "token": "@PrimaryColumn({ name: 'ID_PUBLICACION', type: 'integer' })",
+            "start": 281,
+            "end": 340,
+            "note": "Primer componente de la clave primaria: el ID de la publicacion. Este valor llega de la petición; no se genera automáticamente."
           },
           {
-            "token": "PrimaryColumn",
-            "start": 48,
-            "end": 61,
-            "note": "Ambas PrimaryColumn forman una sola clave primaria compuesta."
+            "token": "@PrimaryColumn({ name: 'ID_AUTOR', type: 'integer' })",
+            "start": 370,
+            "end": 423,
+            "note": "Segundo componente. Los dos IDs juntos identifican una única asignación; cada ID por separado puede repetirse."
           },
           {
-            "token": "ManyToOne",
-            "start": 37,
-            "end": 46,
-            "note": "Cada asignación pertenece a una publicacion y a un autor."
+            "token": "@Column({ name: 'ROL', type: 'varchar', length: 120 })",
+            "start": 447,
+            "end": 501,
+            "note": "ROL pertenece al vínculo: una persona puede tener roles distintos en publicaciones distintas."
+          },
+          {
+            "token": "@ManyToOne(() => Publicacion, publicacion => publicacion.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_PUBLICACION' })",
+            "start": 521,
+            "end": 659,
+            "note": "Cada asignación apunta a una publicacion mediante ID_PUBLICACION. RESTRICT impide borrar esa publicacion mientras tenga asignaciones."
+          },
+          {
+            "token": "@ManyToOne(() => Autor, autor => autor.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_AUTOR' })",
+            "start": 692,
+            "end": 806,
+            "note": "La misma fila apunta también al autor mediante ID_AUTOR. Así se unen ambos extremos."
           }
         ],
         "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
@@ -326,41 +243,17 @@
         "chapter": 1,
         "title": "Registra las cuatro Entities",
         "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { PublicacionesService } from './publicaciones/publicaciones.service';\nimport { PublicacionesController } from './publicaciones/publicaciones.controller';\nimport { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [PublicacionesController],\n  providers: [PublicacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Conserva PublicacionesController y PublicacionesService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.",
         "expect": "El módulo conserva todos los casos 1:N. Solo añade las nuevas Entities; aún no importa casos N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
-          },
-          {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1585,
-            "end": 1595,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1645,
-            "end": 1656,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 1784,
-            "end": 1793,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])",
+            "start": 548,
+            "end": 617,
+            "note": "Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -436,105 +329,99 @@
         "create": null
       },
       {
-        "id": "crear-listar-repository",
-        "chapter": 3,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Autor } from '../entities/autor.entity';\n\n@Injectable()\nexport class AutoresRepository {\n  constructor(\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutorRepository(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutoresRepository() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n}\n",
-        "path": "src/autores/crear-listar/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los autores iniciales y a Lucía; no crea asignaciones.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "find",
-            "start": 569,
-            "end": 573,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/autores/crear-listar\nls -d src/autores/crear-listar\ntouch src/autores/crear-listar/repository.ts\ncode src/autores/crear-listar/repository.ts"
-      },
-      {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Conecta el Service",
+        "title": "Crear AutoresService",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { AutoresRepository } from './repository';\n\n@Injectable()\nexport class AutoresService {\n  constructor(private readonly repository: AutoresRepository) {}\n\n  crearAutorService(nombre: string, apellidos: string, email: string) {\n    return this.repository.crearAutorRepository(nombre, apellidos, email);\n  }\n\n  listarAutoresService() {\n    return this.repository.listarAutoresRepository();\n  }\n}\n",
-        "path": "src/autores/crear-listar/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Autor } from './entities/autor.entity';\n\n@Injectable()\nexport class AutoresService {\n  constructor(\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/autores/autores.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los autores iniciales y a Lucía; no crea asignaciones.",
         "focus": "service",
         "cues": [
           {
-            "token": "return",
-            "start": 282,
-            "end": 288,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.autores.create({ nombre, apellidos, email })",
+            "start": 408,
+            "end": 457,
+            "note": "Prepara el perfil sin guardarlo todavía."
+          },
+          {
+            "token": "this.autores.save(autor)",
+            "start": 470,
+            "end": 494,
+            "note": "Guarda la Entity y devuelve su ID generado."
+          },
+          {
+            "token": "this.autores.find({ order: { id: 'ASC' } })",
+            "start": 532,
+            "end": 575,
+            "note": "Lista el catálogo usando la misma Entity."
           }
         ],
-        "create": "mkdir -p src/autores/crear-listar\nls -d src/autores/crear-listar\ntouch src/autores/crear-listar/service.ts\ncode src/autores/crear-listar/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/autores\ntouch src/autores/autores.service.ts\ncode src/autores/autores.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear AutoresController",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AutoresService } from './service';\n\n@Controller('autores')\nexport class AutoresController {\n  constructor(private readonly service: AutoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutorService(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAutoresService();\n  }\n}\n",
-        "path": "src/autores/crear-listar/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AutoresService } from './autores.service';\n\n@Controller('autores')\nexport class AutoresController {\n  constructor(private readonly service: AutoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAutores();\n  }\n}",
+        "path": "src/autores/autores.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los autores iniciales y a Lucía; no crea asignaciones.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Body",
-            "start": 241,
-            "end": 246,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
+            "token": "@Controller('autores')",
+            "start": 115,
+            "end": 137,
+            "note": "Agrupa las rutas del catálogo de autores."
+          },
+          {
+            "token": "@Post()",
+            "start": 233,
+            "end": 240,
+            "note": "POST crea un perfil con nombre, apellidos y correo."
+          },
+          {
+            "token": "this.service.crearAutor(datos.nombre, datos.apellidos, datos.email)",
+            "start": 331,
+            "end": 398,
+            "note": "Entrega los tres valores al Service."
+          },
+          {
+            "token": "@Get()",
+            "start": 407,
+            "end": 413,
+            "note": "GET utiliza listarAutores en ese mismo Service."
           }
         ],
-        "create": "mkdir -p src/autores/crear-listar\nls -d src/autores/crear-listar\ntouch src/autores/crear-listar/controller.ts\ncode src/autores/crear-listar/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/autores\ntouch src/autores/autores.controller.ts\ncode src/autores/autores.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Autores una sola vez",
         "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { PublicacionesService } from './publicaciones/publicaciones.service';\nimport { PublicacionesController } from './publicaciones/publicaciones.controller';\nimport { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresService } from './autores/autores.service';\nimport { AutoresController } from './autores/autores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [PublicacionesController, AutoresController],\n  providers: [PublicacionesService, AutoresService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
+            "token": "controllers: [",
+            "start": 748,
+            "end": 762,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1792,
-            "end": 1802,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1852,
-            "end": 1863,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2010,
-            "end": 2019,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 809,
+            "end": 821,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -579,171 +466,93 @@
         "create": null
       },
       {
-        "id": "asignar-autor-repository",
-        "chapter": 4,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\nimport { Publicacion } from '../../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignarAutorRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  buscarPublicacionRepository(publicacionId: number) {\n    return this.publicaciones.findOneBy({ id: publicacionId });\n  }\n\n  buscarAutorRepository(autorId: number) {\n    return this.autores.findOneBy({ id: autorId });\n  }\n\n  async asignarAutorRepository(publicacionId: number, autorId: number, rol: string) {\n    const asignacion = { publicacionId, autorId, rol };\n    await this.asignaciones.insert(asignacion);\n    return asignacion;\n  }\n}\n",
-        "path": "src/asignaciones/asignar-autor/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "publicacionId",
-            "start": 695,
-            "end": 708,
-            "note": "Identifica la publicacion de la asociación."
-          },
-          {
-            "token": "autorId",
-            "start": 813,
-            "end": 820,
-            "note": "Identifica al autor. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 960,
-            "end": 963,
-            "note": "Es un dato del vínculo; puede cambiar según la publicacion."
-          },
-          {
-            "token": "insert",
-            "start": 1059,
-            "end": 1065,
-            "note": "INSERT rechaza una pareja cuya PK compuesta ya existe."
-          },
-          {
-            "token": "find",
-            "start": 750,
-            "end": 754,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/asignar-autor\nls -d src/asignaciones/asignar-autor\ntouch src/asignaciones/asignar-autor/repository.ts\ncode src/asignaciones/asignar-autor/repository.ts"
-      },
-      {
         "id": "asignar-autor-service",
         "chapter": 4,
-        "title": "Conecta el Service",
+        "title": "Crear AsignacionesService",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { QueryFailedError } from 'typeorm';\nimport { AsignarAutorRepository } from './repository';\n\n@Injectable()\nexport class AsignarAutorService {\n  constructor(private readonly repository: AsignarAutorRepository) {}\n\n  async asignarAutorService(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.repository.buscarPublicacionRepository(publicacionId);\n    const autor = await this.repository.buscarAutorRepository(autorId);\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n\n    try {\n      return await this.repository.asignarAutorRepository(publicacionId, autorId, rol);\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n}\n",
-        "path": "src/asignaciones/asignar-autor/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
-            "token": "publicacionId",
-            "start": 331,
-            "end": 344,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async asignarAutor(publicacionId: number, autorId: number, rol: string)",
+            "start": 713,
+            "end": 784,
+            "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
-            "token": "autorId",
-            "start": 354,
-            "end": 361,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.publicaciones.findOneBy({ id: publicacionId })",
+            "start": 817,
+            "end": 868,
+            "note": "Lee la publicacion con el repositorio de TypeORM."
           },
           {
-            "token": "await",
-            "start": 410,
-            "end": 415,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.autores.findOneBy({ id: autorId })",
+            "start": 894,
+            "end": 933,
+            "note": "Lee el autor antes de asociarlo."
           },
           {
-            "token": "return",
-            "start": 679,
-            "end": 685,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 371,
-            "end": 374,
-            "note": "El mismo autor puede tener otro rol en otra publicacion."
+            "token": "this.asignaciones.insert(asignacion)",
+            "start": 1127,
+            "end": 1163,
+            "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-autor\nls -d src/asignaciones/asignar-autor\ntouch src/asignaciones/asignar-autor/service.ts\ncode src/asignaciones/asignar-autor/service.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-autor-entry",
         "chapter": 4,
-        "title": "Recibe la petición en Controller",
+        "title": "Crear AsignacionesController",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignarAutorService } from './service';\n\n@Controller('publicaciones/:publicacionId/asignaciones')\nexport class AsignarAutorController {\n  constructor(private readonly service: AsignarAutorService) {}\n\n  @Post()\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutorService(Number(publicacionId), datos.autorId, datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/asignar-autor/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 294,
-            "end": 300,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Post('publicaciones/:publicacionId/asignaciones')",
+            "start": 246,
+            "end": 296,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 341,
-            "end": 346,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "publicacionId",
-            "start": 142,
-            "end": 155,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "autorId",
-            "start": 358,
-            "end": 365,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol)",
+            "start": 416,
+            "end": 490,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-autor\nls -d src/asignaciones/asignar-autor\ntouch src/asignaciones/asignar-autor/controller.ts\ncode src/asignaciones/asignar-autor/controller.ts"
+        "updateExisting": false,
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-autor-registro",
         "chapter": 4,
-        "title": "Registra el caso y conserva los anteriores",
+        "title": "Registrar Asignaciones una sola vez",
         "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { AsignarAutorRepository } from './asignaciones/asignar-autor/repository';\nimport { AsignarAutorService } from './asignaciones/asignar-autor/service';\nimport { AsignarAutorController } from './asignaciones/asignar-autor/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, AsignarAutorController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, AsignarAutorRepository, AsignarAutorService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { PublicacionesService } from './publicaciones/publicaciones.service';\nimport { PublicacionesController } from './publicaciones/publicaciones.controller';\nimport { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresService } from './autores/autores.service';\nimport { AutoresController } from './autores/autores.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [PublicacionesController, AutoresController, AsignacionesController],\n  providers: [PublicacionesService, AutoresService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
+            "token": "controllers: [",
+            "start": 904,
+            "end": 918,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2032,
-            "end": 2042,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2092,
-            "end": 2103,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2274,
-            "end": 2283,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 989,
+            "end": 1001,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -788,132 +597,58 @@
         "create": null
       },
       {
-        "id": "listar-por-publicacion-repository",
-        "chapter": 5,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorPublicacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorPublicacionRepository(publicacionId: number) {\n    return this.asignaciones.find({\n      where: { publicacionId },\n      order: { autorId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-publicacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "La publicacion 7 devuelve (7,1,Redacción) y (7,2,Revisión): dos autores para una publicacion.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "publicacionId",
-            "start": 412,
-            "end": 425,
-            "note": "Identifica la publicacion de la asociación."
-          },
-          {
-            "token": "autorId",
-            "start": 520,
-            "end": 527,
-            "note": "Identifica al autor. El par completo identifica la asignación."
-          },
-          {
-            "token": "find",
-            "start": 466,
-            "end": 470,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-publicacion\nls -d src/asignaciones/listar-por-publicacion\ntouch src/asignaciones/listar-por-publicacion/repository.ts\ncode src/asignaciones/listar-por-publicacion/repository.ts"
-      },
-      {
         "id": "listar-por-publicacion-service",
         "chapter": 5,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorPublicacion al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorPublicacionRepository } from './repository';\n\n@Injectable()\nexport class ListarPorPublicacionService {\n  constructor(private readonly repository: ListarPorPublicacionRepository) {}\n\n  listarAsignacionesPorPublicacionService(publicacionId: number) {\n    return this.repository.listarAsignacionesPorPublicacionRepository(publicacionId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-publicacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La publicacion 7 devuelve (7,1,Redacción) y (7,2,Revisión): dos autores para una publicacion.",
         "focus": "service",
         "cues": [
           {
-            "token": "publicacionId",
-            "start": 287,
-            "end": 300,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "listarPorPublicacion(publicacionId: number)",
+            "start": 1421,
+            "end": 1464,
+            "note": "Recibe un ID de publicacion."
           },
           {
-            "token": "return",
-            "start": 316,
-            "end": 322,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } })",
+            "start": 1478,
+            "end": 1557,
+            "note": "Filtra las asignaciones por publicacion y ordena por autor."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-publicacion\nls -d src/asignaciones/listar-por-publicacion\ntouch src/asignaciones/listar-por-publicacion/service.ts\ncode src/asignaciones/listar-por-publicacion/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-publicacion-entry",
         "chapter": 5,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorPublicacion al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorPublicacionService } from './service';\n\n@Controller('publicaciones/:publicacionId/asignaciones')\nexport class ListarPorPublicacionController {\n  constructor(private readonly service: ListarPorPublicacionService) {}\n\n  @Get()\n  listar(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarAsignacionesPorPublicacionService(Number(publicacionId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-publicacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "La publicacion 7 devuelve (7,1,Redacción) y (7,2,Revisión): dos autores para una publicacion.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 309,
-            "end": 315,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('publicaciones/:publicacionId/asignaciones')",
+            "start": 504,
+            "end": 553,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "publicacionId",
-            "start": 143,
-            "end": 156,
-            "note": "Primera parte de la clave compuesta."
+            "token": "this.service.listarPorPublicacion(Number(publicacionId))",
+            "start": 637,
+            "end": 693,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-publicacion\nls -d src/asignaciones/listar-por-publicacion\ntouch src/asignaciones/listar-por-publicacion/controller.ts\ncode src/asignaciones/listar-por-publicacion/controller.ts"
-      },
-      {
-        "id": "listar-por-publicacion-registro",
-        "chapter": 5,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { AsignarAutorRepository } from './asignaciones/asignar-autor/repository';\nimport { AsignarAutorService } from './asignaciones/asignar-autor/service';\nimport { AsignarAutorController } from './asignaciones/asignar-autor/controller';\nimport { ListarPorPublicacionRepository } from './asignaciones/listar-por-publicacion/repository';\nimport { ListarPorPublicacionService } from './asignaciones/listar-por-publicacion/service';\nimport { ListarPorPublicacionController } from './asignaciones/listar-por-publicacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, AsignarAutorController, ListarPorPublicacionController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, AsignarAutorRepository, AsignarAutorService, ListarPorPublicacionRepository, ListarPorPublicacionService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
-          },
-          {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2323,
-            "end": 2333,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2383,
-            "end": 2394,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2597,
-            "end": 2606,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-publicacion-ejecutar",
@@ -949,138 +684,58 @@
         "create": null
       },
       {
-        "id": "listar-por-autor-repository",
-        "chapter": 6,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorAutorRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorAutorRepository(autorId: number) {\n    return this.asignaciones.find({\n      where: { autorId },\n      order: { publicacionId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-autor/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "El autor 1 devuelve las publicaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "publicacionId",
-            "start": 496,
-            "end": 509,
-            "note": "Identifica la publicacion de la asociación."
-          },
-          {
-            "token": "autorId",
-            "start": 400,
-            "end": 407,
-            "note": "Identifica al autor. El par completo identifica la asignación."
-          },
-          {
-            "token": "PorAutor",
-            "start": 229,
-            "end": 237,
-            "note": "Usa la segunda organización de los mismos vínculos."
-          },
-          {
-            "token": "find",
-            "start": 448,
-            "end": 452,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-autor\nls -d src/asignaciones/listar-por-autor\ntouch src/asignaciones/listar-por-autor/repository.ts\ncode src/asignaciones/listar-por-autor/repository.ts"
-      },
-      {
         "id": "listar-por-autor-service",
         "chapter": 6,
-        "title": "Conecta el Service",
+        "title": "Añadir listarPorAutor al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorAutorRepository } from './repository';\n\n@Injectable()\nexport class ListarPorAutorService {\n  constructor(private readonly repository: ListarPorAutorRepository) {}\n\n  listarAsignacionesPorAutorService(autorId: number) {\n    return this.repository.listarAsignacionesPorAutorRepository(autorId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-autor/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El autor 1 devuelve las publicaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "service",
         "cues": [
           {
-            "token": "autorId",
-            "start": 263,
-            "end": 270,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "listarPorAutor(autorId: number)",
+            "start": 1566,
+            "end": 1597,
+            "note": "Recibe un ID de autor."
           },
           {
-            "token": "return",
-            "start": 286,
-            "end": 292,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } })",
+            "start": 1611,
+            "end": 1690,
+            "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-autor\nls -d src/asignaciones/listar-por-autor\ntouch src/asignaciones/listar-por-autor/service.ts\ncode src/asignaciones/listar-por-autor/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-autor-entry",
         "chapter": 6,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir listarPorAutor al Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorAutorService } from './service';\n\n@Controller('autores/:autorId/asignaciones')\nexport class ListarPorAutorController {\n  constructor(private readonly service: ListarPorAutorService) {}\n\n  @Get()\n  listar(@Param('autorId') autorId: string) {\n    return this.service.listarAsignacionesPorAutorService(Number(autorId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-autor/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "El autor 1 devuelve las publicaciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 279,
-            "end": 285,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('autores/:autorId/asignaciones')",
+            "start": 702,
+            "end": 739,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "autorId",
-            "start": 131,
-            "end": 138,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.listarPorAutor(Number(autorId))",
+            "start": 805,
+            "end": 849,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-autor\nls -d src/asignaciones/listar-por-autor\ntouch src/asignaciones/listar-por-autor/controller.ts\ncode src/asignaciones/listar-por-autor/controller.ts"
-      },
-      {
-        "id": "listar-por-autor-registro",
-        "chapter": 6,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { AsignarAutorRepository } from './asignaciones/asignar-autor/repository';\nimport { AsignarAutorService } from './asignaciones/asignar-autor/service';\nimport { AsignarAutorController } from './asignaciones/asignar-autor/controller';\nimport { ListarPorPublicacionRepository } from './asignaciones/listar-por-publicacion/repository';\nimport { ListarPorPublicacionService } from './asignaciones/listar-por-publicacion/service';\nimport { ListarPorPublicacionController } from './asignaciones/listar-por-publicacion/controller';\nimport { ListarPorAutorRepository } from './asignaciones/listar-por-autor/repository';\nimport { ListarPorAutorService } from './asignaciones/listar-por-autor/service';\nimport { ListarPorAutorController } from './asignaciones/listar-por-autor/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, AsignarAutorController, ListarPorPublicacionController, ListarPorAutorController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, AsignarAutorRepository, AsignarAutorService, ListarPorPublicacionRepository, ListarPorPublicacionService, ListarPorAutorRepository, ListarPorAutorService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
-          },
-          {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2578,
-            "end": 2588,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2638,
-            "end": 2649,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2878,
-            "end": 2887,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-autor-ejecutar",
@@ -1116,168 +771,64 @@
         "create": null
       },
       {
-        "id": "modificar-rol-repository",
-        "chapter": 7,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ModificarRolRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  async modificarRolRepository(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    return resultado.affected;\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".update(",
-            "start": 490,
-            "end": 498,
-            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
-          },
-          {
-            "token": "publicacionId",
-            "start": 390,
-            "end": 403,
-            "note": "Identifica la publicacion de la asociación."
-          },
-          {
-            "token": "autorId",
-            "start": 413,
-            "end": 420,
-            "note": "Identifica al autor. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 430,
-            "end": 433,
-            "note": "Es un dato del vínculo; puede cambiar según la publicacion."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.ts\ncode src/asignaciones/modificar-rol/repository.ts"
-      },
-      {
         "id": "modificar-rol-service",
         "chapter": 7,
-        "title": "Conecta el Service",
+        "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { Injectable, NotFoundException } from '@nestjs/common';\nimport { ModificarRolRepository } from './repository';\n\n@Injectable()\nexport class ModificarRolService {\n  constructor(private readonly repository: ModificarRolRepository) {}\n\n  async modificarRolService(publicacionId: number, autorId: number, rol: string) {\n    const modificadas = await this.repository.modificarRolRepository(publicacionId, autorId, rol);\n    if (!modificadas) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
-            "token": "publicacionId",
-            "start": 268,
-            "end": 281,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async modificarRol(publicacionId: number, autorId: number, rol: string)",
+            "start": 1699,
+            "end": 1770,
+            "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
-            "token": "autorId",
-            "start": 291,
-            "end": 298,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.asignaciones.update({ publicacionId, autorId }, { rol })",
+            "start": 1801,
+            "end": 1862,
+            "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
-            "token": "await",
-            "start": 347,
-            "end": 352,
-            "note": "Espera el resultado antes de seguir o devolverlo."
-          },
-          {
-            "token": "return",
-            "start": 504,
-            "end": 510,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 308,
-            "end": 311,
-            "note": "El mismo autor puede tener otro rol en otra publicacion."
+            "token": "if (!resultado.affected)",
+            "start": 1868,
+            "end": 1892,
+            "note": "Si no había esa pareja, devuelve 404."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/service.ts\ncode src/asignaciones/modificar-rol/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "modificar-rol-entry",
         "chapter": 7,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Patch } from '@nestjs/common';\nimport { ModificarRolService } from './service';\n\n@Controller('publicaciones/:publicacionId/asignaciones/:autorId')\nexport class ModificarRolController {\n  constructor(private readonly service: ModificarRolService) {}\n\n  @Patch()\n  modificar(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string, @Body() datos: { rol: string }) {\n    return this.service.modificarRolService(Number(publicacionId), Number(autorId), datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 307,
-            "end": 313,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Patch('publicaciones/:publicacionId/asignaciones/:autorId')",
+            "start": 865,
+            "end": 925,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 389,
-            "end": 394,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "publicacionId",
-            "start": 143,
-            "end": 156,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "autorId",
-            "start": 171,
-            "end": 178,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol)",
+            "start": 1072,
+            "end": 1148,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/controller.ts\ncode src/asignaciones/modificar-rol/controller.ts"
-      },
-      {
-        "id": "modificar-rol-registro",
-        "chapter": 7,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { AsignarAutorRepository } from './asignaciones/asignar-autor/repository';\nimport { AsignarAutorService } from './asignaciones/asignar-autor/service';\nimport { AsignarAutorController } from './asignaciones/asignar-autor/controller';\nimport { ListarPorPublicacionRepository } from './asignaciones/listar-por-publicacion/repository';\nimport { ListarPorPublicacionService } from './asignaciones/listar-por-publicacion/service';\nimport { ListarPorPublicacionController } from './asignaciones/listar-por-publicacion/controller';\nimport { ListarPorAutorRepository } from './asignaciones/listar-por-autor/repository';\nimport { ListarPorAutorService } from './asignaciones/listar-por-autor/service';\nimport { ListarPorAutorController } from './asignaciones/listar-por-autor/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, AsignarAutorController, ListarPorPublicacionController, ListarPorAutorController, ModificarRolController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, AsignarAutorRepository, AsignarAutorService, ListarPorPublicacionRepository, ListarPorPublicacionService, ListarPorAutorRepository, ListarPorAutorService, ModificarRolRepository, ModificarRolService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
-          },
-          {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2818,
-            "end": 2828,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2878,
-            "end": 2889,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3142,
-            "end": 3151,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -1319,144 +870,58 @@
         "create": null
       },
       {
-        "id": "eliminar-asignacion-repository",
-        "chapter": 8,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class EliminarAsignacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  eliminarAsignacionRepository(publicacionId: number, autorId: number) {\n    return this.asignaciones.delete({ publicacionId, autorId });\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las publicaciones y los autores.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".delete(",
-            "start": 466,
-            "end": 474,
-            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
-          },
-          {
-            "token": "publicacionId",
-            "start": 396,
-            "end": 409,
-            "note": "Identifica la publicacion de la asociación."
-          },
-          {
-            "token": "autorId",
-            "start": 419,
-            "end": 426,
-            "note": "Identifica al autor. El par completo identifica la asignación."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.ts\ncode src/asignaciones/eliminar-asignacion/repository.ts"
-      },
-      {
         "id": "eliminar-asignacion-service",
         "chapter": 8,
-        "title": "Conecta el Service",
+        "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarAsignacionRepository } from './repository';\n\n@Injectable()\nexport class EliminarAsignacionService {\n  constructor(private readonly repository: EliminarAsignacionRepository) {}\n\n  async eliminarAsignacionService(publicacionId: number, autorId: number) {\n    await this.repository.eliminarAsignacionRepository(publicacionId, autorId);\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n\n  async eliminarAsignacion(publicacionId: number, autorId: number) {\n    await this.asignaciones.delete({ publicacionId, autorId });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las publicaciones y los autores.",
         "focus": "service",
         "cues": [
           {
-            "token": "publicacionId",
-            "start": 273,
-            "end": 286,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async eliminarAsignacion(publicacionId: number, autorId: number)",
+            "start": 2000,
+            "end": 2064,
+            "note": "Ambos IDs identifican el vínculo."
           },
           {
-            "token": "autorId",
-            "start": 296,
-            "end": 303,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
-          },
-          {
-            "token": "await",
-            "start": 319,
-            "end": 324,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.asignaciones.delete({ publicacionId, autorId })",
+            "start": 2077,
+            "end": 2129,
+            "note": "Borra el vínculo; conserva Publicacion y Autor."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/service.ts\ncode src/asignaciones/eliminar-asignacion/service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "eliminar-asignacion-entry",
         "chapter": 8,
-        "title": "Recibe la petición en Controller",
+        "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Controller, Delete, HttpCode, Param } from '@nestjs/common';\nimport { EliminarAsignacionService } from './service';\n\n@Controller('publicaciones/:publicacionId/asignaciones/:autorId')\nexport class EliminarAsignacionController {\n  constructor(private readonly service: EliminarAsignacionService) {}\n\n  @Delete()\n  @HttpCode(204)\n  eliminar(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string) {\n    return this.service.eliminarAsignacionService(Number(publicacionId), Number(autorId));\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n\n  @Delete('publicaciones/:publicacionId/asignaciones/:autorId')\n  @HttpCode(204)\n  eliminar(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string) {\n    return this.service.eliminarAsignacion(Number(publicacionId), Number(autorId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las publicaciones y los autores.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 347,
-            "end": 353,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Delete('publicaciones/:publicacionId/asignaciones/:autorId')",
+            "start": 1175,
+            "end": 1236,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "publicacionId",
-            "start": 154,
-            "end": 167,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "autorId",
-            "start": 182,
-            "end": 189,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.eliminarAsignacion(Number(publicacionId), Number(autorId))",
+            "start": 1360,
+            "end": 1431,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/controller.ts\ncode src/asignaciones/eliminar-asignacion/controller.ts"
-      },
-      {
-        "id": "eliminar-asignacion-registro",
-        "chapter": 8,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Autor } from './autores/entities/autor.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { AutoresRepository } from './autores/crear-listar/repository';\nimport { AutoresService } from './autores/crear-listar/service';\nimport { AutoresController } from './autores/crear-listar/controller';\nimport { AsignarAutorRepository } from './asignaciones/asignar-autor/repository';\nimport { AsignarAutorService } from './asignaciones/asignar-autor/service';\nimport { AsignarAutorController } from './asignaciones/asignar-autor/controller';\nimport { ListarPorPublicacionRepository } from './asignaciones/listar-por-publicacion/repository';\nimport { ListarPorPublicacionService } from './asignaciones/listar-por-publicacion/service';\nimport { ListarPorPublicacionController } from './asignaciones/listar-por-publicacion/controller';\nimport { ListarPorAutorRepository } from './asignaciones/listar-por-autor/repository';\nimport { ListarPorAutorService } from './asignaciones/listar-por-autor/service';\nimport { ListarPorAutorController } from './asignaciones/listar-por-autor/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { EliminarAsignacionRepository } from './asignaciones/eliminar-asignacion/repository';\nimport { EliminarAsignacionService } from './asignaciones/eliminar-asignacion/service';\nimport { EliminarAsignacionController } from './asignaciones/eliminar-asignacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Editorial } from './editoriales/entities/editorial.entity';\nimport { Publicacion } from './publicaciones/entities/publicacion.entity';\nimport { CrearListarController } from './publicaciones/crear-listar/controller';\nimport { CrearListarService } from './publicaciones/crear-listar/service';\nimport { CrearListarRepository } from './publicaciones/crear-listar/repository';\nimport { EliminarController } from './publicaciones/eliminar/controller';\nimport { EliminarService } from './publicaciones/eliminar/service';\nimport { EliminarRepository } from './publicaciones/eliminar/repository';\nimport { ModificarPaginasController } from './publicaciones/modificar-paginas/controller';\nimport { ModificarPaginasService } from './publicaciones/modificar-paginas/service';\nimport { ModificarPaginasRepository } from './publicaciones/modificar-paginas/repository';\nimport { TrasladarController } from './publicaciones/trasladar/controller';\nimport { TrasladarService } from './publicaciones/trasladar/service';\nimport { TrasladarRepository } from './publicaciones/trasladar/repository';\nimport { ConsultarEditorialController } from './editoriales/consultar/controller';\nimport { ConsultarEditorialService } from './editoriales/consultar/service';\nimport { ConsultarEditorialRepository } from './editoriales/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Editorial, Publicacion, Autor, Asignacion])],\n  controllers: [AutoresController, AsignarAutorController, ListarPorPublicacionController, ListarPorAutorController, ModificarRolController, EliminarAsignacionController, CrearListarController, EliminarController, ModificarPaginasController, TrasladarController, ConsultarEditorialController],\n  providers: [AutoresRepository, AutoresService, AsignarAutorRepository, AsignarAutorService, ListarPorPublicacionRepository, ListarPorPublicacionService, ListarPorAutorRepository, ListarPorAutorService, ModificarRolRepository, ModificarRolService, EliminarAsignacionRepository, EliminarAsignacionService, CrearListarService, EliminarService, ModificarPaginasService, TrasladarService, ConsultarEditorialService, CrearListarRepository, EliminarRepository, ModificarPaginasRepository, TrasladarRepository, ConsultarEditorialRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Autor",
-            "start": 9,
-            "end": 14,
-            "note": "Entidad del perfil del autor."
-          },
-          {
-            "token": "Asignacion",
-            "start": 66,
-            "end": 76,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 3094,
-            "end": 3104,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 3154,
-            "end": 3165,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3448,
-            "end": 3457,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3425,6 +2890,179 @@
       "editorialId": 2
     }
   },
+  "legacyNestIds": [
+    "situacion",
+    "logico",
+    "nosql",
+    "retomar",
+    "autor",
+    "asignacion",
+    "publicacion-inversa",
+    "prof-inversa",
+    "asig-inversas",
+    "registrar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-repository",
+    "crear-listar-service",
+    "crear-listar-entry",
+    "crear-listar-registro",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-autor-repository",
+    "asignar-autor-service",
+    "asignar-autor-entry",
+    "asignar-autor-registro",
+    "asignar-autor-ejecutar",
+    "asignar-autor-curl",
+    "listar-por-publicacion-repository",
+    "listar-por-publicacion-service",
+    "listar-por-publicacion-entry",
+    "listar-por-publicacion-registro",
+    "listar-por-publicacion-ejecutar",
+    "listar-por-publicacion-curl",
+    "listar-por-autor-repository",
+    "listar-por-autor-service",
+    "listar-por-autor-entry",
+    "listar-por-autor-registro",
+    "listar-por-autor-ejecutar",
+    "listar-por-autor-curl",
+    "modificar-rol-repository",
+    "modificar-rol-service",
+    "modificar-rol-entry",
+    "modificar-rol-registro",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-repository",
+    "eliminar-asignacion-service",
+    "eliminar-asignacion-entry",
+    "eliminar-asignacion-registro",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestSimpleRevision": 2,
+  "nestRetainedIds": [
+    "situacion",
+    "logico",
+    "retomar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-autor-ejecutar",
+    "asignar-autor-curl",
+    "listar-por-publicacion-ejecutar",
+    "listar-por-publicacion-curl",
+    "listar-por-autor-ejecutar",
+    "listar-por-autor-curl",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestPreviousIds": {
+    "0": [
+      "situacion",
+      "logico",
+      "nosql",
+      "retomar",
+      "autor",
+      "asignacion",
+      "publicacion-inversa",
+      "prof-inversa",
+      "asig-inversas",
+      "registrar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-repository",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-autor-repository",
+      "asignar-autor-service",
+      "asignar-autor-entry",
+      "asignar-autor-registro",
+      "asignar-autor-ejecutar",
+      "asignar-autor-curl",
+      "listar-por-publicacion-repository",
+      "listar-por-publicacion-service",
+      "listar-por-publicacion-entry",
+      "listar-por-publicacion-registro",
+      "listar-por-publicacion-ejecutar",
+      "listar-por-publicacion-curl",
+      "listar-por-autor-repository",
+      "listar-por-autor-service",
+      "listar-por-autor-entry",
+      "listar-por-autor-registro",
+      "listar-por-autor-ejecutar",
+      "listar-por-autor-curl",
+      "modificar-rol-repository",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-registro",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-repository",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-registro",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestRetainedByRevision": {
+    "0": [
+      "situacion",
+      "logico",
+      "retomar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-autor-ejecutar",
+      "asignar-autor-curl",
+      "listar-por-publicacion-ejecutar",
+      "listar-por-publicacion-curl",
+      "listar-por-autor-ejecutar",
+      "listar-por-autor-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nestStepAliases": {
+    "nosql": "logico",
+    "asignacion": "asig-inversas",
+    "prof-inversa": "autor"
+  },
+  "retiredNestDirectories": [
+    "src/publicaciones/crear-listar/",
+    "src/publicaciones/eliminar/",
+    "src/publicaciones/modificar-paginas/",
+    "src/publicaciones/trasladar/",
+    "src/editoriales/consultar/",
+    "src/autores/crear-listar/",
+    "src/asignaciones/asignar-autor/",
+    "src/asignaciones/listar-por-publicacion/",
+    "src/asignaciones/listar-por-autor/",
+    "src/asignaciones/modificar-rol/",
+    "src/asignaciones/eliminar-asignacion/"
+  ],
   "context": {
     "id": "CH-04",
     "title": "Editorial → Publicacion",

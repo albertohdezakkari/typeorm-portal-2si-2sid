@@ -166,7 +166,7 @@ def compile_case(case, classic, base, sources, pdf_folder):
         for step in stages:
             for cue in step['cues']:
                 assert cue['text'] in step['code'],(cid,step['name'],cue['text'])
-    from arturo_nest_sencillo import apply_training
+    from nest_sencillo import apply_training
     return apply_training(d)
 
 def main():
