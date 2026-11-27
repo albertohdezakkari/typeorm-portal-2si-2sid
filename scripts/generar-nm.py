@@ -605,7 +605,7 @@ SELECT setval(pg_get_serial_sequence('"PROFESIONAL"', 'ID'),
 SELECT * FROM "ASIGNACION" ORDER BY "ID_OBRA", "ID_PROFESIONAL";''')
 NEST['datos-nm.sql']=SEED
 # Referencia reproducible desde cero: respeta el estado final del 1:N, sin aplicarlo a una BD existente.
-NEST['datos-iniciales.sql']=NEST['datos-iniciales.sql'].replace("(7, 'Mejora de acera', 3000, 1)", "(7, 'Mejora de acera', 15000, 2)")
+if 'datos-iniciales.sql'in NEST:NEST['datos-iniciales.sql']=NEST['datos-iniciales.sql'].replace("(7, 'Mejora de acera', 3000, 1)", "(7, 'Mejora de acera', 15000, 2)")
 
 profesionales=[dict(profesionalId=1,nombre='Diego',apellidos='Ruiz López',email='diego.ruiz@example.test'),dict(profesionalId=2,nombre='Ana',apellidos='Vidal Sanz',email='ana.vidal@example.test')]
 asignaciones=[dict(obraId=7,profesionalId=1,rol='Electricista'),dict(obraId=7,profesionalId=2,rol='Arquitecta'),dict(obraId=8,profesionalId=1,rol='Coordinador')]
@@ -741,7 +741,7 @@ for tech,files in [('nest',NEST),('cloud',CLOUD)]:
  dest=OUT/'codigo'/tech
  if tech=='nest':
   # La referencia generada es completa: retirar clases antiguas que ya no se usan.
-  for stale in dest.rglob('*.ts'):
+  for stale in [*dest.rglob('*.ts'),*dest.glob('datos-*.sql')]:
    if str(stale.relative_to(dest))not in files:stale.unlink()
  for path,text in files.items():write(dest/path,text)
 logical=ROOT.parent/'output/preview/nm-ayuntamiento/esquema-logico.svg'

@@ -21,7 +21,7 @@
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
     intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=nest-sencillo-todos-1`);
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=${caseId==='CH-22'?'arturo-orm-1':'nest-sencillo-todos-1'}`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;
@@ -38,7 +38,7 @@
         block: 0, page: 0, full: false, focus: 0,
         profile: ['default','academy'].includes(saved.profile) ? saved.profile : 'default',
         team: /^[a-z][a-z0-9-]{0,19}$/.test(saved.team || '') ? saved.team : 'equipo01',
-        done: Array.isArray(saved.done) ? saved.done.filter(x => typeof x === 'string' && !(data.nestSimpleRevision&&saved.nestSimpleRevision!==data.nestSimpleRevision&&/^nest:(caso-|guardar)/.test(x))) : []
+        done: Array.isArray(saved.done) ? saved.done.filter(x => typeof x === 'string' && !(data.ormDataRevision&&saved.ormDataRevision!==data.ormDataRevision&&x.startsWith('nest:')&&data.ormDataRevisedSteps.includes(x.slice(5))) && !(data.nestSimpleRevision&&saved.nestSimpleRevision!==data.nestSimpleRevision&&/^nest:(caso-|guardar)/.test(x))) : []
       };
       for (const tech of ['nest','cloud']) {
         if (!Number.isInteger(state.positions[tech]) || !data.tracks[tech][state.positions[tech]]) state.positions[tech] = 0;
@@ -56,7 +56,7 @@
       const phase = () => step().id === 'guardar' ? 3 : step().id.startsWith('caso-') ? 2 : ['modelos','datos'].includes(step().id) ? 1 : 0;
       const text = value => String(value || '').replaceAll('{{PROFILE}}', state.profile).replaceAll('{{TEAM}}', state.team);
       const save = () => {
-        try { localStorage.setItem(key, JSON.stringify({version: 1, caseId, ...(data.nestSimpleRevision?{nestSimpleRevision:data.nestSimpleRevision}:{}), track: state.track, positions: state.positions, profile: state.profile, team: state.team, done: state.done})); }
+        try { localStorage.setItem(key, JSON.stringify({version: 1, caseId, ...(data.ormDataRevision?{ormDataRevision:data.ormDataRevision}:{}), ...(data.nestSimpleRevision?{nestSimpleRevision:data.nestSimpleRevision}:{}), track: state.track, positions: state.positions, profile: state.profile, team: state.team, done: state.done})); }
         catch { announcement = 'Puedes continuar; este navegador no permite guardar el avance.'; }
       };
       function nodeMeaning() {
@@ -71,6 +71,7 @@
           records: [`El ID 1 identifica ${parent.examples[0]}.`, `Los registros 7 y 9 de ${child.entity} guardan la referencia al ID 1.`, `El ID 2 identifica ${parent.examples[1]}.`, `El registro 8 de ${child.entity} guarda la referencia al ID 2.`],
           trace: ['La llamada transporta los datos de la operación.', cloud ? 'El handler recibe body, pathParameters o queryStringParameters.' : 'El controller recibe body, parámetros de ruta o filtros de consulta.', !cloud&&data.nestSimpleRevision?'El Service usa directamente Repository<'+child.entity+'> y Repository<'+parent.entity+'>, proporcionados por TypeORM.':'El service organiza el caso y llama al repository.', cloud ? 'El repository usa el modelo y envía el comando de Toolbox.' : data.nestSimpleRevision?'Las Entities indican las columnas y la relación que TypeORM utiliza al leer o guardar.':'El repository usa la Entity y ejecuta la lectura o escritura SQL.']
         };
+        if(!cloud&&data.ormDataRevision&&step().scene==='records')return ['findOneBy busca el primer ayuntamiento; save lo crea si no existe.','Las Entities relacionan estas dos obras con el primer ayuntamiento. Sus IDs reales se guardan en ids-aula.env.','Se prepara el segundo ayuntamiento sin cambiar un registro ya existente.','Zona de sombra se relaciona con el segundo ayuntamiento. find() permite leer lo guardado.'][state.focus];
         return (meanings[step().scene] || [step().lead, block().explain, step().lead, step().expect])[state.focus];
       }
       const icon = type => {
@@ -101,6 +102,7 @@
         </div>`;
       }
       function codeView(b) {
+        if(b.kind==='instruction')return `<section class="pg-explanation"><h4>${esc(b.title)}</h4><ol>${(b.instructions||[]).map(item=>`<li>${esc(item)}</li>`).join('')}</ol></section>`;
         const code = text(b.code);
         const lines = code.split('\n');
         const pages = Math.max(1, Math.ceil(lines.length / 14));

@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=nest-sencillo-todos-1';
+      frame.src = 'entrenar/?v='+(caseData.id==='CH-22'?'arturo-orm-1':'nest-sencillo-todos-1');
       // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
       if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {
