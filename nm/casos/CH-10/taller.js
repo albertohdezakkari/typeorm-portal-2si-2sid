@@ -25,7 +25,15 @@ function defaults(saved){
   }
  }
 
- const s={version:1,unit:'nm',caseId:'CH-10',...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
+ if(D.ormDataRevision&&saved&&saved.ormDataRevision!==D.ormDataRevision){
+  saved=structuredClone(saved);
+  const changed=k=>String(k).startsWith('nest:')&&(D.ormDataRevisedIds||[]).includes(String(k).slice(5));
+  saved.answers=Object.fromEntries(Object.entries(saved.answers||{}).filter(([k])=>!changed(k)));
+  saved.solved=(saved.solved||[]).filter(k=>!changed(k));saved.checked=(saved.checked||[]).filter(k=>!changed(k));
+  if(saved.track==='nest'&&changed('nest:'+D.tracks.nest[saved.positions?.nest]?.id)){saved.cue=0;saved.mode='observe';saved.full=false;}
+ }
+
+ const s={version:1,unit:'nm',caseId:'CH-10',...(D.ormDataRevision?{ormDataRevision:D.ormDataRevision}:{}),...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
  if(saved?.version===1&&saved.unit==='nm'&&saved.caseId==='CH-10'){
   s.track=saved.track==='cloud'?'cloud':'nest';
   for(const t of ['nest','cloud'])if(Number.isInteger(saved.positions?.[t])&&D.tracks[t][saved.positions[t]])s.positions[t]=saved.positions[t];
@@ -70,6 +78,7 @@ function travellingData(chapter){
 }
 function scene(){
  const s=stage(),c=D.cases[s.chapter-3],focus=s.focus;
+ if(D.ormDataRevision&&S.track==='nest'&&['datos','cargar'].includes(s.id))return `<div class="nm-scene-header"><span>CARGAR Y LEER DESDE LAS ENTITIES</span><b>TypeORM</b></div><div class="nm-startup-diagram"><article><span class="nm-startup-symbol">1</span><div><strong>Ejecuta el archivo de datos</strong><code>node --env-file=.env<br>dist/datos/cargar-datos-nm.js</code><small>Utiliza AppModule y la conexión que ya preparaste.</small></div></article><div class="nm-startup-link">↓</div><article><span class="nm-startup-symbol">2</span><div><strong>Enfermero + Asignacion</strong><code>findOneBy(...)<br>save(...)<br>find(...)</code><small>Busca los ejemplos, crea los que faltan y lee el resultado.</small></div></article><div class="nm-startup-link">↓</div><article><span class="nm-startup-symbol">3</span><div><strong>PostgreSQL + IDs reales</strong><code>. ./ids-aula.env</code><small>Recupera los IDs generados para utilizarlos en tus peticiones curl.</small></div></article></div>`;
  if(s.runbook)return `<div class="nm-scene-header"><span>ARRANCAR ANTES DE CONSULTAR</span><b>Dos terminales</b></div><div class="nm-startup-diagram"><article><span class="nm-startup-symbol">BD</span><div><strong>PostgreSQL</strong><small>Servidor encendido · base 1:N conservada</small></div></article><div class="nm-startup-link"><span>↑ consulta a la base · datos ↓</span></div><article class="nm-startup-server"><span class="nm-startup-symbol">1</span><div><strong>Terminal 1 · Nest</strong><code>npm run build<br>npm run start</code><small>Se queda ejecutándose y atiende peticiones</small></div></article><div class="nm-startup-link"><span>↑ petición HTTP · respuesta JSON ↓</span></div><article><span class="nm-startup-symbol">2</span><div><strong>Terminal 2 · pruebas</strong><code>curl /salud<br>curl /habitaciones</code><small>Escribes las consultas sin cerrar Nest</small></div></article></div><p class="nm-startup-caption">Ejecuta el proyecto en la Terminal 1 y déjala abierta. En la Terminal 2 comprueba que la API responde. Si Nest ya estaba arrancado, empieza directamente por las pruebas.</p>`;
  if(s.kind==='logical')return `<div class="nm-scene-header"><span>UNA CLAVE, DOS VALORES</span><b>1:N + N:M</b></div><div class="nm-pair-diagram"><div><b>HABITACION</b><strong>ID = 7</strong></div><span>↘</span><div><b>ENFERMERO</b><strong>ID = 1</strong></div><div class="nm-link-card"><b>ASIGNACION</b><strong>(7, 1)</strong><span>ROL = Cuidados</span></div></div><p>El par (7,1) identifica una fila. (7,2) es otra fila: cambia el enfermero.</p>`;
  if(s.kind==='story')return `<div class="nm-scene-header"><span>EL MISMO ENFERMERO, OTRA HABITACION</span><b>Datos iniciales</b></div>${dataCards('enfermero')}<p>Diego (ID 1) es Cuidados en la habitacion 7 y Coordinación en la 8. El rol pertenece a la asignación.</p>`;
@@ -217,7 +226,7 @@ function onPointerUp(event){if(!drag)return;const moved=drag.moving;const id=dra
 function cleanDrag(){highlight(null);if(drag?.el.hasPointerCapture?.(drag.pointer))drag.el.releasePointerCapture(drag.pointer);drag=null;}
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-10.json?v=nest-sencillo-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
+ try{D=await (await fetch('CH-10.json?v=orm-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

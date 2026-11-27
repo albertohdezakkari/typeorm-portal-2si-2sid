@@ -8,9 +8,8 @@ class SaludController {
   constructor(private readonly db: DataSource) {}
 
   @Get()
-  async salud() {
-    const [resultado] = await this.db.query('SELECT current_database() AS base');
-    return { estado: 'ok', base: resultado.base };
+  salud() {
+    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };
   }
 }
 

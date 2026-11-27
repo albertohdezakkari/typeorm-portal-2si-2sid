@@ -298,42 +298,24 @@
       {
         "id": "postgres",
         "title": "Prepara PostgreSQL",
-        "lead": "PostgreSQL es otro proceso: debe estar instalado y arrancado antes de conectar Nest.",
-        "where": "Otra terminal Git Bash / Terminal · PostgreSQL local",
+        "lead": "PostgreSQL debe estar encendido. La base vacía se prepara una sola vez desde pgAdmin; las tablas las generará TypeORM con tus Entities.",
+        "where": "pgAdmin · servidor PostgreSQL local",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Comprueba herramientas y abre psql",
-            "code": "psql --version\npsql -h localhost -p 5432 -U postgres -d postgres -W",
-            "explain": "En Windows instala PostgreSQL con usuario postgres y contraseña 123456. Instala también Command Line Tools y añade su carpeta bin al PATH de Git Bash; reinicia la terminal. En macOS usa tu instalación PostgreSQL y arráncala. La contraseña se configura en el servidor, no al escribir .env.",
-            "terms": [],
-            "links": [
-              [
-                "Instalar PostgreSQL en Windows",
-                "https://www.postgresql.org/download/windows/"
-              ],
-              [
-                "Instalar PostgreSQL en macOS",
-                "https://www.postgresql.org/download/macosx/"
-              ]
-            ]
-          },
-          {
-            "kind": "command",
-            "title": "Dentro de psql · crea la base",
-            "code": "CREATE DATABASE control_databridge;\n\\q",
-            "explain": "Este bloque es SQL dentro de psql, no Bash. Si la base ya existe, continúa sin borrarla.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Desde Git Bash · verifica la base",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT current_database();'",
-            "explain": "",
+            "kind": "instruction",
+            "title": "Crea la base vacía desde pgAdmin",
+            "code": "",
+            "instructions": [
+              "Abre pgAdmin y conecta con tu servidor PostgreSQL.",
+              "En el panel izquierdo, pulsa con el botón derecho sobre Databases → Create → Database.",
+              "Escribe control_databridge y pulsa Save. Si ya existe, utiliza esa base sin borrarla.",
+              "Conserva host, puerto, usuario y contraseña de tu .env. En el siguiente paso Nest comprobará la conexión."
+            ],
+            "explain": "Aquí solo preparas la base vacía. TypeORM creará sus tablas y relaciones al arrancar con las Entities registradas y synchronize: true.",
             "terms": []
           }
         ],
-        "expect": "SELECT current_database() devuelve control_databridge. Si psql no existe, instala sus herramientas; si connection refused, inicia PostgreSQL. No cambies al siguiente paso hasta poder conectar.",
+        "expect": "La base control_databridge aparece en pgAdmin. Aún no necesitas crear tablas ni escribir consultas.",
         "scene": "database",
         "nodes": [
           "Nest :3000",
@@ -346,7 +328,7 @@
       {
         "id": "conexion",
         "title": "Conecta Nest con PostgreSQL",
-        "lead": "Ahora sí, /salud hará una consulta SQL. No necesita todavía las entidades del caso.",
+        "lead": "TypeOrmModule abre la conexión con tu .env. /salud comprueba que DataSource está inicializado.",
         "where": "mi-practica/nest · Terminal 1 detenida con Ctrl+C",
         "blocks": [
           {
@@ -354,7 +336,7 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
-            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  salud() {\n    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "explain": "forRoot abre la conexión usando .env; autoLoadEntities recogerá las entidades registradas después. synchronize se usa solo en esta base de práctica.",
             "terms": [
               [
@@ -366,8 +348,8 @@
                 "Lee DB_NAME de .env, cargado por npm run start."
               ],
               [
-                "SELECT current_database()",
-                "La respuesta prueba una consulta real a PostgreSQL."
+                "this.db.isInitialized",
+                "Indica que TypeORM ha inicializado la conexión. No ejecuta una consulta escrita a mano."
               ]
             ]
           },
@@ -386,13 +368,13 @@
             "terms": []
           }
         ],
-        "expect": "HTTP 200 y {\"estado\":\"ok\",\"base\":\"control_databridge\"}. Ahora la respuesta confirma conexión SQL real.",
+        "expect": "GET /salud devuelve HTTP 200, estado ok y el nombre de tu base. La conexión de TypeORM se ha inicializado.",
         "scene": "connection",
         "nodes": [
           ".env",
-          "forRoot",
-          "DataSource",
-          "SELECT → /salud"
+          "TypeOrmModule.forRoot",
+          "DataSource.isInitialized",
+          "GET /salud"
         ],
         "workshop": null
       },
@@ -433,10 +415,15 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\nimport { TallerModule } from './taller.module';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    }),\n    TallerModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\nimport { TallerModule } from './taller.module';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  salud() {\n    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    }),\n    TallerModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
             "explain": "AppModule importa TallerModule, que registra las Entities con forFeature.",
-            "terms": []
+            "terms": [
+              [
+                "this.db.isInitialized",
+                "Indica que TypeORM ha inicializado la conexión. No ejecuta una consulta escrita a mano."
+              ]
+            ]
           },
           {
             "kind": "command",
@@ -447,9 +434,9 @@
           },
           {
             "kind": "command",
-            "title": "Terminal 2 · mira las tablas",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c '\\dt'",
-            "explain": "",
+            "title": "Terminal 2 · comprueba TypeORM",
+            "code": "curl -i http://localhost:3000/salud",
+            "explain": "Con synchronize: true, al arrancar Nest TypeORM crea las tablas y las relaciones declaradas en las Entities. Puedes verlas en pgAdmin → Schemas → public → Tables.",
             "terms": []
           }
         ],
@@ -469,33 +456,40 @@
       {
         "id": "datos",
         "title": "Carga los datos de tu ficha",
-        "lead": "Carga los dos registros principales y los tres registros asociados de tu ficha.",
+        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
         "where": "mi-practica/nest · Terminal 2",
         "blocks": [
           {
             "kind": "file",
-            "title": "datos-iniciales.sql",
-            "path": "datos-iniciales.sql",
-            "code": "INSERT INTO \"CLUB\" (\"ID\", \"NOMBRE\") VALUES\n  (1, 'Club Encuentro'),\n  (2, 'Club Horizonte')\nON CONFLICT (\"ID\") DO NOTHING;\n\nINSERT INTO \"ACTIVIDAD\" (\"ID\", \"NOMBRE\", \"PLAZAS\", \"ID_CLUB\") VALUES\n  (7, 'Taller de fotografía', 15, 1),\n  (8, 'Ruta urbana', 35, 2),\n  (9, 'Taller de fotografía · nuevo', 65, 1)\nON CONFLICT (\"ID\") DO NOTHING;\n\nSELECT setval(pg_get_serial_sequence('\"CLUB\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"CLUB\"), true);\nSELECT * FROM \"CLUB\" ORDER BY \"ID\";\n\nSELECT setval(pg_get_serial_sequence('\"ACTIVIDAD\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"ACTIVIDAD\"), true);\nSELECT * FROM \"ACTIVIDAD\" ORDER BY \"ID\";",
-            "create": "touch datos-iniciales.sql\ncode datos-iniciales.sql",
-            "explain": "setval coloca la secuencia después del ID mayor ya cargado.",
+            "title": "src/datos/cargar-datos.ts",
+            "path": "src/datos/cargar-datos.ts",
+            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Club } from '../clubes/entities/club.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const clubes = db.getRepository(Club);\n    const actividades = db.getRepository(Actividad);\n\n    const primero = await clubes.findOneBy({ nombre: 'Club Encuentro' })\n      ?? await clubes.save({ nombre: 'Club Encuentro' });\n    const segundo = await clubes.findOneBy({ nombre: 'Club Horizonte' })\n      ?? await clubes.save({ nombre: 'Club Horizonte' });\n\n    const principal = await actividades.findOneBy({ nombre: 'Taller de fotografía' })\n      ?? await actividades.save({ nombre: 'Taller de fotografía', plazas: 15, club: primero });\n    const secundaria = await actividades.findOneBy({ nombre: 'Ruta urbana' })\n      ?? await actividades.save({ nombre: 'Ruta urbana', plazas: 35, club: segundo });\n    const otra = await actividades.findOneBy({ nombre: 'Taller de fotografía · nuevo' })\n      ?? await actividades.save({ nombre: 'Taller de fotografía · nuevo', plazas: 65, club: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export CLUB_1_ID=${primero.id}`,\n      `export CLUB_2_ID=${segundo.id}`,\n      `export ACTIVIDAD_1_ID=${principal.id}`,\n      `export ACTIVIDAD_2_ID=${secundaria.id}`,\n      `export ACTIVIDAD_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await actividades.find({ relations: { club: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
+            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
+            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Ejecuta el archivo SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -f datos-iniciales.sql",
-            "explain": "",
+            "title": "Compila y carga los ejemplos",
+            "code": "npm run build\nnode --env-file=.env dist/datos/cargar-datos.js",
+            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Carga los IDs reales",
+            "code": ". ./ids-aula.env\nprintf 'Actividad principal: %s\\nOtro club: %s\\n' \"$ACTIVIDAD_1_ID\" \"$CLUB_2_ID\"",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
             "terms": []
           }
         ],
-        "expect": "Ves dos registros de Club y tres de Actividad: 7→1, 8→2 y 9→1. Compara PLAZAS con tu ficha.",
+        "expect": "Hay dos clubes y tres actividades de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
         "scene": "records",
         "nodes": [
-          "Club 1",
-          "Actividad 7 y 9",
-          "Club 2",
-          "Actividad 8"
+          "Club Encuentro",
+          "Taller de fotografía y otra actividad",
+          "Club Horizonte",
+          "Ruta urbana"
         ],
         "workshop": null
       },
@@ -505,6 +499,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/actividades/actividades.service.ts",
@@ -549,12 +550,12 @@
           {
             "kind": "command",
             "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/actividades\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"plazas\":16,\"clubId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/actividades\"",
+            "code": "curl -fsS -X POST \"http://localhost:3000/actividades\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"plazas\\\":16,\\\"clubId\\\":$CLUB_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/actividades\"",
             "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro actividades. Conserva ese ID para el borrado.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -573,6 +574,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/actividades/actividades.service.ts",
@@ -606,7 +614,7 @@
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Se elimina únicamente la actividad de prueba. Siguen las tres actividades originales con sus datos y relaciones.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -625,6 +633,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/actividades/actividades.service.ts",
@@ -653,19 +668,12 @@
           {
             "kind": "command",
             "title": "Modificar plazas",
-            "code": "curl -i -X PATCH \"http://localhost:3000/actividades/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":50}'\ncurl -i \"http://localhost:3000/actividades\"",
-            "explain": "",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Confirma el dato y la referencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"PLAZAS\", \"ID_CLUB\" FROM \"ACTIVIDAD\" WHERE \"ID\" = 7;'",
+            "code": "curl -i -X PATCH \"http://localhost:3000/actividades/$ACTIVIDAD_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":50}'\ncurl -i http://localhost:3000/actividades",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · plazas = 50 personas · clubId = 1",
+        "expect": "La actividad principal tiene plazas 50 y conserva su club.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -684,6 +692,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/actividades/actividades.service.ts",
@@ -712,19 +727,12 @@
           {
             "kind": "command",
             "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/actividades/7/club\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"clubId\":2}'\ncurl -i \"http://localhost:3000/actividades\"",
-            "explain": "",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Confirma el dato y la referencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"PLAZAS\", \"ID_CLUB\" FROM \"ACTIVIDAD\" WHERE \"ID\" = 7;'",
+            "code": "curl -i -X PATCH \"http://localhost:3000/actividades/$ACTIVIDAD_1_ID/club\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"clubId\\\":$CLUB_2_ID}\"\ncurl -i http://localhost:3000/actividades",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · plazas = 50 personas · clubId pasa de 1 a 2",
+        "expect": "La actividad principal pasa al segundo club y conserva su plazas 50.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -743,6 +751,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ACTIVIDAD_1_ID es el ID real de «Taller de fotografía»; ACTIVIDAD_2_ID, el de «Ruta urbana». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/actividades/actividades.service.ts",
@@ -771,12 +786,12 @@
           {
             "kind": "command",
             "title": "Consultar la relación",
-            "code": "curl -i -X GET \"http://localhost:3000/clubes/2/actividades?minimo=36\"",
+            "code": "curl -i \"http://localhost:3000/clubes/$CLUB_2_ID/actividades?minimo=36\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Club Horizonte + registro 7 (50 personas). Excluye el 8 (35 personas) y el 9 (pertenece al ID 1).",
+        "expect": "La respuesta incluye el segundo club y la actividad principal; el filtro excluye las otras dos actividades.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -797,9 +812,9 @@
         "blocks": [
           {
             "kind": "command",
-            "title": "Confirma la persistencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ACTIVIDAD\" ORDER BY \"ID\";'",
-            "explain": "",
+            "title": "Comprueba el listado desde tu aplicación",
+            "code": "curl -i http://localhost:3000/actividades",
+            "explain": "La petición pasa por Controller → Service → Entity. find() realiza la lectura y TypeORM genera la consulta.",
             "terms": []
           },
           {
@@ -817,7 +832,7 @@
             "terms": []
           }
         ],
-        "expect": "El registro 7 tiene plazas = 50 y referencia al ID 2. Tu código está en tu GitHub, sin credenciales.",
+        "expect": "La actividad principal conserva plazas 50 y pertenece al segundo club. Tu código está en tu GitHub, sin credenciales.",
         "scene": "persist",
         "nodes": [
           "Petición",
@@ -1638,5 +1653,18 @@
       }
     ]
   },
-  "nestSimpleRevision": 1
+  "nestSimpleRevision": 1,
+  "ormDataRevision": 1,
+  "ormDataRevisedSteps": [
+    "postgres",
+    "conexion",
+    "modelos",
+    "datos",
+    "caso-1",
+    "caso-2",
+    "caso-3",
+    "caso-4",
+    "caso-5",
+    "guardar"
+  ]
 }

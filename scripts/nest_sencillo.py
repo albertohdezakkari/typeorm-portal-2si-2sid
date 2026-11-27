@@ -55,22 +55,19 @@ def apply_training(data):
     c=data['context']
     if c['text']['property']!='nombre':
         for key in ['fields','args']:data['operations'][0][key]=data['operations'][0][key].replace('nombre',c['text']['property'])
-    if c['id']=='CH-22':
-        from arturo_sin_sql import training
-        training(data)
+    from orm_sin_sql import training
+    training(data)
     return data
 def apply_preparation(data,training):
     template(training['context']['id'])['apply_preparation'](data,training)
-    if data['caseId']=='CH-22':
-        from arturo_sin_sql import preparation
-        preparation(data,training)
+    from orm_sin_sql import preparation
+    preparation(data,training)
     return data
 def module_code(context,chapter):return template(context['id'])['module_code'](chapter)
 def apply_nm(data,files):
     template(data['caseId'])['apply_nm'](data,files)
-    if data['caseId']=='CH-22':
-        from arturo_sin_sql import nm
-        nm(data,files)
+    from orm_sin_sql import nm
+    nm(data,files)
     if data['caseId']!='CH-22':
         # Los demás casos pasan directamente del recorrido original a esta versión.
         data['nestPreviousIds'].pop('1',None);data['nestRetainedByRevision'].pop('1',None)

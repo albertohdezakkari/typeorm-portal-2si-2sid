@@ -70,7 +70,7 @@
         "code": "# Terminal 2 · misma carpeta del backend.\npwd\ncurl -i http://localhost:3000/salud\ncurl -i http://localhost:3000/pistas",
         "path": "",
         "note": "Tu proyecto base 1:N ya está preparado: conserva sus dependencias, configuración, tablas y datos. Abre su carpeta real en VS Code. Aquí solo vas a ejecutarlo y comprobar que sigue funcionando antes de añadir la N:M. Si Nest ya está en marcha, deja esa terminal abierta y pasa directamente a las pruebas del bloque 2.",
-        "expect": "Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /pistas devuelven HTTP 200. Se conservan los registros 7, 8 y 9 de Pista. El registro 7 mantiene SUPERFICIE_M2 = 420 y COMPLEJO_ID = 2, como al terminar el 1:N.",
+        "expect": "Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /pistas devuelven HTTP 200. Se conservan las tres pistas; «Pista cubierta» mantiene superficie 420 y pertenece al segundo complejo. Las fichas dibujan IDs de ejemplo; las pruebas usan los IDs reales generados en tu proyecto.",
         "focus": "model",
         "cues": [
           {
@@ -274,58 +274,65 @@
       {
         "id": "datos",
         "chapter": 2,
-        "title": "Carga los tres vínculos de partida",
+        "title": "Prepara los vínculos con TypeORM",
         "kind": "seed",
-        "code": "INSERT INTO \"ENTRENADOR\" (\"ID\", \"NOMBRE\", \"APELLIDOS\", \"EMAIL\") VALUES\n  (1, 'Diego', 'Ruiz López', 'diego.ruiz@example.test'),\n  (2, 'Ana', 'Vidal Sanz', 'ana.vidal@example.test')\nON CONFLICT (\"ID\") DO NOTHING;\n\nINSERT INTO \"ASIGNACION\" (\"ID_PISTA\", \"ID_ENTRENADOR\", \"ROL\") VALUES\n  (7, 1, 'Entrenamiento'),\n  (7, 2, 'Supervisión'),\n  (8, 1, 'Coordinación')\nON CONFLICT (\"ID_PISTA\", \"ID_ENTRENADOR\") DO NOTHING;\n\nSELECT setval(pg_get_serial_sequence('\"ENTRENADOR\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"ENTRENADOR\"), true);\nSELECT * FROM \"ASIGNACION\" ORDER BY \"ID_PISTA\", \"ID_ENTRENADOR\";\n",
-        "path": "datos-nm.sql",
-        "note": "",
-        "expect": "Tres filas: (7,1), (7,2), (8,1). Los dos entrenadores tienen nombre, apellidos y email.",
+        "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Complejo } from '../complejos/entities/complejo.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\nimport { Asignacion } from '../asignaciones/entities/asignacion.entity';\n\nasync function cargarDatosNM() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const pistas = db.getRepository(Pista);\n    const complejos = db.getRepository(Complejo);\n    const entrenadores = db.getRepository(Entrenador);\n    const asignaciones = db.getRepository(Asignacion);\n    const principal = await pistas.findOneByOrFail({ nombre: 'Pista cubierta' });\n    const secundaria = await pistas.findOneByOrFail({ nombre: 'Pista exterior' });\n    const otra = await pistas.findOneByOrFail({ nombre: 'Pista cubierta · nuevo' });\n    const primero = await complejos.findOneByOrFail({ nombre: 'Complejo Municipal' });\n    const segundo = await complejos.findOneByOrFail({ nombre: 'Complejo del Barrio' });\n\n    const diego = await entrenadores.findOneBy({ email: 'diego.ruiz@example.test' })\n      ?? await entrenadores.save({ nombre: 'Diego', apellidos: 'Ruiz López', email: 'diego.ruiz@example.test' });\n    const ana = await entrenadores.findOneBy({ email: 'ana.vidal@example.test' })\n      ?? await entrenadores.save({ nombre: 'Ana', apellidos: 'Vidal Sanz', email: 'ana.vidal@example.test' });\n\n    for (const datos of [\n      { pistaId: principal.id, entrenadorId: diego.id, rol: 'Entrenamiento' },\n      { pistaId: principal.id, entrenadorId: ana.id, rol: 'Supervisión' },\n      { pistaId: secundaria.id, entrenadorId: diego.id, rol: 'Coordinación' }\n    ]) {\n      const existente = await asignaciones.findOneBy({ pistaId: datos.pistaId, entrenadorId: datos.entrenadorId });\n      if (!existente) await asignaciones.save(datos);\n    }\n\n    writeFileSync('ids-aula.env', [\n      `export COMPLEJO_1_ID=${primero.id}`,\n      `export COMPLEJO_2_ID=${segundo.id}`,\n      `export PISTA_1_ID=${principal.id}`,\n      `export PISTA_2_ID=${secundaria.id}`,\n      `export PISTA_3_ID=${otra.id}`,\n      `export ENTRENADOR_1_ID=${diego.id}`,\n      `export ENTRENADOR_2_ID=${ana.id}`\n    ].join('\\n') + '\\n');\n    console.table(await asignaciones.find({ order: { pistaId: 'ASC', entrenadorId: 'ASC' } }));\n    console.log('Vínculos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatosNM().catch(error => { console.error(error); process.exitCode = 1; });",
+        "path": "src/datos/cargar-datos-nm.ts",
+        "note": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. La base 1:N debe estar preparada; este archivo utiliza sus pistas existentes.",
+        "expect": "El archivo usa los modelos Entrenador y Asignacion con save() y find().",
         "focus": "model",
         "cues": [
           {
-            "token": "ID_PISTA",
-            "start": 240,
-            "end": 248,
-            "note": "Un mismo ID de pista puede repetirse."
+            "token": "db.getRepository(Entrenador)",
+            "start": 720,
+            "end": 748,
+            "note": "Utiliza la Entity Entrenador."
           },
           {
-            "token": "ID_ENTRENADOR",
-            "start": 252,
-            "end": 265,
-            "note": "Un mismo entrenador puede aparecer en varias pistas."
+            "token": "entrenadores.save({",
+            "start": 1331,
+            "end": 1350,
+            "note": "Crea el entrenador y recibe su ID generado."
           },
           {
-            "token": "ON CONFLICT",
-            "start": 181,
-            "end": 192,
-            "note": "No sobrescribe los vínculos que ya existen."
+            "token": "if (!existente) await asignaciones.save(datos);",
+            "start": 2013,
+            "end": 2060,
+            "note": "Guarda cada vínculo solo si no existe. No modifica otros vínculos."
           },
           {
-            "token": "setval",
-            "start": 421,
-            "end": 427,
-            "note": "Coloca la secuencia detrás del mayor ID que acabas de cargar."
-          },
-          {
-            "token": "ROL",
-            "start": 269,
-            "end": 272,
-            "note": "La responsabilidad pertenece a este vínculo."
+            "token": "asignaciones.find({",
+            "start": 2452,
+            "end": 2471,
+            "note": "TypeORM consulta las asignaciones y muestra el resultado."
           }
         ],
-        "create": "touch datos-nm.sql\ncode datos-nm.sql"
+        "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos-nm.ts\ncode src/datos/cargar-datos-nm.ts"
       },
       {
         "id": "cargar",
         "chapter": 2,
-        "title": "Ejecuta el SQL y mira las dos direcciones",
+        "title": "Carga los vínculos y sus IDs reales",
         "kind": "command",
-        "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -v ON_ERROR_STOP=1 -f datos-nm.sql\npsql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" WHERE \"ID_PISTA\" = 7 ORDER BY \"ID_ENTRENADOR\";'\npsql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" WHERE \"ID_ENTRENADOR\" = 1 ORDER BY \"ID_PISTA\";'\n",
+        "code": "npm run build\nnode --env-file=.env dist/datos/cargar-datos-nm.js\n. ./ids-aula.env",
         "path": "",
-        "note": "",
-        "expect": "Cada consulta devuelve dos filas; son distintas agrupaciones de los mismos tres vínculos.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+        "expect": "Ves tres vínculos iniciales. Las variables guardan los IDs reales de las pistas y de Diego y Ana.",
         "focus": "model",
-        "cues": [],
+        "cues": [
+          {
+            "token": "node --env-file=.env dist/datos/cargar-datos-nm.js",
+            "start": 14,
+            "end": 64,
+            "note": "Ejecuta el archivo compilado con la conexión de tu .env. save() escribe y find() lee."
+          },
+          {
+            "token": ". ./ids-aula.env",
+            "start": 65,
+            "end": 81,
+            "note": "Carga los IDs reales en esta terminal para los curl siguientes."
+          }
+        ],
         "create": null
       },
       {
@@ -336,7 +343,7 @@
         "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Entrenador } from './entities/entrenador.entity';\n\n@Injectable()\nexport class EntrenadoresService {\n  constructor(\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n}",
         "path": "src/entrenadores/entrenadores.service.ts",
         "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los entrenadores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "POST devuelve el ID real del nuevo entrenador; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "service",
         "cues": [
           {
@@ -369,7 +376,7 @@
         "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EntrenadoresService } from './entrenadores.service';\n\n@Controller('entrenadores')\nexport class EntrenadoresController {\n  constructor(private readonly service: EntrenadoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEntrenadores();\n  }\n}",
         "path": "src/entrenadores/entrenadores.controller.ts",
         "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los entrenadores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "POST devuelve el ID real del nuevo entrenador; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "entry",
         "cues": [
           {
@@ -408,7 +415,7 @@
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Complejo } from './complejos/entities/complejo.entity';\nimport { Pista } from './pistas/entities/pista.entity';\nimport { PistasService } from './pistas/pistas.service';\nimport { PistasController } from './pistas/pistas.controller';\nimport { Entrenador } from './entrenadores/entities/entrenador.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { EntrenadoresService } from './entrenadores/entrenadores.service';\nimport { EntrenadoresController } from './entrenadores/entrenadores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Complejo, Pista, Entrenador, Asignacion])],\n  controllers: [PistasController, EntrenadoresController],\n  providers: [PistasService, EntrenadoresService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
         "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "POST devuelve el ID real del nuevo entrenador; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "route",
         "cues": [
           {
@@ -434,7 +441,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "POST devuelve el ID real del nuevo entrenador; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -444,23 +451,23 @@
         "chapter": 3,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"http://localhost:3000/entrenadores\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"http://localhost:3000/entrenadores\"",
+        "code": ". ./ids-aula.env\ncurl -i -X POST \"http://localhost:3000/entrenadores\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"http://localhost:3000/entrenadores\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los entrenadores iniciales y a Lucía; no crea asignaciones.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "POST devuelve el ID real del nuevo entrenador; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -473,7 +480,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Se crea el vínculo de la segunda pista con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
@@ -512,7 +519,7 @@
         "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Se crea el vínculo de la segunda pista con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
@@ -539,7 +546,7 @@
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Complejo } from './complejos/entities/complejo.entity';\nimport { Pista } from './pistas/entities/pista.entity';\nimport { PistasService } from './pistas/pistas.service';\nimport { PistasController } from './pistas/pistas.controller';\nimport { Entrenador } from './entrenadores/entities/entrenador.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { EntrenadoresService } from './entrenadores/entrenadores.service';\nimport { EntrenadoresController } from './entrenadores/entrenadores.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Complejo, Pista, Entrenador, Asignacion])],\n  controllers: [PistasController, EntrenadoresController, AsignacionesController],\n  providers: [PistasService, EntrenadoresService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
         "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Se crea el vínculo de la segunda pista con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "route",
         "cues": [
           {
@@ -565,7 +572,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Se crea el vínculo de la segunda pista con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -575,23 +582,23 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"http://localhost:3000/pistas/8/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"entrenadorId\":2,\"rol\":\"Supervisión\"}'",
+        "code": ". ./ids-aula.env\ncurl -i -X POST \"http://localhost:3000/pistas/$PISTA_2_ID/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"entrenadorId\\\":$ENTRENADOR_2_ID,\\\"rol\\\":\\\"Supervisión\\\"}\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Se crea el vínculo de la segunda pista con Ana. Repetir esa pareja devuelve 409.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -604,7 +611,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "La pista 7 devuelve (7,1,Entrenamiento) y (7,2,Supervisión): dos entrenadores para una pista.",
+        "expect": "La pista principal devuelve sus dos entrenadores y sus roles.",
         "focus": "service",
         "cues": [
           {
@@ -631,7 +638,7 @@
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "La pista 7 devuelve (7,1,Entrenamiento) y (7,2,Supervisión): dos entrenadores para una pista.",
+        "expect": "La pista principal devuelve sus dos entrenadores y sus roles.",
         "focus": "entry",
         "cues": [
           {
@@ -658,7 +665,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "La pista principal devuelve sus dos entrenadores y sus roles.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -668,17 +675,23 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"http://localhost:3000/pistas/7/asignaciones\"",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/pistas/$PISTA_1_ID/asignaciones\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. ",
-        "expect": "La pista 7 devuelve (7,1,Entrenamiento) y (7,2,Supervisión): dos entrenadores para una pista.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "La pista principal devuelve sus dos entrenadores y sus roles.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
+          },
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -691,7 +704,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "El entrenador 1 devuelve las pistas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Diego devuelve sus vínculos con la pista principal y la secundaria.",
         "focus": "service",
         "cues": [
           {
@@ -718,7 +731,7 @@
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "El entrenador 1 devuelve las pistas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Diego devuelve sus vínculos con la pista principal y la secundaria.",
         "focus": "entry",
         "cues": [
           {
@@ -745,7 +758,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Diego devuelve sus vínculos con la pista principal y la secundaria.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -755,17 +768,23 @@
         "chapter": 6,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"http://localhost:3000/entrenadores/1/asignaciones\"",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/entrenadores/$ENTRENADOR_1_ID/asignaciones\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. El índice es eventualmente consistente; repite la lectura si acabas de escribir.",
-        "expect": "El entrenador 1 devuelve las pistas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Diego devuelve sus vínculos con la pista principal y la secundaria.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
+          },
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -778,7 +797,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Solo el vínculo de la pista principal con Diego cambia a Jefe de equipo.",
         "focus": "service",
         "cues": [
           {
@@ -811,7 +830,7 @@
         "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Solo el vínculo de la pista principal con Diego cambia a Jefe de equipo.",
         "focus": "entry",
         "cues": [
           {
@@ -838,7 +857,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Solo el vínculo de la pista principal con Diego cambia a Jefe de equipo.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -848,23 +867,23 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"http://localhost:3000/pistas/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": ". ./ids-aula.env\ncurl -i -X PATCH \"http://localhost:3000/pistas/$PISTA_1_ID/asignaciones/$ENTRENADOR_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Solo el vínculo de la pista principal con Diego cambia a Jefe de equipo.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "PATCH",
-            "start": 11,
-            "end": 16,
-            "note": "Modifica únicamente el dato que envías."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -877,7 +896,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n\n  async eliminarAsignacion(pistaId: number, entrenadorId: number) {\n    await this.asignaciones.delete({ pistaId, entrenadorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las pistas y los entrenadores.",
+        "expect": "Se elimina solo ese vínculo; se conservan las pistas, los entrenadores y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
@@ -904,7 +923,7 @@
         "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n\n  @Delete('pistas/:pistaId/asignaciones/:entrenadorId')\n  @HttpCode(204)\n  eliminar(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string) {\n    return this.service.eliminarAsignacion(Number(pistaId), Number(entrenadorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las pistas y los entrenadores.",
+        "expect": "Se elimina solo ese vínculo; se conservan las pistas, los entrenadores y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
@@ -931,7 +950,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Se elimina solo ese vínculo; se conservan las pistas, los entrenadores y los otros tres vínculos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -941,23 +960,23 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"http://localhost:3000/pistas/7/asignaciones/1\"",
+        "code": ". ./ids-aula.env\ncurl -i -X DELETE \"http://localhost:3000/pistas/$PISTA_1_ID/asignaciones/$ENTRENADOR_1_ID\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las pistas y los entrenadores.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "HTTP 204. Desaparece solo ese vínculo; se conservan las pistas, los entrenadores y los otros tres vínculos.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "DELETE",
-            "start": 11,
-            "end": 17,
-            "note": "Elimina el vínculo identificado por la ruta."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -967,12 +986,19 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" ORDER BY \"ID_PISTA\", \"ID_ENTRENADOR\";'",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/pistas/$PISTA_1_ID/asignaciones\"\ncurl -i \"http://localhost:3000/entrenadores/$ENTRENADOR_1_ID/asignaciones\"\ncurl -i http://localhost:3000/pistas\ncurl -i http://localhost:3000/entrenadores",
         "path": "",
-        "note": "",
-        "expect": "Tras los seis casos quedan (7,2), (8,1) y (8,2). Permanecen pistas y entrenadores, y la relación 1:N anterior.",
+        "note": "Comprueba desde las rutas de lectura de tu aplicación. Sus Services utilizan find() sobre Asignacion.",
+        "expect": "La pista principal conserva el vínculo con Ana; Diego conserva el de la segunda pista. Las pistas y los entrenadores siguen existiendo.",
         "focus": "response",
-        "cues": [],
+        "cues": [
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "Lee el resultado a través de Controller y Service. TypeORM genera la consulta."
+          }
+        ],
         "create": null
       },
       {
@@ -3062,6 +3088,18 @@
     "src/asignaciones/listar-por-entrenador/",
     "src/asignaciones/modificar-rol/",
     "src/asignaciones/eliminar-asignacion/"
+  ],
+  "ormDataRevision": 1,
+  "ormDataRevisedIds": [
+    "datos",
+    "cargar",
+    "persistencia",
+    "crear-listar-curl",
+    "asignar-entrenador-curl",
+    "listar-por-pista-curl",
+    "listar-por-entrenador-curl",
+    "modificar-rol-curl",
+    "eliminar-asignacion-curl"
   ],
   "context": {
     "id": "CH-24",

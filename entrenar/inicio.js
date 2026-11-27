@@ -25,7 +25,7 @@ window.addEventListener('message', async event => {
   status.textContent = 'Preparando tu taller…';
   try {
     const caseUrl = new URL(`casos/${init.caseId}.json`, location.href);
-    caseUrl.searchParams.set('v', init.caseId==='CH-22'?'arturo-orm-1':'nest-sencillo-todos-1');
+    caseUrl.searchParams.set('v', 'orm-todos-1');
     const [dataResponse, templateResponse] = await Promise.all([
       fetch(caseUrl),
       fetch(new URL('plantilla.html?v=preparacion-1', location.href)),

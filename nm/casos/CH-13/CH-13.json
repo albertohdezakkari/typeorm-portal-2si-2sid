@@ -70,7 +70,7 @@
         "code": "# Terminal 2 · misma carpeta del backend.\npwd\ncurl -i http://localhost:3000/salud\ncurl -i http://localhost:3000/proyecciones",
         "path": "",
         "note": "Tu proyecto base 1:N ya está preparado: conserva sus dependencias, configuración, tablas y datos. Abre su carpeta real en VS Code. Aquí solo vas a ejecutarlo y comprobar que sigue funcionando antes de añadir la N:M. Si Nest ya está en marcha, deja esa terminal abierta y pasa directamente a las pruebas del bloque 2.",
-        "expect": "Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /proyecciones devuelven HTTP 200. Se conservan los registros 7, 8 y 9 de Proyeccion. El registro 7 mantiene DURACION_MINUTOS = 215 y CINE_ID = 2, como al terminar el 1:N.",
+        "expect": "Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /proyecciones devuelven HTTP 200. Se conservan las tres proyecciones; «Viaje al norte» mantiene duración 215 y pertenece al segundo cine. Las fichas dibujan IDs de ejemplo; las pruebas usan los IDs reales generados en tu proyecto.",
         "focus": "model",
         "cues": [
           {
@@ -274,58 +274,65 @@
       {
         "id": "datos",
         "chapter": 2,
-        "title": "Carga los tres vínculos de partida",
+        "title": "Prepara los vínculos con TypeORM",
         "kind": "seed",
-        "code": "INSERT INTO \"TECNICO\" (\"ID\", \"NOMBRE\", \"APELLIDOS\", \"EMAIL\") VALUES\n  (1, 'Diego', 'Ruiz López', 'diego.ruiz@example.test'),\n  (2, 'Ana', 'Vidal Sanz', 'ana.vidal@example.test')\nON CONFLICT (\"ID\") DO NOTHING;\n\nINSERT INTO \"ASIGNACION\" (\"ID_PROYECCION\", \"ID_TECNICO\", \"ROL\") VALUES\n  (7, 1, 'Imagen'),\n  (7, 2, 'Sonido'),\n  (8, 1, 'Coordinación')\nON CONFLICT (\"ID_PROYECCION\", \"ID_TECNICO\") DO NOTHING;\n\nSELECT setval(pg_get_serial_sequence('\"TECNICO\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"TECNICO\"), true);\nSELECT * FROM \"ASIGNACION\" ORDER BY \"ID_PROYECCION\", \"ID_TECNICO\";\n",
-        "path": "datos-nm.sql",
-        "note": "",
-        "expect": "Tres filas: (7,1), (7,2), (8,1). Los dos tecnicos tienen nombre, apellidos y email.",
+        "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Cine } from '../cines/entities/cine.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\nimport { Asignacion } from '../asignaciones/entities/asignacion.entity';\n\nasync function cargarDatosNM() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const proyecciones = db.getRepository(Proyeccion);\n    const cines = db.getRepository(Cine);\n    const tecnicos = db.getRepository(Tecnico);\n    const asignaciones = db.getRepository(Asignacion);\n    const principal = await proyecciones.findOneByOrFail({ pelicula: 'Viaje al norte' });\n    const secundaria = await proyecciones.findOneByOrFail({ pelicula: 'La última estación' });\n    const otra = await proyecciones.findOneByOrFail({ pelicula: 'Viaje al norte · nuevo' });\n    const primero = await cines.findOneByOrFail({ nombre: 'Cine Alameda' });\n    const segundo = await cines.findOneByOrFail({ nombre: 'Cine del Parque' });\n\n    const diego = await tecnicos.findOneBy({ email: 'diego.ruiz@example.test' })\n      ?? await tecnicos.save({ nombre: 'Diego', apellidos: 'Ruiz López', email: 'diego.ruiz@example.test' });\n    const ana = await tecnicos.findOneBy({ email: 'ana.vidal@example.test' })\n      ?? await tecnicos.save({ nombre: 'Ana', apellidos: 'Vidal Sanz', email: 'ana.vidal@example.test' });\n\n    for (const datos of [\n      { proyeccionId: principal.id, tecnicoId: diego.id, rol: 'Imagen' },\n      { proyeccionId: principal.id, tecnicoId: ana.id, rol: 'Sonido' },\n      { proyeccionId: secundaria.id, tecnicoId: diego.id, rol: 'Coordinación' }\n    ]) {\n      const existente = await asignaciones.findOneBy({ proyeccionId: datos.proyeccionId, tecnicoId: datos.tecnicoId });\n      if (!existente) await asignaciones.save(datos);\n    }\n\n    writeFileSync('ids-aula.env', [\n      `export CINE_1_ID=${primero.id}`,\n      `export CINE_2_ID=${segundo.id}`,\n      `export PROYECCION_1_ID=${principal.id}`,\n      `export PROYECCION_2_ID=${secundaria.id}`,\n      `export PROYECCION_3_ID=${otra.id}`,\n      `export TECNICO_1_ID=${diego.id}`,\n      `export TECNICO_2_ID=${ana.id}`\n    ].join('\\n') + '\\n');\n    console.table(await asignaciones.find({ order: { proyeccionId: 'ASC', tecnicoId: 'ASC' } }));\n    console.log('Vínculos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatosNM().catch(error => { console.error(error); process.exitCode = 1; });",
+        "path": "src/datos/cargar-datos-nm.ts",
+        "note": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. La base 1:N debe estar preparada; este archivo utiliza sus proyecciones existentes.",
+        "expect": "El archivo usa los modelos Tecnico y Asignacion con save() y find().",
         "focus": "model",
         "cues": [
           {
-            "token": "ID_PROYECCION",
-            "start": 237,
-            "end": 250,
-            "note": "Un mismo ID de proyeccion puede repetirse."
+            "token": "db.getRepository(Tecnico)",
+            "start": 713,
+            "end": 738,
+            "note": "Utiliza la Entity Tecnico."
           },
           {
-            "token": "ID_TECNICO",
-            "start": 254,
-            "end": 264,
-            "note": "Un mismo tecnico puede aparecer en varias proyecciones."
+            "token": "tecnicos.save({",
+            "start": 1327,
+            "end": 1342,
+            "note": "Crea el tecnico y recibe su ID generado."
           },
           {
-            "token": "ON CONFLICT",
-            "start": 178,
-            "end": 189,
-            "note": "No sobrescribe los vínculos que ya existen."
+            "token": "if (!existente) await asignaciones.save(datos);",
+            "start": 1995,
+            "end": 2042,
+            "note": "Guarda cada vínculo solo si no existe. No modifica otros vínculos."
           },
           {
-            "token": "setval",
-            "start": 410,
-            "end": 416,
-            "note": "Coloca la secuencia detrás del mayor ID que acabas de cargar."
-          },
-          {
-            "token": "ROL",
-            "start": 268,
-            "end": 271,
-            "note": "La responsabilidad pertenece a este vínculo."
+            "token": "asignaciones.find({",
+            "start": 2435,
+            "end": 2454,
+            "note": "TypeORM consulta las asignaciones y muestra el resultado."
           }
         ],
-        "create": "touch datos-nm.sql\ncode datos-nm.sql"
+        "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos-nm.ts\ncode src/datos/cargar-datos-nm.ts"
       },
       {
         "id": "cargar",
         "chapter": 2,
-        "title": "Ejecuta el SQL y mira las dos direcciones",
+        "title": "Carga los vínculos y sus IDs reales",
         "kind": "command",
-        "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -v ON_ERROR_STOP=1 -f datos-nm.sql\npsql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" WHERE \"ID_PROYECCION\" = 7 ORDER BY \"ID_TECNICO\";'\npsql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" WHERE \"ID_TECNICO\" = 1 ORDER BY \"ID_PROYECCION\";'\n",
+        "code": "npm run build\nnode --env-file=.env dist/datos/cargar-datos-nm.js\n. ./ids-aula.env",
         "path": "",
-        "note": "",
-        "expect": "Cada consulta devuelve dos filas; son distintas agrupaciones de los mismos tres vínculos.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+        "expect": "Ves tres vínculos iniciales. Las variables guardan los IDs reales de las proyecciones y de Diego y Ana.",
         "focus": "model",
-        "cues": [],
+        "cues": [
+          {
+            "token": "node --env-file=.env dist/datos/cargar-datos-nm.js",
+            "start": 14,
+            "end": 64,
+            "note": "Ejecuta el archivo compilado con la conexión de tu .env. save() escribe y find() lee."
+          },
+          {
+            "token": ". ./ids-aula.env",
+            "start": 65,
+            "end": 81,
+            "note": "Carga los IDs reales en esta terminal para los curl siguientes."
+          }
+        ],
         "create": null
       },
       {
@@ -336,7 +343,7 @@
         "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Tecnico } from './entities/tecnico.entity';\n\n@Injectable()\nexport class TecnicosService {\n  constructor(\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n}",
         "path": "src/tecnicos/tecnicos.service.ts",
         "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los tecnicos iniciales y a Lucía; no crea asignaciones.",
+        "expect": "POST devuelve el ID real del nuevo tecnico; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "service",
         "cues": [
           {
@@ -369,7 +376,7 @@
         "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { TecnicosService } from './tecnicos.service';\n\n@Controller('tecnicos')\nexport class TecnicosController {\n  constructor(private readonly service: TecnicosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarTecnicos();\n  }\n}",
         "path": "src/tecnicos/tecnicos.controller.ts",
         "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los tecnicos iniciales y a Lucía; no crea asignaciones.",
+        "expect": "POST devuelve el ID real del nuevo tecnico; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "entry",
         "cues": [
           {
@@ -408,7 +415,7 @@
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\nimport { ProyeccionesService } from './proyecciones/proyecciones.service';\nimport { ProyeccionesController } from './proyecciones/proyecciones.controller';\nimport { Tecnico } from './tecnicos/entities/tecnico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { TecnicosService } from './tecnicos/tecnicos.service';\nimport { TecnicosController } from './tecnicos/tecnicos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion, Tecnico, Asignacion])],\n  controllers: [ProyeccionesController, TecnicosController],\n  providers: [ProyeccionesService, TecnicosService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
         "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "POST devuelve el ID real del nuevo tecnico; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "route",
         "cues": [
           {
@@ -434,7 +441,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "POST devuelve el ID real del nuevo tecnico; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -444,23 +451,23 @@
         "chapter": 3,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"http://localhost:3000/tecnicos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"http://localhost:3000/tecnicos\"",
+        "code": ". ./ids-aula.env\ncurl -i -X POST \"http://localhost:3000/tecnicos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"http://localhost:3000/tecnicos\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los tecnicos iniciales y a Lucía; no crea asignaciones.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "POST devuelve el ID real del nuevo tecnico; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -473,7 +480,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {\n    const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!proyeccion || !tecnico) {\n      throw new NotFoundException('No existe la proyeccion o el tecnico');\n    }\n    const asignacion = { proyeccionId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa proyeccion');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Se crea el vínculo de la segunda proyeccion con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
@@ -512,7 +519,7 @@
         "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyecciones/:proyeccionId/asignaciones')\n  asignar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(proyeccionId), datos.tecnicoId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Se crea el vínculo de la segunda proyeccion con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
@@ -539,7 +546,7 @@
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './cines/entities/cine.entity';\nimport { Proyeccion } from './proyecciones/entities/proyeccion.entity';\nimport { ProyeccionesService } from './proyecciones/proyecciones.service';\nimport { ProyeccionesController } from './proyecciones/proyecciones.controller';\nimport { Tecnico } from './tecnicos/entities/tecnico.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { TecnicosService } from './tecnicos/tecnicos.service';\nimport { TecnicosController } from './tecnicos/tecnicos.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion, Tecnico, Asignacion])],\n  controllers: [ProyeccionesController, TecnicosController, AsignacionesController],\n  providers: [ProyeccionesService, TecnicosService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
         "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Se crea el vínculo de la segunda proyeccion con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "route",
         "cues": [
           {
@@ -565,7 +572,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Se crea el vínculo de la segunda proyeccion con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -575,23 +582,23 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"http://localhost:3000/proyecciones/8/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tecnicoId\":2,\"rol\":\"Sonido\"}'",
+        "code": ". ./ids-aula.env\ncurl -i -X POST \"http://localhost:3000/proyecciones/$PROYECCION_2_ID/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"tecnicoId\\\":$TECNICO_2_ID,\\\"rol\\\":\\\"Sonido\\\"}\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Se crea el vínculo de la segunda proyeccion con Ana. Repetir esa pareja devuelve 409.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -604,7 +611,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {\n    const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!proyeccion || !tecnico) {\n      throw new NotFoundException('No existe la proyeccion o el tecnico');\n    }\n    const asignacion = { proyeccionId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa proyeccion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyeccion(proyeccionId: number) {\n    return this.asignaciones.find({ where: { proyeccionId }, order: { tecnicoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "La proyeccion 7 devuelve (7,1,Imagen) y (7,2,Sonido): dos tecnicos para una proyeccion.",
+        "expect": "La proyeccion principal devuelve sus dos tecnicos y sus roles.",
         "focus": "service",
         "cues": [
           {
@@ -631,7 +638,7 @@
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyecciones/:proyeccionId/asignaciones')\n  asignar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(proyeccionId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('proyecciones/:proyeccionId/asignaciones')\n  listarPorProyeccion(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.listarPorProyeccion(Number(proyeccionId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "La proyeccion 7 devuelve (7,1,Imagen) y (7,2,Sonido): dos tecnicos para una proyeccion.",
+        "expect": "La proyeccion principal devuelve sus dos tecnicos y sus roles.",
         "focus": "entry",
         "cues": [
           {
@@ -658,7 +665,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "La proyeccion principal devuelve sus dos tecnicos y sus roles.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -668,17 +675,23 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"http://localhost:3000/proyecciones/7/asignaciones\"",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/proyecciones/$PROYECCION_1_ID/asignaciones\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. ",
-        "expect": "La proyeccion 7 devuelve (7,1,Imagen) y (7,2,Sonido): dos tecnicos para una proyeccion.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "La proyeccion principal devuelve sus dos tecnicos y sus roles.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
+          },
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -691,7 +704,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {\n    const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!proyeccion || !tecnico) {\n      throw new NotFoundException('No existe la proyeccion o el tecnico');\n    }\n    const asignacion = { proyeccionId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa proyeccion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyeccion(proyeccionId: number) {\n    return this.asignaciones.find({ where: { proyeccionId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { proyeccionId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "El tecnico 1 devuelve las proyecciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Diego devuelve sus vínculos con la proyeccion principal y la secundaria.",
         "focus": "service",
         "cues": [
           {
@@ -718,7 +731,7 @@
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyecciones/:proyeccionId/asignaciones')\n  asignar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(proyeccionId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('proyecciones/:proyeccionId/asignaciones')\n  listarPorProyeccion(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.listarPorProyeccion(Number(proyeccionId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "El tecnico 1 devuelve las proyecciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Diego devuelve sus vínculos con la proyeccion principal y la secundaria.",
         "focus": "entry",
         "cues": [
           {
@@ -745,7 +758,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Diego devuelve sus vínculos con la proyeccion principal y la secundaria.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -755,17 +768,23 @@
         "chapter": 6,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"http://localhost:3000/tecnicos/1/asignaciones\"",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/tecnicos/$TECNICO_1_ID/asignaciones\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. El índice es eventualmente consistente; repite la lectura si acabas de escribir.",
-        "expect": "El tecnico 1 devuelve las proyecciones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Diego devuelve sus vínculos con la proyeccion principal y la secundaria.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
+          },
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -778,7 +797,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {\n    const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!proyeccion || !tecnico) {\n      throw new NotFoundException('No existe la proyeccion o el tecnico');\n    }\n    const asignacion = { proyeccionId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa proyeccion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyeccion(proyeccionId: number) {\n    return this.asignaciones.find({ where: { proyeccionId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { proyeccionId: 'ASC' } });\n  }\n\n  async modificarRol(proyeccionId: number, tecnicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyeccionId, tecnicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyeccionId, tecnicoId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Solo el vínculo de la proyeccion principal con Diego cambia a Jefe de equipo.",
         "focus": "service",
         "cues": [
           {
@@ -811,7 +830,7 @@
         "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyecciones/:proyeccionId/asignaciones')\n  asignar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(proyeccionId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('proyecciones/:proyeccionId/asignaciones')\n  listarPorProyeccion(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.listarPorProyeccion(Number(proyeccionId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n\n  @Patch('proyecciones/:proyeccionId/asignaciones/:tecnicoId')\n  modificarRol(@Param('proyeccionId') proyeccionId: string, @Param('tecnicoId') tecnicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyeccionId), Number(tecnicoId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Solo el vínculo de la proyeccion principal con Diego cambia a Jefe de equipo.",
         "focus": "entry",
         "cues": [
           {
@@ -838,7 +857,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Solo el vínculo de la proyeccion principal con Diego cambia a Jefe de equipo.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -848,23 +867,23 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"http://localhost:3000/proyecciones/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": ". ./ids-aula.env\ncurl -i -X PATCH \"http://localhost:3000/proyecciones/$PROYECCION_1_ID/asignaciones/$TECNICO_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "Solo el vínculo de la proyeccion principal con Diego cambia a Jefe de equipo.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "PATCH",
-            "start": 11,
-            "end": 16,
-            "note": "Modifica únicamente el dato que envías."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -877,7 +896,7 @@
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {\n    const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!proyeccion || !tecnico) {\n      throw new NotFoundException('No existe la proyeccion o el tecnico');\n    }\n    const asignacion = { proyeccionId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa proyeccion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyeccion(proyeccionId: number) {\n    return this.asignaciones.find({ where: { proyeccionId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { proyeccionId: 'ASC' } });\n  }\n\n  async modificarRol(proyeccionId: number, tecnicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyeccionId, tecnicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyeccionId, tecnicoId, rol };\n  }\n\n  async eliminarAsignacion(proyeccionId: number, tecnicoId: number) {\n    await this.asignaciones.delete({ proyeccionId, tecnicoId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las proyecciones y los tecnicos.",
+        "expect": "Se elimina solo ese vínculo; se conservan las proyecciones, los tecnicos y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
@@ -904,7 +923,7 @@
         "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyecciones/:proyeccionId/asignaciones')\n  asignar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(proyeccionId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('proyecciones/:proyeccionId/asignaciones')\n  listarPorProyeccion(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.listarPorProyeccion(Number(proyeccionId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n\n  @Patch('proyecciones/:proyeccionId/asignaciones/:tecnicoId')\n  modificarRol(@Param('proyeccionId') proyeccionId: string, @Param('tecnicoId') tecnicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyeccionId), Number(tecnicoId), datos.rol);\n  }\n\n  @Delete('proyecciones/:proyeccionId/asignaciones/:tecnicoId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string, @Param('tecnicoId') tecnicoId: string) {\n    return this.service.eliminarAsignacion(Number(proyeccionId), Number(tecnicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
         "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las proyecciones y los tecnicos.",
+        "expect": "Se elimina solo ese vínculo; se conservan las proyecciones, los tecnicos y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
@@ -931,7 +950,7 @@
         "code": "npm run build\nnpm run start",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Se elimina solo ese vínculo; se conservan las proyecciones, los tecnicos y los otros tres vínculos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -941,23 +960,23 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"http://localhost:3000/proyecciones/7/asignaciones/1\"",
+        "code": ". ./ids-aula.env\ncurl -i -X DELETE \"http://localhost:3000/proyecciones/$PROYECCION_1_ID/asignaciones/$TECNICO_1_ID\"",
         "path": "",
-        "note": "Terminal 2; Nest debe seguir abierto en la Terminal 1. ",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las proyecciones y los tecnicos.",
+        "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base. Mantén Nest abierto en la Terminal 1.",
+        "expect": "HTTP 204. Desaparece solo ese vínculo; se conservan las proyecciones, los tecnicos y los otros tres vínculos.",
         "focus": "response",
         "cues": [
           {
-            "token": "curl",
+            "token": ". ./ids-aula.env",
             "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
+            "end": 16,
+            "note": "Recupera los IDs de tu base, sin escribir números a mano."
           },
           {
-            "token": "DELETE",
-            "start": 11,
-            "end": 17,
-            "note": "Elimina el vínculo identificado por la ruta."
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "La petición recorre Controller → Service → Entity."
           }
         ],
         "create": null
@@ -967,12 +986,19 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"ASIGNACION\" ORDER BY \"ID_PROYECCION\", \"ID_TECNICO\";'",
+        "code": ". ./ids-aula.env\ncurl -i \"http://localhost:3000/proyecciones/$PROYECCION_1_ID/asignaciones\"\ncurl -i \"http://localhost:3000/tecnicos/$TECNICO_1_ID/asignaciones\"\ncurl -i http://localhost:3000/proyecciones\ncurl -i http://localhost:3000/tecnicos",
         "path": "",
-        "note": "",
-        "expect": "Tras los seis casos quedan (7,2), (8,1) y (8,2). Permanecen proyecciones y tecnicos, y la relación 1:N anterior.",
+        "note": "Comprueba desde las rutas de lectura de tu aplicación. Sus Services utilizan find() sobre Asignacion.",
+        "expect": "La proyeccion principal conserva el vínculo con Ana; Diego conserva el de la segunda proyeccion. Las proyecciones y los tecnicos siguen existiendo.",
         "focus": "response",
-        "cues": [],
+        "cues": [
+          {
+            "token": "curl",
+            "start": 17,
+            "end": 21,
+            "note": "Lee el resultado a través de Controller y Service. TypeORM genera la consulta."
+          }
+        ],
         "create": null
       },
       {
@@ -3062,6 +3088,18 @@
     "src/asignaciones/listar-por-tecnico/",
     "src/asignaciones/modificar-rol/",
     "src/asignaciones/eliminar-asignacion/"
+  ],
+  "ormDataRevision": 1,
+  "ormDataRevisedIds": [
+    "datos",
+    "cargar",
+    "persistencia",
+    "crear-listar-curl",
+    "asignar-tecnico-curl",
+    "listar-por-proyeccion-curl",
+    "listar-por-tecnico-curl",
+    "modificar-rol-curl",
+    "eliminar-asignacion-curl"
   ],
   "context": {
     "id": "CH-13",

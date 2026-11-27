@@ -298,42 +298,24 @@
       {
         "id": "postgres",
         "title": "Prepara PostgreSQL",
-        "lead": "PostgreSQL es otro proceso: debe estar instalado y arrancado antes de conectar Nest.",
-        "where": "Otra terminal Git Bash / Terminal · PostgreSQL local",
+        "lead": "PostgreSQL debe estar encendido. La base vacía se prepara una sola vez desde pgAdmin; las tablas las generará TypeORM con tus Entities.",
+        "where": "pgAdmin · servidor PostgreSQL local",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Comprueba herramientas y abre psql",
-            "code": "psql --version\npsql -h localhost -p 5432 -U postgres -d postgres -W",
-            "explain": "En Windows instala PostgreSQL con usuario postgres y contraseña 123456. Instala también Command Line Tools y añade su carpeta bin al PATH de Git Bash; reinicia la terminal. En macOS usa tu instalación PostgreSQL y arráncala. La contraseña se configura en el servidor, no al escribir .env.",
-            "terms": [],
-            "links": [
-              [
-                "Instalar PostgreSQL en Windows",
-                "https://www.postgresql.org/download/windows/"
-              ],
-              [
-                "Instalar PostgreSQL en macOS",
-                "https://www.postgresql.org/download/macosx/"
-              ]
-            ]
-          },
-          {
-            "kind": "command",
-            "title": "Dentro de psql · crea la base",
-            "code": "CREATE DATABASE control_databridge;\n\\q",
-            "explain": "Este bloque es SQL dentro de psql, no Bash. Si la base ya existe, continúa sin borrarla.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Desde Git Bash · verifica la base",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT current_database();'",
-            "explain": "",
+            "kind": "instruction",
+            "title": "Crea la base vacía desde pgAdmin",
+            "code": "",
+            "instructions": [
+              "Abre pgAdmin y conecta con tu servidor PostgreSQL.",
+              "En el panel izquierdo, pulsa con el botón derecho sobre Databases → Create → Database.",
+              "Escribe control_databridge y pulsa Save. Si ya existe, utiliza esa base sin borrarla.",
+              "Conserva host, puerto, usuario y contraseña de tu .env. En el siguiente paso Nest comprobará la conexión."
+            ],
+            "explain": "Aquí solo preparas la base vacía. TypeORM creará sus tablas y relaciones al arrancar con las Entities registradas y synchronize: true.",
             "terms": []
           }
         ],
-        "expect": "SELECT current_database() devuelve control_databridge. Si psql no existe, instala sus herramientas; si connection refused, inicia PostgreSQL. No cambies al siguiente paso hasta poder conectar.",
+        "expect": "La base control_databridge aparece en pgAdmin. Aún no necesitas crear tablas ni escribir consultas.",
         "scene": "database",
         "nodes": [
           "Nest :3000",
@@ -346,7 +328,7 @@
       {
         "id": "conexion",
         "title": "Conecta Nest con PostgreSQL",
-        "lead": "Ahora sí, /salud hará una consulta SQL. No necesita todavía las entidades del caso.",
+        "lead": "TypeOrmModule abre la conexión con tu .env. /salud comprueba que DataSource está inicializado.",
         "where": "mi-practica/nest · Terminal 1 detenida con Ctrl+C",
         "blocks": [
           {
@@ -354,7 +336,7 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
-            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  salud() {\n    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "explain": "forRoot abre la conexión usando .env; autoLoadEntities recogerá las entidades registradas después. synchronize se usa solo en esta base de práctica.",
             "terms": [
               [
@@ -366,8 +348,8 @@
                 "Lee DB_NAME de .env, cargado por npm run start."
               ],
               [
-                "SELECT current_database()",
-                "La respuesta prueba una consulta real a PostgreSQL."
+                "this.db.isInitialized",
+                "Indica que TypeORM ha inicializado la conexión. No ejecuta una consulta escrita a mano."
               ]
             ]
           },
@@ -386,13 +368,13 @@
             "terms": []
           }
         ],
-        "expect": "HTTP 200 y {\"estado\":\"ok\",\"base\":\"control_databridge\"}. Ahora la respuesta confirma conexión SQL real.",
+        "expect": "GET /salud devuelve HTTP 200, estado ok y el nombre de tu base. La conexión de TypeORM se ha inicializado.",
         "scene": "connection",
         "nodes": [
           ".env",
-          "forRoot",
-          "DataSource",
-          "SELECT → /salud"
+          "TypeOrmModule.forRoot",
+          "DataSource.isInitialized",
+          "GET /salud"
         ],
         "workshop": null
       },
@@ -433,10 +415,15 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\nimport { TallerModule } from './taller.module';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  async salud() {\n    const [resultado] = await this.db.query('SELECT current_database() AS base');\n    return { estado: 'ok', base: resultado.base };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    }),\n    TallerModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Controller, Get, Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { DataSource } from 'typeorm';\nimport { TallerModule } from './taller.module';\n\n@Controller('salud')\nclass SaludController {\n  constructor(private readonly db: DataSource) {}\n\n  @Get()\n  salud() {\n    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };\n  }\n}\n\n@Module({\n  imports: [\n    TypeOrmModule.forRoot({\n      type: 'postgres',\n      host: process.env.DB_HOST,\n      port: Number(process.env.DB_PORT),\n      username: process.env.DB_USER,\n      password: process.env.DB_PASSWORD,\n      database: process.env.DB_NAME,\n      autoLoadEntities: true,\n      synchronize: true // Solo en esta base de práctica.\n    }),\n    TallerModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\nls -d src\ntouch src/app.module.ts\ncode src/app.module.ts",
             "explain": "AppModule importa TallerModule, que registra las Entities con forFeature.",
-            "terms": []
+            "terms": [
+              [
+                "this.db.isInitialized",
+                "Indica que TypeORM ha inicializado la conexión. No ejecuta una consulta escrita a mano."
+              ]
+            ]
           },
           {
             "kind": "command",
@@ -447,9 +434,9 @@
           },
           {
             "kind": "command",
-            "title": "Terminal 2 · mira las tablas",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c '\\dt'",
-            "explain": "",
+            "title": "Terminal 2 · comprueba TypeORM",
+            "code": "curl -i http://localhost:3000/salud",
+            "explain": "Con synchronize: true, al arrancar Nest TypeORM crea las tablas y las relaciones declaradas en las Entities. Puedes verlas en pgAdmin → Schemas → public → Tables.",
             "terms": []
           }
         ],
@@ -469,33 +456,40 @@
       {
         "id": "datos",
         "title": "Carga los datos de tu ficha",
-        "lead": "Carga los dos registros principales y los tres registros asociados de tu ficha.",
+        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
         "where": "mi-practica/nest · Terminal 2",
         "blocks": [
           {
             "kind": "file",
-            "title": "datos-iniciales.sql",
-            "path": "datos-iniciales.sql",
-            "code": "INSERT INTO \"LABORATORIO\" (\"ID\", \"NOMBRE\") VALUES\n  (1, 'Laboratorio Azul'),\n  (2, 'Laboratorio Verde')\nON CONFLICT (\"ID\") DO NOTHING;\n\nINSERT INTO \"MUESTRA\" (\"ID\", \"NOMBRE\", \"CANTIDAD_ML\", \"ID_LABORATORIO\") VALUES\n  (7, 'Muestra M-01', 15, 1),\n  (8, 'Muestra M-02', 60, 2),\n  (9, 'Muestra M-01 · nuevo', 90, 1)\nON CONFLICT (\"ID\") DO NOTHING;\n\nSELECT setval(pg_get_serial_sequence('\"LABORATORIO\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"LABORATORIO\"), true);\nSELECT * FROM \"LABORATORIO\" ORDER BY \"ID\";\n\nSELECT setval(pg_get_serial_sequence('\"MUESTRA\"', 'ID'),\n              (SELECT MAX(\"ID\") FROM \"MUESTRA\"), true);\nSELECT * FROM \"MUESTRA\" ORDER BY \"ID\";",
-            "create": "touch datos-iniciales.sql\ncode datos-iniciales.sql",
-            "explain": "setval coloca la secuencia después del ID mayor ya cargado.",
+            "title": "src/datos/cargar-datos.ts",
+            "path": "src/datos/cargar-datos.ts",
+            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\nimport { Muestra } from '../muestras/entities/muestra.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const laboratorios = db.getRepository(Laboratorio);\n    const muestras = db.getRepository(Muestra);\n\n    const primero = await laboratorios.findOneBy({ nombre: 'Laboratorio Azul' })\n      ?? await laboratorios.save({ nombre: 'Laboratorio Azul' });\n    const segundo = await laboratorios.findOneBy({ nombre: 'Laboratorio Verde' })\n      ?? await laboratorios.save({ nombre: 'Laboratorio Verde' });\n\n    const principal = await muestras.findOneBy({ nombre: 'Muestra M-01' })\n      ?? await muestras.save({ nombre: 'Muestra M-01', cantidadMl: 15, laboratorio: primero });\n    const secundaria = await muestras.findOneBy({ nombre: 'Muestra M-02' })\n      ?? await muestras.save({ nombre: 'Muestra M-02', cantidadMl: 60, laboratorio: segundo });\n    const otra = await muestras.findOneBy({ nombre: 'Muestra M-01 · nuevo' })\n      ?? await muestras.save({ nombre: 'Muestra M-01 · nuevo', cantidadMl: 90, laboratorio: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export LABORATORIO_1_ID=${primero.id}`,\n      `export LABORATORIO_2_ID=${segundo.id}`,\n      `export MUESTRA_1_ID=${principal.id}`,\n      `export MUESTRA_2_ID=${secundaria.id}`,\n      `export MUESTRA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
+            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
+            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Ejecuta el archivo SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -f datos-iniciales.sql",
-            "explain": "",
+            "title": "Compila y carga los ejemplos",
+            "code": "npm run build\nnode --env-file=.env dist/datos/cargar-datos.js",
+            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Carga los IDs reales",
+            "code": ". ./ids-aula.env\nprintf 'Muestra principal: %s\\nOtro laboratorio: %s\\n' \"$MUESTRA_1_ID\" \"$LABORATORIO_2_ID\"",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
             "terms": []
           }
         ],
-        "expect": "Ves dos registros de Laboratorio y tres de Muestra: 7→1, 8→2 y 9→1. Compara CANTIDAD_ML con tu ficha.",
+        "expect": "Hay dos laboratorios y tres muestras de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
         "scene": "records",
         "nodes": [
-          "Laboratorio 1",
-          "Muestra 7 y 9",
-          "Laboratorio 2",
-          "Muestra 8"
+          "Laboratorio Azul",
+          "Muestra M-01 y otra muestra",
+          "Laboratorio Verde",
+          "Muestra M-02"
         ],
         "workshop": null
       },
@@ -505,6 +499,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -549,12 +550,12 @@
           {
             "kind": "command",
             "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"cantidadMl\":16,\"laboratorioId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/muestras\"",
+            "code": "curl -fsS -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"cantidadMl\\\":16,\\\"laboratorioId\\\":$LABORATORIO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/muestras\"",
             "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro muestras. Conserva ese ID para el borrado.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -573,6 +574,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -606,7 +614,7 @@
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Se elimina únicamente la muestra de prueba. Siguen las tres muestras originales con sus datos y relaciones.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -625,6 +633,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -653,19 +668,12 @@
           {
             "kind": "command",
             "title": "Modificar cantidad",
-            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'\ncurl -i \"http://localhost:3000/muestras\"",
-            "explain": "",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Confirma el dato y la referencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"CANTIDAD_ML\", \"ID_LABORATORIO\" FROM \"MUESTRA\" WHERE \"ID\" = 7;'",
+            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/$MUESTRA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'\ncurl -i http://localhost:3000/muestras",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · cantidadMl = 75 ml · laboratorioId = 1",
+        "expect": "La muestra principal tiene cantidad 75 y conserva su laboratorio.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -684,6 +692,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -712,19 +727,12 @@
           {
             "kind": "command",
             "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/7/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"laboratorioId\":2}'\ncurl -i \"http://localhost:3000/muestras\"",
-            "explain": "",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Confirma el dato y la referencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT \"ID\", \"CANTIDAD_ML\", \"ID_LABORATORIO\" FROM \"MUESTRA\" WHERE \"ID\" = 7;'",
+            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/$MUESTRA_1_ID/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"laboratorioId\\\":$LABORATORIO_2_ID}\"\ncurl -i http://localhost:3000/muestras",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · cantidadMl = 75 ml · laboratorioId pasa de 1 a 2",
+        "expect": "La muestra principal pasa al segundo laboratorio y conserva su cantidad 75.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -743,6 +751,13 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "mi-practica/nest · dos terminales",
         "blocks": [
+          {
+            "kind": "command",
+            "title": "Terminal 2 · recupera los IDs de tu proyecto",
+            "code": ". ./ids-aula.env",
+            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "terms": []
+          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -771,12 +786,12 @@
           {
             "kind": "command",
             "title": "Consultar la relación",
-            "code": "curl -i -X GET \"http://localhost:3000/laboratorios/2/muestras?minimo=61\"",
+            "code": "curl -i \"http://localhost:3000/laboratorios/$LABORATORIO_2_ID/muestras?minimo=61\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Laboratorio Verde + registro 7 (75 ml). Excluye el 8 (60 ml) y el 9 (pertenece al ID 1).",
+        "expect": "La respuesta incluye el segundo laboratorio y la muestra principal; el filtro excluye las otras dos muestras.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -797,9 +812,9 @@
         "blocks": [
           {
             "kind": "command",
-            "title": "Confirma la persistencia en SQL",
-            "code": "psql -h localhost -p 5432 -U postgres -d control_databridge -W -c 'SELECT * FROM \"MUESTRA\" ORDER BY \"ID\";'",
-            "explain": "",
+            "title": "Comprueba el listado desde tu aplicación",
+            "code": "curl -i http://localhost:3000/muestras",
+            "explain": "La petición pasa por Controller → Service → Entity. find() realiza la lectura y TypeORM genera la consulta.",
             "terms": []
           },
           {
@@ -817,7 +832,7 @@
             "terms": []
           }
         ],
-        "expect": "El registro 7 tiene cantidadMl = 75 y referencia al ID 2. Tu código está en tu GitHub, sin credenciales.",
+        "expect": "La muestra principal conserva cantidad 75 y pertenece al segundo laboratorio. Tu código está en tu GitHub, sin credenciales.",
         "scene": "persist",
         "nodes": [
           "Petición",
@@ -1638,5 +1653,18 @@
       }
     ]
   },
-  "nestSimpleRevision": 1
+  "nestSimpleRevision": 1,
+  "ormDataRevision": 1,
+  "ormDataRevisedSteps": [
+    "postgres",
+    "conexion",
+    "modelos",
+    "datos",
+    "caso-1",
+    "caso-2",
+    "caso-3",
+    "caso-4",
+    "caso-5",
+    "guardar"
+  ]
 }

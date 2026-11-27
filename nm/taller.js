@@ -226,7 +226,7 @@ function onPointerUp(event){if(!drag)return;const moved=drag.moving;const id=dra
 function cleanDrag(){highlight(null);if(drag?.el.hasPointerCapture?.(drag.pointer))drag.el.releasePointerCapture(drag.pointer);drag=null;}
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-22.json?v=arturo-orm-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
+ try{D=await (await fetch('CH-22.json?v=orm-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

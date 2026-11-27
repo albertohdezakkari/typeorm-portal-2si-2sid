@@ -1,6 +1,6 @@
 # Recorridos N:M de todo el alumnado
 
-En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos. Serverless conserva sus 60 pasos.
+En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos, con synchronize: true y carga de datos mediante las Entities de TypeORM, sin SQL externo. Serverless conserva sus 60 pasos.
 
 | Caso | Proyecto 1:N existente | Ampliación N:M | Material |
 | --- | --- | --- | --- |

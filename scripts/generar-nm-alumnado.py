@@ -82,12 +82,10 @@ for case_id, config in CONFIG.items():
     final_note=f"Se conservan los registros 7, 8 y 9 de {n['entity']}. El registro 7 mantiene {m['column']} = {m['after']} y {p['sql']}_ID = 2, como al terminar el 1:N."
     for tech,steps in data['tracks'].items():
         resume=next(s for s in steps if s['id']=='retomar')
-        resume['expect']=('Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /'+n['route']+' devuelven HTTP 200. ' if tech=='nest' else 'La API responde con HTTP 200. ')+final_note
+        if tech=='cloud':resume['expect']='La API responde con HTTP 200. '+final_note
     # Referencia 1:N completa: usar exactamente las filas del contexto original.
     initial=source['fixtures'][0]
-    sql=env['NEST']['datos-iniciales.sql']
-    sql=sql.replace(f"(7, '{initial['name']}', {m['initial']}, 1)",f"(7, '{initial['name']}', {m['after']}, 2)")
-    write(folder/'codigo/nest/datos-iniciales.sql',sql)
+    # Nest carga y consulta los ejemplos mediante Entities; no genera archivos SQL.
     cloud=env['CLOUD']['cargar-datos-1n.sh']
     cloud=cloud.replace(f"'{m['column']}':{m['initial']}",f"'{m['column']}':{m['after']}")
     cloud=cloud.replace(f"'{n['sql']}_ID':7,'{ctx['text']['column']}':'{initial['name']}','{m['column']}':{m['after']},'{p['sql']}_ID':1",f"'{n['sql']}_ID':7,'{ctx['text']['column']}':'{initial['name']}','{m['column']}':{m['after']},'{p['sql']}_ID':2")
@@ -95,7 +93,7 @@ for case_id, config in CONFIG.items():
     write(folder/(case_id+'.json'),json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     # El título de la ficha docente CH-13 usa PELICULA, no NOMBRE.
     runtime=translated(RUNTIME).replace('fichas-nm-'+case_id.lower().replace('-','')+'.pdf','fichas-nm.pdf')
-    runtime=runtime.replace('?v=arturo-nm-simple-2','?v=nest-sencillo-todos-1')
+    runtime=runtime.replace('?v=arturo-orm-1','?v=orm-todos-1')
     runtime=runtime.replace('/tree/main/nm/codigo/','/tree/main/nm/casos/'+case_id+'/codigo/')
     runtime=runtime.replace("['DATO','NOMBRE'],['DATO','"+m['column']+"']","['DATO','"+ctx['text']['column']+"'],['DATO','"+m['column']+"']")
     runtime=runtime.replace("['ID','PK'],['NOMBRE',''],['"+m['column']+"','']","['ID','PK'],['"+ctx['text']['column']+"',''],['"+m['column']+"','']")
@@ -108,8 +106,8 @@ for case_id, config in CONFIG.items():
     # Encabezados y campos largos mantienen espacio para las insignias PK/FK.
     diagram=diagram.replace('font-size="25"','font-size="21"').replace('font-size="21" font-family="Consolas','font-size="18" font-family="Consolas')
     write(folder/'esquema-logico.svg',diagram)
-    write(folder/'index.html',f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=nest-sencillo-todos-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=nest-sencillo-todos-1"></script></body></html>\n')
-    write(folder/'README.md',f'# {case_id} · {title} · N:M\n\nContinúa tu proyecto **{ctx["title"]}** ya preparado. No reinstales ni reemplaces el 1:N.\n\nAñade **{person}** (ID, NOMBRE, APELLIDOS, EMAIL) y **Asignacion**, cuya clave compuesta es `(ID_{n["sql"]}, ID_{person.upper()})`, con ROL como dato del vínculo.\n\nEn DynamoDB, ASIGNACIONES tiene PK `{n["sql"]}_ID` y SK `{person.upper()}_ID`; el índice `Por{person}` invierte ambas claves y proyecta ROL.\n\nRecorre los diez apartados del [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm) seleccionando tu correo. Alterna Nest + TypeORM / Serverless + Toolbox. Los directorios `codigo/nest` y `codigo/cloud` contienen la referencia completa, pero cada paso te proporciona el archivo acumulativo que corresponde a ese momento.\n\n[Fichas N:M para imprimir](fichas-nm.pdf) · [Esquema lógico](esquema-logico.svg)\n\n{final_note}\n\nLos seis casos enseñan alta/listado, asignación, lectura en ambas direcciones, cambio de rol y eliminación del vínculo. Se conservan ambos extremos. En Serverless, todos los repositories utilizan `MODELO.build(EntityRepository)`. Cada caso incluye curl y evento/Invoke compatibles con su handler.\n')
+    write(folder/'index.html',f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=orm-todos-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=orm-todos-1"></script></body></html>\n')
+    write(folder/'README.md',f'# {case_id} · {title} · N:M\n\nContinúa tu proyecto **{ctx["title"]}** ya preparado. No reinstales ni reemplaces el 1:N.\n\nAñade **{person}** (ID, NOMBRE, APELLIDOS, EMAIL) y **Asignacion**, cuya clave compuesta es `(ID_{n["sql"]}, ID_{person.upper()})`, con ROL como dato del vínculo.\n\nEn DynamoDB, ASIGNACIONES tiene PK `{n["sql"]}_ID` y SK `{person.upper()}_ID`; el índice `Por{person}` invierte ambas claves y proyecta ROL.\n\nRecorre los diez apartados del [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm) seleccionando tu correo. Alterna Nest + TypeORM / Serverless + Toolbox. Los directorios `codigo/nest` y `codigo/cloud` contienen la referencia completa, pero cada paso te proporciona el archivo acumulativo que corresponde a ese momento.\n\n[Fichas N:M para imprimir](fichas-nm.pdf) · [Esquema lógico](esquema-logico.svg)\n\n{final_note} Los números de la ficha son ejemplos visuales. En Nest, las pruebas utilizan los IDs reales cargados desde `ids-aula.env`; los archivos `src/datos/cargar-datos.ts` y `src/datos/cargar-datos-nm.ts` utilizan las Entities de TypeORM, sin SQL manual.\n\nLos seis casos enseñan alta/listado, asignación, lectura en ambas direcciones, cambio de rol y eliminación del vínculo. Se conservan ambos extremos. En Serverless, todos los repositories utilizan `MODELO.build(EntityRepository)`. Cada caso incluye curl y evento/Invoke compatibles con su handler.\n')
     if args.pdf:
         pdfprogram=translated(PDF)
         pdfprogram=pdfprogram.replace('scripts/plantillas/nm-'+case_id.lower().replace('-','')+'-impreso.json',f'scripts/plantillas/nm-impreso/{case_id}.json')
@@ -126,7 +124,7 @@ for case_id, config in CONFIG.items():
 
 write(NM/'contextos.json',json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 rows=['# Recorridos N:M de todo el alumnado','',
-      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos. Serverless conserva sus 60 pasos.','',
+      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos, con synchronize: true y carga de datos mediante las Entities de TypeORM, sin SQL externo. Serverless conserva sus 60 pasos.','',
       '| Caso | Proyecto 1:N existente | Ampliación N:M | Material |',
       '| --- | --- | --- | --- |']
 for case_id,meta in manifest.items():

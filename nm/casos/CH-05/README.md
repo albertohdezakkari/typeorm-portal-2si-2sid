@@ -10,6 +10,6 @@ Recorre los diez apartados del [cuaderno](https://albertohdezakkari.github.io/ty
 
 [Fichas N:M para imprimir](fichas-nm.pdf) · [Esquema lógico](esquema-logico.svg)
 
-Se conservan los registros 7, 8 y 9 de Actuacion. El registro 7 mantiene DURACION_MINUTOS = 85 y FESTIVAL_ID = 2, como al terminar el 1:N.
+Se conservan los registros 7, 8 y 9 de Actuacion. El registro 7 mantiene DURACION_MINUTOS = 85 y FESTIVAL_ID = 2, como al terminar el 1:N. Los números de la ficha son ejemplos visuales. En Nest, las pruebas utilizan los IDs reales cargados desde `ids-aula.env`; los archivos `src/datos/cargar-datos.ts` y `src/datos/cargar-datos-nm.ts` utilizan las Entities de TypeORM, sin SQL manual.
 
 Los seis casos enseñan alta/listado, asignación, lectura en ambas direcciones, cambio de rol y eliminación del vínculo. Se conservan ambos extremos. En Serverless, todos los repositories utilizan `MODELO.build(EntityRepository)`. Cada caso incluye curl y evento/Invoke compatibles con su handler.
