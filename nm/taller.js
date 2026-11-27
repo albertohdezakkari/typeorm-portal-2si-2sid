@@ -122,8 +122,8 @@ function bank(){
 function setupNMGuidance(){
  if(!D.projectBase)return;
  root.setAttribute('data-guided-course','');
- const map=document.createElement('details');map.className='nm-guide-map';
- map.innerHTML='<summary><strong data-nm-guide-route></strong><span>Ver recorrido y cambiar tecnología</span></summary><div class="nm-guide-map-content"></div>';
+ const map=document.createElement('details');map.className='nm-guide-map';map.open=true;
+ map.innerHTML='<summary><strong data-nm-guide-route></strong><span>Recorrido y tecnología</span></summary><div class="nm-guide-map-content"></div>';
  const content=map.querySelector('div');
  for(const selector of ['.nm-tech','.nm-toolbar','.nm-chapters','.nm-files'])content.append($(selector));
  $('.nm-menu-content').replaceChildren(map);
@@ -191,13 +191,13 @@ function focusCode(){
  const a=source.getBoundingClientRect(),b=target.getBoundingClientRect();
  if(b.top<a.top+12||b.bottom>a.bottom-12)source.scrollTop+=b.top-a.top-source.clientHeight*.32;
 }
-function go(index){stop();const mapWasOpen=D.projectBase&&$('.nm-guide-map').open;if(D.projectBase)$('.nm-guide-map').open=false;selected=null;S.positions[S.track]=Math.max(0,Math.min(index,D.tracks[S.track].length-1));S.cue=0;S.mode='observe';S.full=false;save();render();if(mapWasOpen)$('[data-nm-guide-primary]').focus({preventScroll:true});}
+function go(index){stop();const mapWasOpen=D.projectBase&&$('.nm-guide-map').open;selected=null;S.positions[S.track]=Math.max(0,Math.min(index,D.tracks[S.track].length-1));S.cue=0;S.mode='observe';S.full=false;save();render();if(mapWasOpen)$('[data-nm-guide-primary]').focus({preventScroll:true});}
 function setMenu(value){
  menuCollapsed=value;
  const menu=$('.nm-menu'),visible=value&&menu.dataset.pinned==='true';
  menu.dataset.collapsed=String(visible);$('.nm-menu-content').inert=visible;$('.nm-menu-content').setAttribute('aria-hidden',String(visible));$('.nm-summary').hidden=!visible;$('.nm-summary').setAttribute('aria-expanded',String(!visible));
 }
-function syncMenu(){const menu=$('.nm-menu');if(!menu)return;menu.dataset.pinned=String($('.nm-menu-content').offsetHeight<(outerHeight||innerHeight)*.72);menu.style.transform=menu.dataset.pinned==='true'&&outerOffset?'translateY('+Math.max(0,Math.min(outerOffset,root.offsetHeight-menu.offsetHeight))+'px)':'';setMenu(menuCollapsed);}
+function syncMenu(){const menu=$('.nm-menu');if(!menu)return;if(D.projectBase){menu.dataset.pinned='false';menu.style.transform='';setMenu(false);return;}menu.dataset.pinned=String($('.nm-menu-content').offsetHeight<(outerHeight||innerHeight)*.72);menu.style.transform=menu.dataset.pinned==='true'&&outerOffset?'translateY('+Math.max(0,Math.min(outerOffset,root.offsetHeight-menu.offsetHeight))+'px)':'';setMenu(menuCollapsed);}
 function onScroll(){
  if(scrollFrame)return;
  scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;const now=window.scrollY,delta=now-scrollYBefore;scrollYBefore=now;if(Math.abs(delta)<2)return;const dir=delta>0?1:-1;if(dir!==scrollDirection){scrollDistance=0;scrollDirection=dir;}scrollDistance+=Math.abs(delta);if(scrollDistance<12)return;scrollDistance=0;if(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))return;setMenu(dir>0&&$('.nm-menu').getBoundingClientRect().top<=1);});
@@ -207,7 +207,7 @@ async function onClick(event){
  const button=event.target.closest('[data-action]');if(!button)return;
  const a=button.dataset.action;
  if(a==='track'){
-  if(D.projectBase)$('.nm-guide-map').open=false;
+
   const previous=stage(),from=S.track;stop();S.track=button.dataset.track;const pairs={nest:{profesional:'entity',asignacion:'entity','obra-inversa':'entity','prof-inversa':'entity','asig-inversas':'entity',registrar:'infra',arrancar:'desplegar',cargar:'leer-datos'},cloud:{infra:'registrar',table:D.nestSimpleRevision?'asig-inversas':'asignacion',entity:D.nestSimpleRevision?'asig-inversas':'asignacion',desplegar:'arrancar','leer-datos':'cargar'}};let counterpart=pairs[from][previous.id]||previous.id;if(previous.id.endsWith('-evento'))counterpart=previous.id.replace(/-evento$/,'-entry');if(previous.id.endsWith('-invoke'))counterpart=previous.id.replace(/-invoke$/,'-curl');const same=D.tracks[S.track].findIndex(x=>x.id===counterpart);S.positions[S.track]=same>=0?same:D.tracks[S.track].findIndex(x=>x.chapter===previous.chapter);S.mode='observe';S.cue=0;selected=null;save();render();if(D.projectBase)$('[data-nm-guide-primary]').focus({preventScroll:true});return;
  }
  if(a==='step')return go(+button.dataset.step);

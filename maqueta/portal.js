@@ -181,7 +181,7 @@
       mainNav.querySelector('[data-tab="bases"]').focus({preventScroll:true});
     }
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=guiado-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=guiado-arturo-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=recorrido-abierto-1`, `preparar/${encodeURIComponent(context.id)}.json?v=recorrido-abierto-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;
