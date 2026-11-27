@@ -114,12 +114,12 @@ def write_runtime(case_id):
     runtime=runtime.replace("['ID','PK'],['NOMBRE',''],['"+m['column']+"','']","['ID','PK'],['"+c['text']['column']+"',''],['"+m['column']+"','']")
     folder=ROOT/'nm'if case_id=='CH-22'else ROOT/f'nm/casos/{case_id}';(folder/'taller.js').write_text(runtime)
     if case_id=='CH-22':
-        page=folder/'index.html';page.write_text(re.sub(r'taller.js\?v=[^"\s]+','taller.js?v=nest-cli-1',page.read_text()))
+        page=folder/'index.html';page.write_text(re.sub(r'taller.js\?v=[^"\s]+','taller.js?v=nest-cli-2',page.read_text()))
         return
     title=json.loads((folder/(case_id+'.json')).read_text())['title']
     (folder/'index.html').write_text(f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=altas-api-1"><link rel="stylesheet" href="../../../lectura.css?v=altas-api-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=altas-api-1"></script></body></html>\n')
     (folder/'README.md').write_text('# '+case_id+' · '+title+'\n\nEn el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo. Prepara el proyecto base siguiendo detenidamente su README y continúa en Entrenar con mis fichas.\n\nPrimero completa la relación 1:N de '+c['title']+'. Después amplía el mismo backend con '+CONFIG[case_id][0]+' y Asignacion. En Nest se crean las dos Entities, sus módulos, Services y Controllers; las altas se hacen mediante la API, con sus IDs reales, sin otra precarga. Serverless conserva sus tablas, Table + Entity y las operaciones desde el modelo.\n\nLee y copia los archivos completos en orden. Los menús permanecen abiertos, el selector de tecnología está a la derecha y puedes alternar Nest + TypeORM / Serverless + Toolbox. Las comprobaciones se ejecutan en tu terminal. El cuaderno guarda el avance en este navegador.\n')
-    page=folder/'index.html';html=page.read_text().replace('src="taller.js?v=altas-api-1"','src="taller.js?v=nest-cli-1"')
+    page=folder/'index.html';html=page.read_text().replace('src="taller.js?v=altas-api-1"','src="taller.js?v=nest-cli-2"')
     page.write_text(html)
     guide=folder/'README.md';guide.write_text(guide.read_text().replace('sus módulos, Services y Controllers','un único AsignacionesModule, un AsignacionesService con los tres repositorios y un AsignacionesController para toda la N:M'))
 

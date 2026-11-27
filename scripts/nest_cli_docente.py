@@ -21,7 +21,7 @@ def creation(path,seen):
         commands=[command(t,name)for t in KINDS]
         seen.update(f'src/{name}/{name}.{t}.ts'for t in KINDS)
     else:commands=[command(k,name)];seen.add(path)
-    return '\n'.join(commands+['code '+path]),'Genera con Nest CLI y abre el archivo','Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda.'
+    return '\n'.join(commands+['code '+path]),'Genera con Nest CLI y abre el archivo','Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea los archivos y actualiza el módulo correspondiente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda.'
 
 def set_creation(item,seen):
     path=item.get('path','')

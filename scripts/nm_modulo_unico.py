@@ -5,7 +5,7 @@ import json,re
 
 ROOT=Path(__file__).resolve().parents[1]
 CONFIG=json.loads((ROOT/'scripts/nm-contextos.json').read_text())
-CACHE='nest-cli-1'
+CACHE='nest-cli-2'
 
 @lru_cache(None)
 def adapter(case_id):

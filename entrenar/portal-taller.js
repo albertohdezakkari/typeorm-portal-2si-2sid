@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=nest-cli-1';
+      frame.src = 'entrenar/?v=nest-cli-2';
     } catch {
       status.textContent = 'No se ha podido preparar el taller. Recarga la página e inténtalo de nuevo.';
     }
