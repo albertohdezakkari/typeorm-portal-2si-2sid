@@ -35,7 +35,7 @@ window.addEventListener('message', async event => {
     if (data.context?.id !== init.caseId || data.version !== 5) throw new Error('El contexto no coincide');
     // Cada contexto reúne también sus pruebas reales en el mismo taller.
     if(data.projectBase){
-      const response=await fetch(new URL(`../preparar/${init.caseId}.json?v=estudio-todos-1`,location.href));
+      const response=await fetch(new URL(`../preparar/${init.caseId}.json?v=estudio-todos-2`,location.href));
       if(!response.ok)throw new Error('No se pudieron cargar las pruebas del proyecto');
       const preparation=await response.json();
       if(preparation.caseId!==init.caseId)throw new Error('Las pruebas no corresponden al contexto');

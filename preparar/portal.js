@@ -21,7 +21,7 @@
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
     intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=base-arturo-1`);
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=estudio-todos-2`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;

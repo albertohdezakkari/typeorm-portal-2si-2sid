@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=estudio-todos-1';
+      frame.src = 'entrenar/?v=estudio-todos-2';
     } catch {
       status.textContent = 'No se ha podido preparar el taller. Recarga la página e inténtalo de nuevo.';
     }

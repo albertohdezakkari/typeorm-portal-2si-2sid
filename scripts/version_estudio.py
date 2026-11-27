@@ -25,7 +25,7 @@ def adapters(case_id):
     train=json.loads((ROOT/f'entrenar/casos/{case_id}.json').read_text());c=train['context'];p=c['parent'];n=c['child'];m=c['metric']
     person,people,role1,role2,role3,gender=CONFIG[case_id]
     mapping={
-        'CH-22':case_id,'Arturo':case_id,
+        'CH-22':case_id,'Arturo':case_id,'taller-arturo':'mi-backend-'+case_id.lower(),
         'profesionales':people,'Profesionales':people.capitalize(),'PROFESIONALES':people.upper(),
         'profesional':person.lower(),'Profesional':person,'PROFESIONAL':person.upper(),
         'ayuntamientos':p['route'],'Ayuntamientos':p['route'].capitalize(),'AYUNTAMIENTOS':p['table'],
