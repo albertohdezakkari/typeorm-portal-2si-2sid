@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'COLABORADOR' })\nexport class Colaborador {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.colaborador)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/colaboradores/entities/colaborador.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al colaborador y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al colaborador y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "proyecto-inversa",
         "chapter": 1,
-        "title": "Relaciona la Proyecto existente con Asignacion",
+        "title": "Relaciona el Proyecto existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Empresa } from '../../empresas/entities/empresa.entity';\n\n@Entity({ name: 'PROYECTO' })\nexport class Proyecto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'HORAS_ESTIMADAS', type: 'integer' })\n  horasEstimadas!: number;\n\n  @ManyToOne(() => Empresa, empresa => empresa.proyectos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_EMPRESA' })\n  empresa!: Empresa;\n  @OneToMany(() => Asignacion, asignacion => asignacion.proyecto)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/proyectos/entities/proyecto.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "colaboradores-modulo",
-        "chapter": 1,
-        "title": "Prepara ColaboradoresModule",
-        "kind": "module",
-        "path": "src/colaboradores/colaboradores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Colaborador } from './entities/colaborador.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Colaborador])],\n  providers: [],\n  controllers: []\n})\nexport class ColaboradoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/colaboradores\ncode src/colaboradores/colaboradores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Colaborador])]",
-            "start": 164,
-            "end": 214,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Proyecto, Colaborador])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Proyecto, Colaborador y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo empresa. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyectosModule } from './proyectos/proyectos.module';\nimport { ColaboradoresModule } from './colaboradores/colaboradores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EmpresasModule } from './empresas/empresas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EmpresasModule,\n    ProyectosModule,\n    ColaboradoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyectosModule } from './proyectos/proyectos.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EmpresasModule } from './empresas/empresas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EmpresasModule,\n    ProyectosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ProyectosModule y la conexión original. Añade ColaboradoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Proyectos y añade Colaboradores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva EmpresasModule, ProyectosModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira ColaboradoresModule de AppModule y sus empresas module, service y controller; conserva colaborador.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "ColaboradoresModule,",
-            "start": 1231,
-            "end": 1251,
-            "note": "Carga el módulo que registra Colaborador."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1256,
-            "end": 1275,
+            "start": 1155,
+            "end": 1174,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea COLABORADOR y ASIGNACION desde las Entities y conserva EMPRESA y PROYECTO. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear ColaboradoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Colaborador } from './entities/colaborador.entity';\n\n@Injectable()\nexport class ColaboradoresService {\n  constructor(\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/colaboradores/colaboradores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Proyecto, Colaborador y Asignacion. Empieza con crearColaborador y listarColaboradores; los siguientes casos amplían este mismo empresa.",
         "expect": "POST devuelve el colaborador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 405,
+            "end": 434
+          },
+          {
+            "token": "@InjectRepository(Proyecto)",
+            "note": "Repositorio del primer extremo: permite comprobar que el proyecto existe.",
+            "start": 494,
+            "end": 521
+          },
+          {
+            "token": "@InjectRepository(Colaborador)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los colaboradores.",
+            "start": 576,
+            "end": 606
+          },
+          {
             "token": "this.colaboradores.create({ nombre, apellidos, email })",
-            "start": 456,
-            "end": 511,
+            "start": 766,
+            "end": 821,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.colaboradores.save(colaborador)",
-            "start": 524,
-            "end": 560,
+            "start": 834,
+            "end": 870,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.colaboradores.find({ order: { id: 'ASC' } })",
-            "start": 604,
-            "end": 653,
+            "start": 914,
+            "end": 963,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/colaboradores\ntouch src/colaboradores/colaboradores.service.ts\ncode src/colaboradores/colaboradores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear ColaboradoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ColaboradoresService } from './colaboradores.service';\n\n@Controller('colaboradores')\nexport class ColaboradoresController {\n  constructor(private readonly service: ColaboradoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarColaboradores();\n  }\n}",
-        "path": "src/colaboradores/colaboradores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /colaboradores y GET /colaboradores. Las siguientes operaciones se añaden a este mismo empresa.",
         "expect": "POST devuelve el colaborador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('colaboradores')",
-            "start": 127,
-            "end": 155,
-            "note": "Agrupa las rutas del catálogo de colaboradores."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Colaboradores y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 263,
-            "end": 270,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('colaboradores')",
+            "note": "POST /colaboradores crea un colaborador a través del mismo Service N:M.",
+            "start": 244,
+            "end": 266
+          },
+          {
+            "token": "@Get('colaboradores')",
+            "note": "GET /colaboradores lista los colaboradores desde el mismo Service.",
+            "start": 450,
+            "end": 471
           },
           {
             "token": "this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email)",
-            "start": 361,
-            "end": 434,
+            "start": 368,
+            "end": 441,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 443,
-            "end": 449,
-            "note": "GET utiliza listarColaboradores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/colaboradores\ntouch src/colaboradores/colaboradores.controller.ts\ncode src/colaboradores/colaboradores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Colaboradores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Colaborador } from './entities/colaborador.entity';\nimport { ColaboradoresService } from './colaboradores.service';\nimport { ColaboradoresController } from './colaboradores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Colaborador])],\n  providers: [ColaboradoresService],\n  controllers: [ColaboradoresController]\n})\nexport class ColaboradoresModule {}",
-        "path": "src/colaboradores/colaboradores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ProyectosModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Proyecto, Colaborador])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el colaborador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [ColaboradoresService]",
-            "start": 352,
-            "end": 385,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 510,
+            "end": 542,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [ColaboradoresController]",
-            "start": 389,
-            "end": 427,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 546,
+            "end": 583,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/colaboradores/colaboradores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-colaborador-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarColaborador al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El empresa completo conserva crearColaborador, listarColaboradores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de un proyecto existente con el colaborador que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string)",
-            "start": 729,
-            "end": 809,
+            "start": 1028,
+            "end": 1108,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.proyectos.findOneBy({ id: proyectoId })",
-            "start": 839,
-            "end": 883,
+            "start": 1138,
+            "end": 1182,
             "note": "Lee el proyecto con el repositorio de TypeORM."
           },
           {
             "token": "this.colaboradores.findOneBy({ id: colaboradorId })",
-            "start": 915,
-            "end": 966,
+            "start": 1214,
+            "end": 1265,
             "note": "Lee el colaborador antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1169,
-            "end": 1205,
+            "start": 1468,
+            "end": 1504,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-colaborador-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El empresa completo conserva las rutas de Colaboradores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de un proyecto existente con el colaborador que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('proyectos/:proyectoId/asignaciones')",
-            "start": 246,
-            "end": 289,
+            "start": 559,
+            "end": 602,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol)",
-            "start": 409,
-            "end": 492,
+            "start": 722,
+            "end": 805,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-colaborador-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Proyecto, Colaborador])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ProyectosModule.",
-        "expect": "POST crea la asignación de un proyecto existente con el colaborador que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 510,
-            "end": 542,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 546,
-            "end": 583,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-colaborador-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorProyecto al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesService. El empresa completo conserva crearColaborador, listarColaboradores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las asignaciones de ese proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorProyecto(proyectoId: number)",
-            "start": 1466,
-            "end": 1503,
+            "start": 1765,
+            "end": 1802,
             "note": "Recibe un ID de proyecto."
           },
           {
             "token": "this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } })",
-            "start": 1517,
-            "end": 1599,
+            "start": 1816,
+            "end": 1898,
             "note": "Filtra las asignaciones por proyecto y ordena por colaborador."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorProyecto al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesController. El empresa completo conserva las rutas de Colaboradores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las asignaciones de ese proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('proyectos/:proyectoId/asignaciones')",
-            "start": 506,
-            "end": 548,
+            "start": 814,
+            "end": 856,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorProyecto(Number(proyectoId))",
-            "start": 623,
-            "end": 673,
+            "start": 931,
+            "end": 981,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -660,7 +626,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las asignaciones de esa proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "request",
         "cues": [
           {
@@ -686,7 +652,7 @@
         "code": "curl -i \"http://localhost:3000/proyectos/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las asignaciones de esa proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese proyecto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorColaborador al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los proyectos en las que participa ese colaborador. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El empresa completo conserva crearColaborador, listarColaboradores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve los proyectos en los que participa ese colaborador. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorColaborador(colaboradorId: number)",
-            "start": 1608,
-            "end": 1651,
+            "start": 1907,
+            "end": 1950,
             "note": "Recibe un ID de colaborador."
           },
           {
             "token": "this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } })",
-            "start": 1665,
-            "end": 1747,
+            "start": 1964,
+            "end": 2046,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorColaborador al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los proyectos en las que participa ese colaborador. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El empresa completo conserva las rutas de Colaboradores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve los proyectos en los que participa ese colaborador. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('colaboradores/:colaboradorId/asignaciones')",
-            "start": 682,
-            "end": 731,
+            "start": 990,
+            "end": 1039,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorColaborador(Number(colaboradorId))",
-            "start": 815,
-            "end": 871,
+            "start": 1123,
+            "end": 1179,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve los proyectos en las que participa ese colaborador. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los proyectos en los que participa ese colaborador. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/colaboradores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve los proyectos en las que participa ese colaborador. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los proyectos en los que participa ese colaborador. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n\n  async modificarRol(proyectoId: number, colaboradorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyectoId, colaboradorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyectoId, colaboradorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n\n  async modificarRol(proyectoId: number, colaboradorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyectoId, colaboradorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyectoId, colaboradorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El empresa completo conserva crearColaborador, listarColaboradores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el proyecto y el colaborador.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(proyectoId: number, colaboradorId: number, rol: string)",
-            "start": 1756,
-            "end": 1830,
+            "start": 2055,
+            "end": 2129,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ proyectoId, colaboradorId }, { rol })",
-            "start": 1861,
-            "end": 1925,
+            "start": 2160,
+            "end": 2224,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1931,
-            "end": 1955,
+            "start": 2230,
+            "end": 2254,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n\n  @Patch('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  modificarRol(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyectoId), Number(colaboradorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n\n  @Patch('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  modificarRol(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyectoId), Number(colaboradorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El empresa completo conserva las rutas de Colaboradores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el proyecto y el colaborador.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('proyectos/:proyectoId/asignaciones/:colaboradorId')",
-            "start": 887,
-            "end": 946,
+            "start": 1195,
+            "end": 1254,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(proyectoId), Number(colaboradorId), datos.rol)",
-            "start": 1099,
-            "end": 1178,
+            "start": 1407,
+            "end": 1486,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n\n  async modificarRol(proyectoId: number, colaboradorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyectoId, colaboradorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyectoId, colaboradorId, rol };\n  }\n\n  async eliminarAsignacion(proyectoId: number, colaboradorId: number) {\n    await this.asignaciones.delete({ proyectoId, colaboradorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Proyecto } from '../proyectos/entities/proyecto.entity';\nimport { Colaborador } from '../colaboradores/entities/colaborador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Proyecto) private readonly proyectos: Repository<Proyecto>,\n    @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>\n  ) {}\n\n  crearColaborador(nombre: string, apellidos: string, email: string) {\n    const colaborador = this.colaboradores.create({ nombre, apellidos, email });\n    return this.colaboradores.save(colaborador);\n  }\n\n  listarColaboradores() {\n    return this.colaboradores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {\n    const proyecto = await this.proyectos.findOneBy({ id: proyectoId });\n    const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });\n    if (!proyecto || !colaborador) {\n      throw new NotFoundException('No existe el proyecto o el colaborador');\n    }\n    const asignacion = { proyectoId, colaboradorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El colaborador ya está asignado a ese proyecto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProyecto(proyectoId: number) {\n    return this.asignaciones.find({ where: { proyectoId }, order: { colaboradorId: 'ASC' } });\n  }\n\n  listarPorColaborador(colaboradorId: number) {\n    return this.asignaciones.find({ where: { colaboradorId }, order: { proyectoId: 'ASC' } });\n  }\n\n  async modificarRol(proyectoId: number, colaboradorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ proyectoId, colaboradorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { proyectoId, colaboradorId, rol };\n  }\n\n  async eliminarAsignacion(proyectoId: number, colaboradorId: number) {\n    await this.asignaciones.delete({ proyectoId, colaboradorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El empresa completo conserva crearColaborador, listarColaboradores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el proyecto y el colaborador siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(proyectoId: number, colaboradorId: number)",
-            "start": 2066,
-            "end": 2133,
+            "start": 2365,
+            "end": 2432,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ proyectoId, colaboradorId })",
-            "start": 2146,
-            "end": 2201,
+            "start": 2445,
+            "end": 2500,
             "note": "Borra el vínculo; conserva Proyecto y Colaborador."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n\n  @Patch('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  modificarRol(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyectoId), Number(colaboradorId), datos.rol);\n  }\n\n  @Delete('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string) {\n    return this.service.eliminarAsignacion(Number(proyectoId), Number(colaboradorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('colaboradores')\n  crearColaborador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearColaborador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('colaboradores')\n  listarColaboradores() {\n    return this.service.listarColaboradores();\n  }\n\n  @Post('proyectos/:proyectoId/asignaciones')\n  asignar(@Param('proyectoId') proyectoId: string, @Body() datos: { colaboradorId: number; rol: string }) {\n    return this.service.asignarColaborador(Number(proyectoId), datos.colaboradorId, datos.rol);\n  }\n\n  @Get('proyectos/:proyectoId/asignaciones')\n  listarPorProyecto(@Param('proyectoId') proyectoId: string) {\n    return this.service.listarPorProyecto(Number(proyectoId));\n  }\n\n  @Get('colaboradores/:colaboradorId/asignaciones')\n  listarPorColaborador(@Param('colaboradorId') colaboradorId: string) {\n    return this.service.listarPorColaborador(Number(colaboradorId));\n  }\n\n  @Patch('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  modificarRol(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(proyectoId), Number(colaboradorId), datos.rol);\n  }\n\n  @Delete('proyectos/:proyectoId/asignaciones/:colaboradorId')\n  @HttpCode(204)\n  eliminar(@Param('proyectoId') proyectoId: string, @Param('colaboradorId') colaboradorId: string) {\n    return this.service.eliminarAsignacion(Number(proyectoId), Number(colaboradorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El empresa completo conserva las rutas de Colaboradores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el proyecto y el colaborador siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('proyectos/:proyectoId/asignaciones/:colaboradorId')",
-            "start": 1205,
-            "end": 1265,
+            "start": 1513,
+            "end": 1573,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(proyectoId), Number(colaboradorId))",
-            "start": 1395,
-            "end": 1469,
+            "start": 1703,
+            "end": 1777,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -996,7 +962,7 @@
         "kind": "review",
         "code": "",
         "path": "",
-        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro colaborador, asígnalo a la misma proyecto y asigna un colaborador a otra proyecto. Todos los datos se crean mediante los Controllers que has programado.",
+        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro colaborador, asígnalo a el mismo proyecto y asigna un colaborador a otro proyecto. Todos los datos se crean mediante los Controllers que has programado.",
         "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
         "focus": "model",
         "cues": [],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "colaborador",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "colaboradores-modulo": "asignaciones-modulo",
+    "asignar-colaborador-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/proyectos/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "colaboradores",
     "input": "colaboradorId",
     "role": "Desarrollo"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "colaborador",
+      "asig-inversas",
+      "proyecto-inversa",
+      "colaboradores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-colaborador-service",
+      "asignar-colaborador-entry",
+      "asignar-colaborador-registro",
+      "asignar-colaborador-ejecutar",
+      "asignar-colaborador-curl",
+      "listar-por-proyecto-service",
+      "listar-por-proyecto-entry",
+      "listar-por-proyecto-ejecutar",
+      "listar-por-proyecto-curl",
+      "listar-por-colaborador-service",
+      "listar-por-colaborador-entry",
+      "listar-por-colaborador-ejecutar",
+      "listar-por-colaborador-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "colaboradores-modulo": "asignaciones-modulo",
+      "asignar-colaborador-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "colaborador",
+      "asig-inversas",
+      "proyecto-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-colaborador-ejecutar",
+      "asignar-colaborador-curl",
+      "listar-por-proyecto-ejecutar",
+      "listar-por-proyecto-curl",
+      "listar-por-colaborador-ejecutar",
+      "listar-por-colaborador-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

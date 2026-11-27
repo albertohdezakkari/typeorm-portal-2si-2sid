@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Colaborador) private readonly colaboradores: Repository<Colaborador>
   ) {}
 
+  crearColaborador(nombre: string, apellidos: string, email: string) {
+    const colaborador = this.colaboradores.create({ nombre, apellidos, email });
+    return this.colaboradores.save(colaborador);
+  }
+
+  listarColaboradores() {
+    return this.colaboradores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarColaborador(proyectoId: number, colaboradorId: number, rol: string) {
     const proyecto = await this.proyectos.findOneBy({ id: proyectoId });
     const colaborador = await this.colaboradores.findOneBy({ id: colaboradorId });

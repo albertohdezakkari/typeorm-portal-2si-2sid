@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Guia) private readonly guias: Repository<Guia>
   ) {}
 
+  crearGuia(nombre: string, apellidos: string, email: string) {
+    const guia = this.guias.create({ nombre, apellidos, email });
+    return this.guias.save(guia);
+  }
+
+  listarGuias() {
+    return this.guias.find({ order: { id: 'ASC' } });
+  }
+
   async asignarGuia(excursionId: number, guiaId: number, rol: string) {
     const excursion = await this.excursiones.findOneBy({ id: excursionId });
     const guia = await this.guias.findOneBy({ id: guiaId });

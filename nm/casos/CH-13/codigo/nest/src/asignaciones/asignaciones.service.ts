@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>
   ) {}
 
+  crearTecnico(nombre: string, apellidos: string, email: string) {
+    const tecnico = this.tecnicos.create({ nombre, apellidos, email });
+    return this.tecnicos.save(tecnico);
+  }
+
+  listarTecnicos() {
+    return this.tecnicos.find({ order: { id: 'ASC' } });
+  }
+
   async asignarTecnico(proyeccionId: number, tecnicoId: number, rol: string) {
     const proyeccion = await this.proyecciones.findOneBy({ id: proyeccionId });
     const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });

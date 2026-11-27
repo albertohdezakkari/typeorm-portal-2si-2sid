@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Conductor) private readonly conductores: Repository<Conductor>
   ) {}
 
+  crearConductor(nombre: string, apellidos: string, email: string) {
+    const conductor = this.conductores.create({ nombre, apellidos, email });
+    return this.conductores.save(conductor);
+  }
+
+  listarConductores() {
+    return this.conductores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarConductor(trayectoId: number, conductorId: number, rol: string) {
     const trayecto = await this.trayectos.findOneBy({ id: trayectoId });
     const conductor = await this.conductores.findOneBy({ id: conductorId });

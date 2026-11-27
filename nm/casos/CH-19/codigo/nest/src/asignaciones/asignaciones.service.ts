@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Tripulante) private readonly tripulantes: Repository<Tripulante>
   ) {}
 
+  crearTripulante(nombre: string, apellidos: string, email: string) {
+    const tripulante = this.tripulantes.create({ nombre, apellidos, email });
+    return this.tripulantes.save(tripulante);
+  }
+
+  listarTripulantes() {
+    return this.tripulantes.find({ order: { id: 'ASC' } });
+  }
+
   async asignarTripulante(embarcacionId: number, tripulanteId: number, rol: string) {
     const embarcacion = await this.embarcaciones.findOneBy({ id: embarcacionId });
     const tripulante = await this.tripulantes.findOneBy({ id: tripulanteId });

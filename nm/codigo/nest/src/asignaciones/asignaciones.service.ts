@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>
   ) {}
 
+  crearProfesional(nombre: string, apellidos: string, email: string) {
+    const profesional = this.profesionales.create({ nombre, apellidos, email });
+    return this.profesionales.save(profesional);
+  }
+
+  listarProfesionales() {
+    return this.profesionales.find({ order: { id: 'ASC' } });
+  }
+
   async asignarProfesional(obraId: number, profesionalId: number, rol: string) {
     const obra = await this.obras.findOneBy({ id: obraId });
     const profesional = await this.profesionales.findOneBy({ id: profesionalId });

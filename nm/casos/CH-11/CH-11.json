@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'HUESPED' })\nexport class Huesped {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.huesped)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/huespedes/entities/huesped.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al huesped y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al huesped y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "reserva-inversa",
         "chapter": 1,
-        "title": "Relaciona la Reserva existente con Asignacion",
+        "title": "Relaciona el Reserva existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Hotel } from '../../hoteles/entities/hotel.entity';\n\n@Entity({ name: 'RESERVA' })\nexport class Reserva {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'NOCHES', type: 'integer' })\n  noches!: number;\n\n  @ManyToOne(() => Hotel, hotel => hotel.reservas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_HOTEL' })\n  hotel!: Hotel;\n  @OneToMany(() => Asignacion, asignacion => asignacion.reserva)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/reservas/entities/reserva.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "huespedes-modulo",
-        "chapter": 1,
-        "title": "Prepara HuespedesModule",
-        "kind": "module",
-        "path": "src/huespedes/huespedes.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huesped } from './entities/huesped.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huesped])],\n  providers: [],\n  controllers: []\n})\nexport class HuespedesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/huespedes\ncode src/huespedes/huespedes.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Huesped])]",
-            "start": 156,
-            "end": 202,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reserva, Huesped])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Reserva, Huesped y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo hotel. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReservasModule } from './reservas/reservas.module';\nimport { HuespedesModule } from './huespedes/huespedes.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { HotelesModule } from './hoteles/hoteles.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    HotelesModule,\n    ReservasModule,\n    HuespedesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReservasModule } from './reservas/reservas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { HotelesModule } from './hoteles/hoteles.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    HotelesModule,\n    ReservasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ReservasModule y la conexión original. Añade HuespedesModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Reservas y añade Huespedes y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva HotelesModule, ReservasModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira HuespedesModule de AppModule y sus hoteles module, service y controller; conserva huesped.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "HuespedesModule,",
-            "start": 1211,
-            "end": 1227,
-            "note": "Carga el módulo que registra Huesped."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1232,
-            "end": 1251,
+            "start": 1147,
+            "end": 1166,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea HUESPED y ASIGNACION desde las Entities y conserva HOTEL y RESERVA. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear HuespedesService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Huesped } from './entities/huesped.entity';\n\n@Injectable()\nexport class HuespedesService {\n  constructor(\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/huespedes/huespedes.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Reserva, Huesped y Asignacion. Empieza con crearHuesped y listarHuespedes; los siguientes casos amplían este mismo hotel.",
         "expect": "POST devuelve el huesped creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 390,
+            "end": 419
+          },
+          {
+            "token": "@InjectRepository(Reserva)",
+            "note": "Repositorio del primer extremo: permite comprobar que la reserva existe.",
+            "start": 479,
+            "end": 505
+          },
+          {
+            "token": "@InjectRepository(Huesped)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los huespedes.",
+            "start": 558,
+            "end": 584
+          },
+          {
             "token": "this.huespedes.create({ nombre, apellidos, email })",
-            "start": 424,
-            "end": 475,
+            "start": 728,
+            "end": 779,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.huespedes.save(huesped)",
-            "start": 488,
-            "end": 516,
+            "start": 792,
+            "end": 820,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.huespedes.find({ order: { id: 'ASC' } })",
-            "start": 556,
-            "end": 601,
+            "start": 860,
+            "end": 905,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/huespedes\ntouch src/huespedes/huespedes.service.ts\ncode src/huespedes/huespedes.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear HuespedesController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { HuespedesService } from './huespedes.service';\n\n@Controller('huespedes')\nexport class HuespedesController {\n  constructor(private readonly service: HuespedesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarHuespedes();\n  }\n}",
-        "path": "src/huespedes/huespedes.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /huespedes y GET /huespedes. Las siguientes operaciones se añaden a este mismo hotel.",
         "expect": "POST devuelve el huesped creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('huespedes')",
-            "start": 119,
-            "end": 143,
-            "note": "Agrupa las rutas del catálogo de huespedes."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Huespedes y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 243,
-            "end": 250,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('huespedes')",
+            "note": "POST /huespedes crea un huesped a través del mismo Service N:M.",
+            "start": 244,
+            "end": 262
+          },
+          {
+            "token": "@Get('huespedes')",
+            "note": "GET /huespedes lista los huespedes desde el mismo Service.",
+            "start": 438,
+            "end": 455
           },
           {
             "token": "this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email)",
-            "start": 341,
-            "end": 410,
+            "start": 360,
+            "end": 429,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 419,
-            "end": 425,
-            "note": "GET utiliza listarHuespedes en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/huespedes\ntouch src/huespedes/huespedes.controller.ts\ncode src/huespedes/huespedes.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Huespedes una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huesped } from './entities/huesped.entity';\nimport { HuespedesService } from './huespedes.service';\nimport { HuespedesController } from './huespedes.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huesped])],\n  providers: [HuespedesService],\n  controllers: [HuespedesController]\n})\nexport class HuespedesModule {}",
-        "path": "src/huespedes/huespedes.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ReservasModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reserva, Huesped])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el huesped creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [HuespedesService]",
-            "start": 324,
-            "end": 353,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 490,
+            "end": 522,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [HuespedesController]",
-            "start": 357,
-            "end": 391,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 526,
+            "end": 563,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/huespedes/huespedes.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-huesped-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarHuesped al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El hotel completo conserva crearHuesped, listarHuespedes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una reserva existente con el huesped que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarHuesped(reservaId: number, huespedId: number, rol: string)",
-            "start": 699,
-            "end": 770,
+            "start": 970,
+            "end": 1041,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.reservas.findOneBy({ id: reservaId })",
-            "start": 799,
-            "end": 841,
+            "start": 1070,
+            "end": 1112,
             "note": "Lee la reserva con el repositorio de TypeORM."
           },
           {
             "token": "this.huespedes.findOneBy({ id: huespedId })",
-            "start": 869,
-            "end": 912,
+            "start": 1140,
+            "end": 1183,
             "note": "Lee el huesped antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1100,
-            "end": 1136,
+            "start": 1371,
+            "end": 1407,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-huesped-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El hotel completo conserva las rutas de Huespedes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una reserva existente con el huesped que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('reservas/:reservaId/asignaciones')",
-            "start": 246,
-            "end": 287,
+            "start": 535,
+            "end": 576,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol)",
-            "start": 401,
-            "end": 475,
+            "start": 690,
+            "end": 764,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-huesped-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reserva, Huesped])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ReservasModule.",
-        "expect": "POST crea la asignación de una reserva existente con el huesped que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 490,
-            "end": 522,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 526,
-            "end": 563,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-huesped-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorReserva al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El hotel completo conserva crearHuesped, listarHuespedes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa reserva. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorReserva(reservaId: number)",
-            "start": 1392,
-            "end": 1427,
+            "start": 1663,
+            "end": 1698,
             "note": "Recibe un ID de reserva."
           },
           {
             "token": "this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } })",
-            "start": 1441,
-            "end": 1518,
+            "start": 1712,
+            "end": 1789,
             "note": "Filtra las asignaciones por reserva y ordena por huesped."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorReserva al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El hotel completo conserva las rutas de Huespedes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa reserva. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('reservas/:reservaId/asignaciones')",
-            "start": 489,
-            "end": 529,
+            "start": 773,
+            "end": 813,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorReserva(Number(reservaId))",
-            "start": 601,
-            "end": 649,
+            "start": 885,
+            "end": 933,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorHuesped al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las reservas en las que participa ese huesped. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El hotel completo conserva crearHuesped, listarHuespedes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las reservas en los que participa ese huesped. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorHuesped(huespedId: number)",
-            "start": 1527,
-            "end": 1562,
+            "start": 1798,
+            "end": 1833,
             "note": "Recibe un ID de huesped."
           },
           {
             "token": "this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } })",
-            "start": 1576,
-            "end": 1653,
+            "start": 1847,
+            "end": 1924,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorHuesped al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las reservas en las que participa ese huesped. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El hotel completo conserva las rutas de Huespedes y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las reservas en los que participa ese huesped. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('huespedes/:huespedId/asignaciones')",
-            "start": 658,
-            "end": 699,
+            "start": 942,
+            "end": 983,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorHuesped(Number(huespedId))",
-            "start": 771,
-            "end": 819,
+            "start": 1055,
+            "end": 1103,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las reservas en las que participa ese huesped. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las reservas en los que participa ese huesped. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/huespedes/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las reservas en las que participa ese huesped. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las reservas en los que participa ese huesped. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El hotel completo conserva crearHuesped, listarHuespedes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la reserva y el huesped.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(reservaId: number, huespedId: number, rol: string)",
-            "start": 1662,
-            "end": 1731,
+            "start": 1933,
+            "end": 2002,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ reservaId, huespedId }, { rol })",
-            "start": 1762,
-            "end": 1821,
+            "start": 2033,
+            "end": 2092,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1827,
-            "end": 1851,
+            "start": 2098,
+            "end": 2122,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El hotel completo conserva las rutas de Huespedes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la reserva y el huesped.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('reservas/:reservaId/asignaciones/:huespedId')",
-            "start": 835,
-            "end": 888,
+            "start": 1119,
+            "end": 1172,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol)",
-            "start": 1031,
-            "end": 1105,
+            "start": 1315,
+            "end": 1389,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n\n  async eliminarAsignacion(reservaId: number, huespedId: number) {\n    await this.asignaciones.delete({ reservaId, huespedId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reserva } from '../reservas/entities/reserva.entity';\nimport { Huesped } from '../huespedes/entities/huesped.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reserva) private readonly reservas: Repository<Reserva>,\n    @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>\n  ) {}\n\n  crearHuesped(nombre: string, apellidos: string, email: string) {\n    const huesped = this.huespedes.create({ nombre, apellidos, email });\n    return this.huespedes.save(huesped);\n  }\n\n  listarHuespedes() {\n    return this.huespedes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarHuesped(reservaId: number, huespedId: number, rol: string) {\n    const reserva = await this.reservas.findOneBy({ id: reservaId });\n    const huesped = await this.huespedes.findOneBy({ id: huespedId });\n    if (!reserva || !huesped) {\n      throw new NotFoundException('No existe la reserva o el huesped');\n    }\n    const asignacion = { reservaId, huespedId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El huesped ya está asignado a esa reserva');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReserva(reservaId: number) {\n    return this.asignaciones.find({ where: { reservaId }, order: { huespedId: 'ASC' } });\n  }\n\n  listarPorHuesped(huespedId: number) {\n    return this.asignaciones.find({ where: { huespedId }, order: { reservaId: 'ASC' } });\n  }\n\n  async modificarRol(reservaId: number, huespedId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reservaId, huespedId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reservaId, huespedId, rol };\n  }\n\n  async eliminarAsignacion(reservaId: number, huespedId: number) {\n    await this.asignaciones.delete({ reservaId, huespedId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El hotel completo conserva crearHuesped, listarHuespedes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la reserva y el huesped siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(reservaId: number, huespedId: number)",
-            "start": 1957,
-            "end": 2019,
+            "start": 2228,
+            "end": 2290,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ reservaId, huespedId })",
-            "start": 2032,
-            "end": 2082,
+            "start": 2303,
+            "end": 2353,
             "note": "Borra el vínculo; conserva Reserva y Huesped."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n\n  @Delete('reservas/:reservaId/asignaciones/:huespedId')\n  @HttpCode(204)\n  eliminar(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string) {\n    return this.service.eliminarAsignacion(Number(reservaId), Number(huespedId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('huespedes')\n  crearHuesped(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearHuesped(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('huespedes')\n  listarHuespedes() {\n    return this.service.listarHuespedes();\n  }\n\n  @Post('reservas/:reservaId/asignaciones')\n  asignar(@Param('reservaId') reservaId: string, @Body() datos: { huespedId: number; rol: string }) {\n    return this.service.asignarHuesped(Number(reservaId), datos.huespedId, datos.rol);\n  }\n\n  @Get('reservas/:reservaId/asignaciones')\n  listarPorReserva(@Param('reservaId') reservaId: string) {\n    return this.service.listarPorReserva(Number(reservaId));\n  }\n\n  @Get('huespedes/:huespedId/asignaciones')\n  listarPorHuesped(@Param('huespedId') huespedId: string) {\n    return this.service.listarPorHuesped(Number(huespedId));\n  }\n\n  @Patch('reservas/:reservaId/asignaciones/:huespedId')\n  modificarRol(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reservaId), Number(huespedId), datos.rol);\n  }\n\n  @Delete('reservas/:reservaId/asignaciones/:huespedId')\n  @HttpCode(204)\n  eliminar(@Param('reservaId') reservaId: string, @Param('huespedId') huespedId: string) {\n    return this.service.eliminarAsignacion(Number(reservaId), Number(huespedId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El hotel completo conserva las rutas de Huespedes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la reserva y el huesped siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('reservas/:reservaId/asignaciones/:huespedId')",
-            "start": 1132,
-            "end": 1186,
+            "start": 1416,
+            "end": 1470,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(reservaId), Number(huespedId))",
-            "start": 1306,
-            "end": 1375,
+            "start": 1590,
+            "end": 1659,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "huesped",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "huespedes-modulo": "asignaciones-modulo",
+    "asignar-huesped-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/reservas/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "huespedes",
     "input": "huespedId",
     "role": "Titular"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "huesped",
+      "asig-inversas",
+      "reserva-inversa",
+      "huespedes-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-huesped-service",
+      "asignar-huesped-entry",
+      "asignar-huesped-registro",
+      "asignar-huesped-ejecutar",
+      "asignar-huesped-curl",
+      "listar-por-reserva-service",
+      "listar-por-reserva-entry",
+      "listar-por-reserva-ejecutar",
+      "listar-por-reserva-curl",
+      "listar-por-huesped-service",
+      "listar-por-huesped-entry",
+      "listar-por-huesped-ejecutar",
+      "listar-por-huesped-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "huespedes-modulo": "asignaciones-modulo",
+      "asignar-huesped-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "huesped",
+      "asig-inversas",
+      "reserva-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-huesped-ejecutar",
+      "asignar-huesped-curl",
+      "listar-por-reserva-ejecutar",
+      "listar-por-reserva-curl",
+      "listar-por-huesped-ejecutar",
+      "listar-por-huesped-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

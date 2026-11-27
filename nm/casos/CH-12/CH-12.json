@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'INSPECTOR' })\nexport class Inspector {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.inspector)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/inspectores/entities/inspector.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al inspector y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al inspector y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "lote-inversa",
         "chapter": 1,
-        "title": "Relaciona la Lote existente con Asignacion",
+        "title": "Relaciona el Lote existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Cooperativa } from '../../cooperativas/entities/cooperativa.entity';\n\n@Entity({ name: 'LOTE' })\nexport class Lote {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'KILOS', type: 'integer' })\n  kilos!: number;\n\n  @ManyToOne(() => Cooperativa, cooperativa => cooperativa.lotes, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COOPERATIVA' })\n  cooperativa!: Cooperativa;\n  @OneToMany(() => Asignacion, asignacion => asignacion.lote)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/lotes/entities/lote.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "inspectores-modulo",
-        "chapter": 1,
-        "title": "Prepara InspectoresModule",
-        "kind": "module",
-        "path": "src/inspectores/inspectores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Inspector } from './entities/inspector.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Inspector])],\n  providers: [],\n  controllers: []\n})\nexport class InspectoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/inspectores\ncode src/inspectores/inspectores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Inspector])]",
-            "start": 160,
-            "end": 208,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Lote, Inspector])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Lote, Inspector y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo cooperativa. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { LotesModule } from './lotes/lotes.module';\nimport { InspectoresModule } from './inspectores/inspectores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { CooperativasModule } from './cooperativas/cooperativas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CooperativasModule,\n    LotesModule,\n    InspectoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { LotesModule } from './lotes/lotes.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { CooperativasModule } from './cooperativas/cooperativas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CooperativasModule,\n    LotesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén LotesModule y la conexión original. Añade InspectoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Lotes y añade Inspectores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva CooperativasModule, LotesModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira InspectoresModule de AppModule y sus cooperativas module, service y controller; conserva inspector.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "InspectoresModule,",
-            "start": 1225,
-            "end": 1243,
-            "note": "Carga el módulo que registra Inspector."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1248,
-            "end": 1267,
+            "start": 1155,
+            "end": 1174,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea INSPECTOR y ASIGNACION desde las Entities y conserva COOPERATIVA y LOTE. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear InspectoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Inspector } from './entities/inspector.entity';\n\n@Injectable()\nexport class InspectoresService {\n  constructor(\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/inspectores/inspectores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Lote, Inspector y Asignacion. Empieza con crearInspector y listarInspectores; los siguientes casos amplían este mismo cooperativa.",
         "expect": "POST devuelve el inspector creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 387,
+            "end": 416
+          },
+          {
+            "token": "@InjectRepository(Lote)",
+            "note": "Repositorio del primer extremo: permite comprobar que el lote existe.",
+            "start": 476,
+            "end": 499
+          },
+          {
+            "token": "@InjectRepository(Inspector)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los inspectores.",
+            "start": 546,
+            "end": 574
+          },
+          {
             "token": "this.inspectores.create({ nombre, apellidos, email })",
-            "start": 440,
-            "end": 493,
+            "start": 726,
+            "end": 779,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.inspectores.save(inspector)",
-            "start": 506,
-            "end": 538,
+            "start": 792,
+            "end": 824,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.inspectores.find({ order: { id: 'ASC' } })",
-            "start": 580,
-            "end": 627,
+            "start": 866,
+            "end": 913,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/inspectores\ntouch src/inspectores/inspectores.service.ts\ncode src/inspectores/inspectores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear InspectoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { InspectoresService } from './inspectores.service';\n\n@Controller('inspectores')\nexport class InspectoresController {\n  constructor(private readonly service: InspectoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarInspectores();\n  }\n}",
-        "path": "src/inspectores/inspectores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /inspectores y GET /inspectores. Las siguientes operaciones se añaden a este mismo cooperativa.",
         "expect": "POST devuelve el inspector creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('inspectores')",
-            "start": 123,
-            "end": 149,
-            "note": "Agrupa las rutas del catálogo de inspectores."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Inspectores y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 253,
-            "end": 260,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('inspectores')",
+            "note": "POST /inspectores crea un inspector a través del mismo Service N:M.",
+            "start": 244,
+            "end": 264
+          },
+          {
+            "token": "@Get('inspectores')",
+            "note": "GET /inspectores lista los inspectores desde el mismo Service.",
+            "start": 444,
+            "end": 463
           },
           {
             "token": "this.service.crearInspector(datos.nombre, datos.apellidos, datos.email)",
-            "start": 351,
-            "end": 422,
+            "start": 364,
+            "end": 435,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 431,
-            "end": 437,
-            "note": "GET utiliza listarInspectores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/inspectores\ntouch src/inspectores/inspectores.controller.ts\ncode src/inspectores/inspectores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Inspectores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Inspector } from './entities/inspector.entity';\nimport { InspectoresService } from './inspectores.service';\nimport { InspectoresController } from './inspectores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Inspector])],\n  providers: [InspectoresService],\n  controllers: [InspectoresController]\n})\nexport class InspectoresModule {}",
-        "path": "src/inspectores/inspectores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni LotesModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Lote, Inspector])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el inspector creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [InspectoresService]",
-            "start": 338,
-            "end": 369,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 486,
+            "end": 518,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [InspectoresController]",
-            "start": 373,
-            "end": 409,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 522,
+            "end": 559,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/inspectores/inspectores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-inspector-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarInspector al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El cooperativa completo conserva crearInspector, listarInspectores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de un lote existente con el inspector que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarInspector(loteId: number, inspectorId: number, rol: string)",
-            "start": 693,
-            "end": 765,
+            "start": 978,
+            "end": 1050,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.lotes.findOneBy({ id: loteId })",
-            "start": 791,
-            "end": 827,
+            "start": 1076,
+            "end": 1112,
             "note": "Lee el lote con el repositorio de TypeORM."
           },
           {
             "token": "this.inspectores.findOneBy({ id: inspectorId })",
-            "start": 857,
-            "end": 904,
+            "start": 1142,
+            "end": 1189,
             "note": "Lee el inspector antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1089,
-            "end": 1125,
+            "start": 1374,
+            "end": 1410,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-inspector-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El cooperativa completo conserva las rutas de Inspectores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de un lote existente con el inspector que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('lotes/:loteId/asignaciones')",
-            "start": 246,
-            "end": 281,
+            "start": 547,
+            "end": 582,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol)",
-            "start": 391,
-            "end": 466,
+            "start": 692,
+            "end": 767,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-inspector-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Lote, Inspector])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni LotesModule.",
-        "expect": "POST crea la asignación de un lote existente con el inspector que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 486,
-            "end": 518,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 522,
-            "end": 559,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-inspector-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorLote al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesService. El cooperativa completo conserva crearInspector, listarInspectores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las asignaciones de ese lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorLote(loteId: number)",
-            "start": 1380,
-            "end": 1409,
+            "start": 1665,
+            "end": 1694,
             "note": "Recibe un ID de lote."
           },
           {
             "token": "this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } })",
-            "start": 1423,
-            "end": 1499,
+            "start": 1708,
+            "end": 1784,
             "note": "Filtra las asignaciones por lote y ordena por inspector."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorLote al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesController. El cooperativa completo conserva las rutas de Inspectores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las asignaciones de ese lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('lotes/:loteId/asignaciones')",
-            "start": 480,
-            "end": 514,
+            "start": 776,
+            "end": 810,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorLote(Number(loteId))",
-            "start": 577,
-            "end": 619,
+            "start": 873,
+            "end": 915,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -660,7 +626,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las asignaciones de esa lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "request",
         "cues": [
           {
@@ -686,7 +652,7 @@
         "code": "curl -i \"http://localhost:3000/lotes/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las asignaciones de esa lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese lote. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorInspector al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los lotes en las que participa ese inspector. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El cooperativa completo conserva crearInspector, listarInspectores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve los lotes en los que participa ese inspector. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorInspector(inspectorId: number)",
-            "start": 1508,
-            "end": 1547,
+            "start": 1793,
+            "end": 1832,
             "note": "Recibe un ID de inspector."
           },
           {
             "token": "this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } })",
-            "start": 1561,
-            "end": 1637,
+            "start": 1846,
+            "end": 1922,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorInspector al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los lotes en las que participa ese inspector. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El cooperativa completo conserva las rutas de Inspectores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve los lotes en los que participa ese inspector. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('inspectores/:inspectorId/asignaciones')",
-            "start": 628,
-            "end": 673,
+            "start": 924,
+            "end": 969,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorInspector(Number(inspectorId))",
-            "start": 751,
-            "end": 803,
+            "start": 1047,
+            "end": 1099,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve los lotes en las que participa ese inspector. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los lotes en los que participa ese inspector. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/inspectores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve los lotes en las que participa ese inspector. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los lotes en los que participa ese inspector. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n\n  async modificarRol(loteId: number, inspectorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ loteId, inspectorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { loteId, inspectorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n\n  async modificarRol(loteId: number, inspectorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ loteId, inspectorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { loteId, inspectorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El cooperativa completo conserva crearInspector, listarInspectores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el lote y el inspector.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(loteId: number, inspectorId: number, rol: string)",
-            "start": 1646,
-            "end": 1714,
+            "start": 1931,
+            "end": 1999,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ loteId, inspectorId }, { rol })",
-            "start": 1745,
-            "end": 1803,
+            "start": 2030,
+            "end": 2088,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1809,
-            "end": 1833,
+            "start": 2094,
+            "end": 2118,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n\n  @Patch('lotes/:loteId/asignaciones/:inspectorId')\n  modificarRol(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(loteId), Number(inspectorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n\n  @Patch('lotes/:loteId/asignaciones/:inspectorId')\n  modificarRol(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(loteId), Number(inspectorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El cooperativa completo conserva las rutas de Inspectores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el lote y el inspector.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('lotes/:loteId/asignaciones/:inspectorId')",
-            "start": 819,
-            "end": 868,
+            "start": 1115,
+            "end": 1164,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(loteId), Number(inspectorId), datos.rol)",
-            "start": 1009,
-            "end": 1082,
+            "start": 1305,
+            "end": 1378,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n\n  async modificarRol(loteId: number, inspectorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ loteId, inspectorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { loteId, inspectorId, rol };\n  }\n\n  async eliminarAsignacion(loteId: number, inspectorId: number) {\n    await this.asignaciones.delete({ loteId, inspectorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Lote } from '../lotes/entities/lote.entity';\nimport { Inspector } from '../inspectores/entities/inspector.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Lote) private readonly lotes: Repository<Lote>,\n    @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>\n  ) {}\n\n  crearInspector(nombre: string, apellidos: string, email: string) {\n    const inspector = this.inspectores.create({ nombre, apellidos, email });\n    return this.inspectores.save(inspector);\n  }\n\n  listarInspectores() {\n    return this.inspectores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarInspector(loteId: number, inspectorId: number, rol: string) {\n    const lote = await this.lotes.findOneBy({ id: loteId });\n    const inspector = await this.inspectores.findOneBy({ id: inspectorId });\n    if (!lote || !inspector) {\n      throw new NotFoundException('No existe el lote o el inspector');\n    }\n    const asignacion = { loteId, inspectorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El inspector ya está asignado a ese lote');\n      }\n      throw error;\n    }\n  }\n\n  listarPorLote(loteId: number) {\n    return this.asignaciones.find({ where: { loteId }, order: { inspectorId: 'ASC' } });\n  }\n\n  listarPorInspector(inspectorId: number) {\n    return this.asignaciones.find({ where: { inspectorId }, order: { loteId: 'ASC' } });\n  }\n\n  async modificarRol(loteId: number, inspectorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ loteId, inspectorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { loteId, inspectorId, rol };\n  }\n\n  async eliminarAsignacion(loteId: number, inspectorId: number) {\n    await this.asignaciones.delete({ loteId, inspectorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El cooperativa completo conserva crearInspector, listarInspectores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el lote y el inspector siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(loteId: number, inspectorId: number)",
-            "start": 1938,
-            "end": 1999,
+            "start": 2223,
+            "end": 2284,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ loteId, inspectorId })",
-            "start": 2012,
-            "end": 2061,
+            "start": 2297,
+            "end": 2346,
             "note": "Borra el vínculo; conserva Lote y Inspector."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n\n  @Patch('lotes/:loteId/asignaciones/:inspectorId')\n  modificarRol(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(loteId), Number(inspectorId), datos.rol);\n  }\n\n  @Delete('lotes/:loteId/asignaciones/:inspectorId')\n  @HttpCode(204)\n  eliminar(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string) {\n    return this.service.eliminarAsignacion(Number(loteId), Number(inspectorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('inspectores')\n  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('inspectores')\n  listarInspectores() {\n    return this.service.listarInspectores();\n  }\n\n  @Post('lotes/:loteId/asignaciones')\n  asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {\n    return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);\n  }\n\n  @Get('lotes/:loteId/asignaciones')\n  listarPorLote(@Param('loteId') loteId: string) {\n    return this.service.listarPorLote(Number(loteId));\n  }\n\n  @Get('inspectores/:inspectorId/asignaciones')\n  listarPorInspector(@Param('inspectorId') inspectorId: string) {\n    return this.service.listarPorInspector(Number(inspectorId));\n  }\n\n  @Patch('lotes/:loteId/asignaciones/:inspectorId')\n  modificarRol(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(loteId), Number(inspectorId), datos.rol);\n  }\n\n  @Delete('lotes/:loteId/asignaciones/:inspectorId')\n  @HttpCode(204)\n  eliminar(@Param('loteId') loteId: string, @Param('inspectorId') inspectorId: string) {\n    return this.service.eliminarAsignacion(Number(loteId), Number(inspectorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El cooperativa completo conserva las rutas de Inspectores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el lote y el inspector siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('lotes/:loteId/asignaciones/:inspectorId')",
-            "start": 1109,
-            "end": 1159,
+            "start": 1405,
+            "end": 1455,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(loteId), Number(inspectorId))",
-            "start": 1277,
-            "end": 1345,
+            "start": 1573,
+            "end": 1641,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -996,7 +962,7 @@
         "kind": "review",
         "code": "",
         "path": "",
-        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro inspector, asígnalo a la misma lote y asigna un inspector a otra lote. Todos los datos se crean mediante los Controllers que has programado.",
+        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro inspector, asígnalo a el mismo lote y asigna un inspector a otro lote. Todos los datos se crean mediante los Controllers que has programado.",
         "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
         "focus": "model",
         "cues": [],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "inspector",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "inspectores-modulo": "asignaciones-modulo",
+    "asignar-inspector-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/lotes/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "inspectores",
     "input": "inspectorId",
     "role": "Control de calidad"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "inspector",
+      "asig-inversas",
+      "lote-inversa",
+      "inspectores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-inspector-service",
+      "asignar-inspector-entry",
+      "asignar-inspector-registro",
+      "asignar-inspector-ejecutar",
+      "asignar-inspector-curl",
+      "listar-por-lote-service",
+      "listar-por-lote-entry",
+      "listar-por-lote-ejecutar",
+      "listar-por-lote-curl",
+      "listar-por-inspector-service",
+      "listar-por-inspector-entry",
+      "listar-por-inspector-ejecutar",
+      "listar-por-inspector-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "inspectores-modulo": "asignaciones-modulo",
+      "asignar-inspector-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "inspector",
+      "asig-inversas",
+      "lote-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-inspector-ejecutar",
+      "asignar-inspector-curl",
+      "listar-por-lote-ejecutar",
+      "listar-por-lote-curl",
+      "listar-por-inspector-ejecutar",
+      "listar-por-inspector-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'DOCENTE' })\nexport class Docente {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.docente)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/docentes/entities/docente.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al docente y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al docente y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "aula-inversa",
         "chapter": 1,
-        "title": "Relaciona la Aula existente con Asignacion",
+        "title": "Relaciona el Aula existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Escuela } from '../../escuelas/entities/escuela.entity';\n\n@Entity({ name: 'AULA' })\nexport class Aula {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'CAPACIDAD', type: 'integer' })\n  capacidad!: number;\n\n  @ManyToOne(() => Escuela, escuela => escuela.aulas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_ESCUELA' })\n  escuela!: Escuela;\n  @OneToMany(() => Asignacion, asignacion => asignacion.aula)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/aulas/entities/aula.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "docentes-modulo",
-        "chapter": 1,
-        "title": "Prepara DocentesModule",
-        "kind": "module",
-        "path": "src/docentes/docentes.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Docente } from './entities/docente.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Docente])],\n  providers: [],\n  controllers: []\n})\nexport class DocentesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/docentes\ncode src/docentes/docentes.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Docente])]",
-            "start": 156,
-            "end": 202,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Aula, Docente])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Aula, Docente y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo escuela. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\nimport { DocentesModule } from './docentes/docentes.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EscuelasModule } from './escuelas/escuelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EscuelasModule,\n    AulasModule,\n    DocentesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EscuelasModule } from './escuelas/escuelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EscuelasModule,\n    AulasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén AulasModule y la conexión original. Añade DocentesModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Aulas y añade Docentes y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva EscuelasModule, AulasModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira DocentesModule de AppModule y sus escuelas module, service y controller; conserva docente.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "DocentesModule,",
-            "start": 1200,
-            "end": 1215,
-            "note": "Carga el módulo que registra Docente."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1220,
-            "end": 1239,
+            "start": 1139,
+            "end": 1158,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea DOCENTE y ASIGNACION desde las Entities y conserva ESCUELA y AULA. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear DocentesService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Docente } from './entities/docente.entity';\n\n@Injectable()\nexport class DocentesService {\n  constructor(\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/docentes/docentes.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Aula, Docente y Asignacion. Empieza con crearDocente y listarDocentes; los siguientes casos amplían este mismo escuela.",
         "expect": "POST devuelve el docente creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 380,
+            "end": 409
+          },
+          {
+            "token": "@InjectRepository(Aula)",
+            "note": "Repositorio del primer extremo: permite comprobar que la aula existe.",
+            "start": 469,
+            "end": 492
+          },
+          {
+            "token": "@InjectRepository(Docente)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los docentes.",
+            "start": 539,
+            "end": 565
+          },
+          {
             "token": "this.docentes.create({ nombre, apellidos, email })",
-            "start": 422,
-            "end": 472,
+            "start": 708,
+            "end": 758,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.docentes.save(docente)",
-            "start": 485,
-            "end": 512,
+            "start": 771,
+            "end": 798,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.docentes.find({ order: { id: 'ASC' } })",
-            "start": 551,
-            "end": 595,
+            "start": 837,
+            "end": 881,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/docentes\ntouch src/docentes/docentes.service.ts\ncode src/docentes/docentes.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear DocentesController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { DocentesService } from './docentes.service';\n\n@Controller('docentes')\nexport class DocentesController {\n  constructor(private readonly service: DocentesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarDocentes();\n  }\n}",
-        "path": "src/docentes/docentes.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /docentes y GET /docentes. Las siguientes operaciones se añaden a este mismo escuela.",
         "expect": "POST devuelve el docente creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('docentes')",
-            "start": 117,
-            "end": 140,
-            "note": "Agrupa las rutas del catálogo de docentes."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Docentes y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 238,
-            "end": 245,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('docentes')",
+            "note": "POST /docentes crea un docente a través del mismo Service N:M.",
+            "start": 244,
+            "end": 261
+          },
+          {
+            "token": "@Get('docentes')",
+            "note": "GET /docentes lista los docentes desde el mismo Service.",
+            "start": 437,
+            "end": 453
           },
           {
             "token": "this.service.crearDocente(datos.nombre, datos.apellidos, datos.email)",
-            "start": 336,
-            "end": 405,
+            "start": 359,
+            "end": 428,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 414,
-            "end": 420,
-            "note": "GET utiliza listarDocentes en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/docentes\ntouch src/docentes/docentes.controller.ts\ncode src/docentes/docentes.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Docentes una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Docente } from './entities/docente.entity';\nimport { DocentesService } from './docentes.service';\nimport { DocentesController } from './docentes.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Docente])],\n  providers: [DocentesService],\n  controllers: [DocentesController]\n})\nexport class DocentesModule {}",
-        "path": "src/docentes/docentes.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni AulasModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Aula, Docente])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el docente creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [DocentesService]",
-            "start": 320,
-            "end": 348,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 477,
+            "end": 509,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [DocentesController]",
-            "start": 352,
-            "end": 385,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 513,
+            "end": 550,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/docentes/docentes.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-docente-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarDocente al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El escuela completo conserva crearDocente, listarDocentes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una aula existente con el docente que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarDocente(aulaId: number, docenteId: number, rol: string)",
-            "start": 679,
-            "end": 747,
+            "start": 946,
+            "end": 1014,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.aulas.findOneBy({ id: aulaId })",
-            "start": 773,
-            "end": 809,
+            "start": 1040,
+            "end": 1076,
             "note": "Lee la aula con el repositorio de TypeORM."
           },
           {
             "token": "this.docentes.findOneBy({ id: docenteId })",
-            "start": 837,
-            "end": 879,
+            "start": 1104,
+            "end": 1146,
             "note": "Lee el docente antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1058,
-            "end": 1094,
+            "start": 1325,
+            "end": 1361,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-docente-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El escuela completo conserva las rutas de Docentes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una aula existente con el docente que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('aulas/:aulaId/asignaciones')",
-            "start": 246,
-            "end": 281,
+            "start": 531,
+            "end": 566,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol)",
-            "start": 389,
-            "end": 460,
+            "start": 674,
+            "end": 745,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-docente-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Aula, Docente])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni AulasModule.",
-        "expect": "POST crea la asignación de una aula existente con el docente que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 477,
-            "end": 509,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 513,
-            "end": 550,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-docente-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorAula al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El escuela completo conserva crearDocente, listarDocentes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa aula. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorAula(aulaId: number)",
-            "start": 1347,
-            "end": 1376,
+            "start": 1614,
+            "end": 1643,
             "note": "Recibe un ID de aula."
           },
           {
             "token": "this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } })",
-            "start": 1390,
-            "end": 1464,
+            "start": 1657,
+            "end": 1731,
             "note": "Filtra las asignaciones por aula y ordena por docente."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorAula al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El escuela completo conserva las rutas de Docentes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa aula. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('aulas/:aulaId/asignaciones')",
-            "start": 474,
-            "end": 508,
+            "start": 754,
+            "end": 788,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorAula(Number(aulaId))",
-            "start": 571,
-            "end": 613,
+            "start": 851,
+            "end": 893,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorDocente al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las aulas en las que participa ese docente. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El escuela completo conserva crearDocente, listarDocentes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las aulas en los que participa ese docente. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorDocente(docenteId: number)",
-            "start": 1473,
-            "end": 1508,
+            "start": 1740,
+            "end": 1775,
             "note": "Recibe un ID de docente."
           },
           {
             "token": "this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } })",
-            "start": 1522,
-            "end": 1596,
+            "start": 1789,
+            "end": 1863,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorDocente al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las aulas en las que participa ese docente. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El escuela completo conserva las rutas de Docentes y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las aulas en los que participa ese docente. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('docentes/:docenteId/asignaciones')",
-            "start": 622,
-            "end": 662,
+            "start": 902,
+            "end": 942,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorDocente(Number(docenteId))",
-            "start": 734,
-            "end": 782,
+            "start": 1014,
+            "end": 1062,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las aulas en las que participa ese docente. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las aulas en los que participa ese docente. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/docentes/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las aulas en las que participa ese docente. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las aulas en los que participa ese docente. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n\n  async modificarRol(aulaId: number, docenteId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ aulaId, docenteId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { aulaId, docenteId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n\n  async modificarRol(aulaId: number, docenteId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ aulaId, docenteId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { aulaId, docenteId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El escuela completo conserva crearDocente, listarDocentes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la aula y el docente.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(aulaId: number, docenteId: number, rol: string)",
-            "start": 1605,
-            "end": 1671,
+            "start": 1872,
+            "end": 1938,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ aulaId, docenteId }, { rol })",
-            "start": 1702,
-            "end": 1758,
+            "start": 1969,
+            "end": 2025,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1764,
-            "end": 1788,
+            "start": 2031,
+            "end": 2055,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n\n  @Patch('aulas/:aulaId/asignaciones/:docenteId')\n  modificarRol(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(aulaId), Number(docenteId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n\n  @Patch('aulas/:aulaId/asignaciones/:docenteId')\n  modificarRol(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(aulaId), Number(docenteId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El escuela completo conserva las rutas de Docentes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la aula y el docente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('aulas/:aulaId/asignaciones/:docenteId')",
-            "start": 798,
-            "end": 845,
+            "start": 1078,
+            "end": 1125,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(aulaId), Number(docenteId), datos.rol)",
-            "start": 982,
-            "end": 1053,
+            "start": 1262,
+            "end": 1333,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n\n  async modificarRol(aulaId: number, docenteId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ aulaId, docenteId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { aulaId, docenteId, rol };\n  }\n\n  async eliminarAsignacion(aulaId: number, docenteId: number) {\n    await this.asignaciones.delete({ aulaId, docenteId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\nimport { Docente } from '../docentes/entities/docente.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Docente) private readonly docentes: Repository<Docente>\n  ) {}\n\n  crearDocente(nombre: string, apellidos: string, email: string) {\n    const docente = this.docentes.create({ nombre, apellidos, email });\n    return this.docentes.save(docente);\n  }\n\n  listarDocentes() {\n    return this.docentes.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarDocente(aulaId: number, docenteId: number, rol: string) {\n    const aula = await this.aulas.findOneBy({ id: aulaId });\n    const docente = await this.docentes.findOneBy({ id: docenteId });\n    if (!aula || !docente) {\n      throw new NotFoundException('No existe la aula o el docente');\n    }\n    const asignacion = { aulaId, docenteId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El docente ya está asignado a esa aula');\n      }\n      throw error;\n    }\n  }\n\n  listarPorAula(aulaId: number) {\n    return this.asignaciones.find({ where: { aulaId }, order: { docenteId: 'ASC' } });\n  }\n\n  listarPorDocente(docenteId: number) {\n    return this.asignaciones.find({ where: { docenteId }, order: { aulaId: 'ASC' } });\n  }\n\n  async modificarRol(aulaId: number, docenteId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ aulaId, docenteId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { aulaId, docenteId, rol };\n  }\n\n  async eliminarAsignacion(aulaId: number, docenteId: number) {\n    await this.asignaciones.delete({ aulaId, docenteId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El escuela completo conserva crearDocente, listarDocentes y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la aula y el docente siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(aulaId: number, docenteId: number)",
-            "start": 1891,
-            "end": 1950,
+            "start": 2158,
+            "end": 2217,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ aulaId, docenteId })",
-            "start": 1963,
-            "end": 2010,
+            "start": 2230,
+            "end": 2277,
             "note": "Borra el vínculo; conserva Aula y Docente."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n\n  @Patch('aulas/:aulaId/asignaciones/:docenteId')\n  modificarRol(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(aulaId), Number(docenteId), datos.rol);\n  }\n\n  @Delete('aulas/:aulaId/asignaciones/:docenteId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string) {\n    return this.service.eliminarAsignacion(Number(aulaId), Number(docenteId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('docentes')\n  crearDocente(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearDocente(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('docentes')\n  listarDocentes() {\n    return this.service.listarDocentes();\n  }\n\n  @Post('aulas/:aulaId/asignaciones')\n  asignar(@Param('aulaId') aulaId: string, @Body() datos: { docenteId: number; rol: string }) {\n    return this.service.asignarDocente(Number(aulaId), datos.docenteId, datos.rol);\n  }\n\n  @Get('aulas/:aulaId/asignaciones')\n  listarPorAula(@Param('aulaId') aulaId: string) {\n    return this.service.listarPorAula(Number(aulaId));\n  }\n\n  @Get('docentes/:docenteId/asignaciones')\n  listarPorDocente(@Param('docenteId') docenteId: string) {\n    return this.service.listarPorDocente(Number(docenteId));\n  }\n\n  @Patch('aulas/:aulaId/asignaciones/:docenteId')\n  modificarRol(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(aulaId), Number(docenteId), datos.rol);\n  }\n\n  @Delete('aulas/:aulaId/asignaciones/:docenteId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string, @Param('docenteId') docenteId: string) {\n    return this.service.eliminarAsignacion(Number(aulaId), Number(docenteId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El escuela completo conserva las rutas de Docentes y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la aula y el docente siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('aulas/:aulaId/asignaciones/:docenteId')",
-            "start": 1080,
-            "end": 1128,
+            "start": 1360,
+            "end": 1408,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(aulaId), Number(docenteId))",
-            "start": 1242,
-            "end": 1308,
+            "start": 1522,
+            "end": 1588,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "docente",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "docentes-modulo": "asignaciones-modulo",
+    "asignar-docente-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/aulas/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "docentes",
     "input": "docenteId",
     "role": "Docencia"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "docente",
+      "asig-inversas",
+      "aula-inversa",
+      "docentes-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-docente-service",
+      "asignar-docente-entry",
+      "asignar-docente-registro",
+      "asignar-docente-ejecutar",
+      "asignar-docente-curl",
+      "listar-por-aula-service",
+      "listar-por-aula-entry",
+      "listar-por-aula-ejecutar",
+      "listar-por-aula-curl",
+      "listar-por-docente-service",
+      "listar-por-docente-entry",
+      "listar-por-docente-ejecutar",
+      "listar-por-docente-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "docentes-modulo": "asignaciones-modulo",
+      "asignar-docente-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "docente",
+      "asig-inversas",
+      "aula-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-docente-ejecutar",
+      "asignar-docente-curl",
+      "listar-por-aula-ejecutar",
+      "listar-por-aula-curl",
+      "listar-por-docente-ejecutar",
+      "listar-por-docente-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

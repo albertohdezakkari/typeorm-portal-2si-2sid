@@ -6,6 +6,8 @@ Todos los registros se crean mediante las APIs que programas. Primero prepara la
 
 En Serverless se sigue Entity → Repository → Service → Handler; el YAML conecta POST y GET con esos handlers. Todas las operaciones de datos parten de EntityRepository. Las altas y lecturas se hacen por API, sin inserciones directas en DynamoDB.
 
+En N:M, un único AsignacionesModule agrupa las tres Entities del caso. AsignacionesService inyecta sus tres repositorios y AsignacionesController atiende todas las operaciones, incluidas las altas y listados del nuevo extremo. Los casos amplían esos mismos archivos; AppModule importa el módulo una sola vez. Los módulos 1:N existentes se conservan.
+
 ## Probar las peticiones
 
 La zona **Prueba ambos lados de la relación** permite elegir qué añadir o consultar, escribir la URL, los datos y los IDs reales, y copiar un curl sencillo para Terminal 2. La respuesta se observa en la terminal. En Nest, mantén `npm run start:dev` abierto en Terminal 1. En Serverless, guarda y despliega antes de probar.
@@ -15,10 +17,10 @@ Los números de las peticiones son ejemplos: utiliza los IDs de tus propias resp
 ## Recorridos
 
 - 1:N: 27 pasos Nest y 31 Serverless, incluidas las APIs del principal.
-- N:M: 38 pasos Nest y 58 Serverless. Continúa el backend anterior, añade las dos Entities y sus capas y prueba los seis casos mediante la API. Se ha retirado también la precarga de N:M en Serverless.
+- N:M: 36 pasos Nest y 58 Serverless. Continúa el backend anterior, añade las dos Entities y sus capas y prueba los seis casos mediante la API. Se ha retirado también la precarga de N:M en Serverless.
 
 Menús abiertos y a todo el ancho, archivos completos, explicaciones estáticas y selector de tecnología a la derecha. Entrada en Preparar; N:M se abre por el primer apartado. Las marcas y posiciones compatibles se migran al añadir los nuevos pasos.
 
 ## Generación
 
-`scripts/version_estudio.py` aplica las adaptaciones de cada contexto y `scripts/api_sin_precarga.py` define las altas por API y elimina los mecanismos antiguos. Los generadores de preparación, taller y N:M llaman a ese mismo circuito. Los PDF anteriores se conservan como documentos históricos.
+`scripts/version_estudio.py` aplica las adaptaciones de cada contexto y `scripts/api_sin_precarga.py` define las altas por API y elimina los mecanismos antiguos. `scripts/nm_modulo_unico.py` especializa la plantilla validada de Alejandro para mantener el mismo módulo, Service y Controller en cada contexto. Los generadores de preparación, taller y N:M llaman a ese mismo circuito. Los PDF anteriores se conservan como documentos históricos.

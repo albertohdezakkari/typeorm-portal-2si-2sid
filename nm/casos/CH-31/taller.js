@@ -301,7 +301,7 @@ function startAtBeginning(){
 }
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-31.json?v=nm-unico-alejandro-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
+ try{D=await (await fetch('CH-31.json?v=nm-unico-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:start')startAtBeginning();if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

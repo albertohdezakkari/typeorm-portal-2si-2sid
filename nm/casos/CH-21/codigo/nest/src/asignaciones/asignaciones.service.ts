@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Analista) private readonly analistas: Repository<Analista>
   ) {}
 
+  crearAnalista(nombre: string, apellidos: string, email: string) {
+    const analista = this.analistas.create({ nombre, apellidos, email });
+    return this.analistas.save(analista);
+  }
+
+  listarAnalistas() {
+    return this.analistas.find({ order: { id: 'ASC' } });
+  }
+
   async asignarAnalista(muestraId: number, analistaId: number, rol: string) {
     const muestra = await this.muestras.findOneBy({ id: muestraId });
     const analista = await this.analistas.findOneBy({ id: analistaId });

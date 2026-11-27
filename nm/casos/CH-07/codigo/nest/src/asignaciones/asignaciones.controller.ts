@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('guias')
+  crearGuia(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearGuia(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('guias')
+  listarGuias() {
+    return this.service.listarGuias();
+  }
+
   @Post('excursiones/:excursionId/asignaciones')
   asignar(@Param('excursionId') excursionId: string, @Body() datos: { guiaId: number; rol: string }) {
     return this.service.asignarGuia(Number(excursionId), datos.guiaId, datos.rol);

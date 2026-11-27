@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Cocinero) private readonly cocineros: Repository<Cocinero>
   ) {}
 
+  crearCocinero(nombre: string, apellidos: string, email: string) {
+    const cocinero = this.cocineros.create({ nombre, apellidos, email });
+    return this.cocineros.save(cocinero);
+  }
+
+  listarCocineros() {
+    return this.cocineros.find({ order: { id: 'ASC' } });
+  }
+
   async asignarCocinero(comandaId: number, cocineroId: number, rol: string) {
     const comanda = await this.comandas.findOneBy({ id: comandaId });
     const cocinero = await this.cocineros.findOneBy({ id: cocineroId });

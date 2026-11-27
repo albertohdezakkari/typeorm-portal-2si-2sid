@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Locutor) private readonly locutores: Repository<Locutor>
   ) {}
 
+  crearLocutor(nombre: string, apellidos: string, email: string) {
+    const locutor = this.locutores.create({ nombre, apellidos, email });
+    return this.locutores.save(locutor);
+  }
+
+  listarLocutores() {
+    return this.locutores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarLocutor(programaId: number, locutorId: number, rol: string) {
     const programa = await this.programas.findOneBy({ id: programaId });
     const locutor = await this.locutores.findOneBy({ id: locutorId });

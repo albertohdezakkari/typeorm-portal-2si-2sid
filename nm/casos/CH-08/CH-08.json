@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'PANADERO' })\nexport class Panadero {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.panadero)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/panaderos/entities/panadero.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al panadero y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al panadero y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "producto-inversa",
         "chapter": 1,
-        "title": "Relaciona la Producto existente con Asignacion",
+        "title": "Relaciona el Producto existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Panaderia } from '../../panaderias/entities/panaderia.entity';\n\n@Entity({ name: 'PRODUCTO' })\nexport class Producto {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PRECIO_CENTIMOS', type: 'integer' })\n  precioCentimos!: number;\n\n  @ManyToOne(() => Panaderia, panaderia => panaderia.productos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_PANADERIA' })\n  panaderia!: Panaderia;\n  @OneToMany(() => Asignacion, asignacion => asignacion.producto)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/productos/entities/producto.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "panaderos-modulo",
-        "chapter": 1,
-        "title": "Prepara PanaderosModule",
-        "kind": "module",
-        "path": "src/panaderos/panaderos.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Panadero } from './entities/panadero.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Panadero])],\n  providers: [],\n  controllers: []\n})\nexport class PanaderosModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/panaderos\ncode src/panaderos/panaderos.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Panadero])]",
-            "start": 158,
-            "end": 205,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Producto, Panadero])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Producto, Panadero y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo panaderia. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProductosModule } from './productos/productos.module';\nimport { PanaderosModule } from './panaderos/panaderos.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { PanaderiasModule } from './panaderias/panaderias.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PanaderiasModule,\n    ProductosModule,\n    PanaderosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProductosModule } from './productos/productos.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { PanaderiasModule } from './panaderias/panaderias.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PanaderiasModule,\n    ProductosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ProductosModule y la conexión original. Añade PanaderosModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Productos y añade Panaderos y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva PanaderiasModule, ProductosModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira PanaderosModule de AppModule y sus panaderias module, service y controller; conserva panadero.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "PanaderosModule,",
-            "start": 1227,
-            "end": 1243,
-            "note": "Carga el módulo que registra Panadero."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1248,
-            "end": 1267,
+            "start": 1163,
+            "end": 1182,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea PANADERO y ASIGNACION desde las Entities y conserva PANADERIA y PRODUCTO. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear PanaderosService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Panadero } from './entities/panadero.entity';\n\n@Injectable()\nexport class PanaderosService {\n  constructor(\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/panaderos/panaderos.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Producto, Panadero y Asignacion. Empieza con crearPanadero y listarPanaderos; los siguientes casos amplían este mismo panaderia.",
         "expect": "POST devuelve el panadero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 395,
+            "end": 424
+          },
+          {
+            "token": "@InjectRepository(Producto)",
+            "note": "Repositorio del primer extremo: permite comprobar que el producto existe.",
+            "start": 484,
+            "end": 511
+          },
+          {
+            "token": "@InjectRepository(Panadero)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los panaderos.",
+            "start": 566,
+            "end": 593
+          },
+          {
             "token": "this.panaderos.create({ nombre, apellidos, email })",
-            "start": 430,
-            "end": 481,
+            "start": 740,
+            "end": 791,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.panaderos.save(panadero)",
-            "start": 494,
-            "end": 523,
+            "start": 804,
+            "end": 833,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.panaderos.find({ order: { id: 'ASC' } })",
-            "start": 563,
-            "end": 608,
+            "start": 873,
+            "end": 918,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/panaderos\ntouch src/panaderos/panaderos.service.ts\ncode src/panaderos/panaderos.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear PanaderosController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { PanaderosService } from './panaderos.service';\n\n@Controller('panaderos')\nexport class PanaderosController {\n  constructor(private readonly service: PanaderosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarPanaderos();\n  }\n}",
-        "path": "src/panaderos/panaderos.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /panaderos y GET /panaderos. Las siguientes operaciones se añaden a este mismo panaderia.",
         "expect": "POST devuelve el panadero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('panaderos')",
-            "start": 119,
-            "end": 143,
-            "note": "Agrupa las rutas del catálogo de panaderos."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Panaderos y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 243,
-            "end": 250,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('panaderos')",
+            "note": "POST /panaderos crea un panadero a través del mismo Service N:M.",
+            "start": 244,
+            "end": 262
+          },
+          {
+            "token": "@Get('panaderos')",
+            "note": "GET /panaderos lista los panaderos desde el mismo Service.",
+            "start": 440,
+            "end": 457
           },
           {
             "token": "this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email)",
-            "start": 341,
-            "end": 411,
+            "start": 361,
+            "end": 431,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 420,
-            "end": 426,
-            "note": "GET utiliza listarPanaderos en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/panaderos\ntouch src/panaderos/panaderos.controller.ts\ncode src/panaderos/panaderos.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Panaderos una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Panadero } from './entities/panadero.entity';\nimport { PanaderosService } from './panaderos.service';\nimport { PanaderosController } from './panaderos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Panadero])],\n  providers: [PanaderosService],\n  controllers: [PanaderosController]\n})\nexport class PanaderosModule {}",
-        "path": "src/panaderos/panaderos.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ProductosModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Producto, Panadero])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el panadero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [PanaderosService]",
-            "start": 327,
-            "end": 356,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 497,
+            "end": 529,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [PanaderosController]",
-            "start": 360,
-            "end": 394,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 533,
+            "end": 570,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/panaderos/panaderos.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-panadero-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarPanadero al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El panaderia completo conserva crearPanadero, listarPanaderos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de un producto existente con el panadero que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarPanadero(productoId: number, panaderoId: number, rol: string)",
-            "start": 709,
-            "end": 783,
+            "start": 983,
+            "end": 1057,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.productos.findOneBy({ id: productoId })",
-            "start": 813,
-            "end": 857,
+            "start": 1087,
+            "end": 1131,
             "note": "Lee el producto con el repositorio de TypeORM."
           },
           {
             "token": "this.panaderos.findOneBy({ id: panaderoId })",
-            "start": 886,
-            "end": 930,
+            "start": 1160,
+            "end": 1204,
             "note": "Lee el panadero antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1124,
-            "end": 1160,
+            "start": 1398,
+            "end": 1434,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-panadero-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El panaderia completo conserva las rutas de Panaderos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de un producto existente con el panadero que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('productos/:productoId/asignaciones')",
-            "start": 246,
-            "end": 289,
+            "start": 537,
+            "end": 580,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol)",
-            "start": 406,
-            "end": 483,
+            "start": 697,
+            "end": 774,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-panadero-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Producto, Panadero])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ProductosModule.",
-        "expect": "POST crea la asignación de un producto existente con el panadero que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 497,
-            "end": 529,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 533,
-            "end": 570,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-panadero-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorProducto al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesService. El panaderia completo conserva crearPanadero, listarPanaderos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las asignaciones de ese producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorProducto(productoId: number)",
-            "start": 1418,
-            "end": 1455,
+            "start": 1692,
+            "end": 1729,
             "note": "Recibe un ID de producto."
           },
           {
             "token": "this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } })",
-            "start": 1469,
-            "end": 1548,
+            "start": 1743,
+            "end": 1822,
             "note": "Filtra las asignaciones por producto y ordena por panadero."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorProducto al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesController. El panaderia completo conserva las rutas de Panaderos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las asignaciones de ese producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('productos/:productoId/asignaciones')",
-            "start": 497,
-            "end": 539,
+            "start": 783,
+            "end": 825,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorProducto(Number(productoId))",
-            "start": 614,
-            "end": 664,
+            "start": 900,
+            "end": 950,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -660,7 +626,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las asignaciones de esa producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "request",
         "cues": [
           {
@@ -686,7 +652,7 @@
         "code": "curl -i \"http://localhost:3000/productos/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las asignaciones de esa producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese producto. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorPanadero al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los productos en las que participa ese panadero. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El panaderia completo conserva crearPanadero, listarPanaderos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve los productos en los que participa ese panadero. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorPanadero(panaderoId: number)",
-            "start": 1557,
-            "end": 1594,
+            "start": 1831,
+            "end": 1868,
             "note": "Recibe un ID de panadero."
           },
           {
             "token": "this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } })",
-            "start": 1608,
-            "end": 1687,
+            "start": 1882,
+            "end": 1961,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorPanadero al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los productos en las que participa ese panadero. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El panaderia completo conserva las rutas de Panaderos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve los productos en los que participa ese panadero. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('panaderos/:panaderoId/asignaciones')",
-            "start": 673,
-            "end": 715,
+            "start": 959,
+            "end": 1001,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorPanadero(Number(panaderoId))",
-            "start": 790,
-            "end": 840,
+            "start": 1076,
+            "end": 1126,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve los productos en las que participa ese panadero. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los productos en los que participa ese panadero. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/panaderos/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve los productos en las que participa ese panadero. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los productos en los que participa ese panadero. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n\n  async modificarRol(productoId: number, panaderoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ productoId, panaderoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { productoId, panaderoId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n\n  async modificarRol(productoId: number, panaderoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ productoId, panaderoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { productoId, panaderoId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El panaderia completo conserva crearPanadero, listarPanaderos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el producto y el panadero.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(productoId: number, panaderoId: number, rol: string)",
-            "start": 1696,
-            "end": 1767,
+            "start": 1970,
+            "end": 2041,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ productoId, panaderoId }, { rol })",
-            "start": 1798,
-            "end": 1859,
+            "start": 2072,
+            "end": 2133,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1865,
-            "end": 1889,
+            "start": 2139,
+            "end": 2163,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n\n  @Patch('productos/:productoId/asignaciones/:panaderoId')\n  modificarRol(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(productoId), Number(panaderoId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n\n  @Patch('productos/:productoId/asignaciones/:panaderoId')\n  modificarRol(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(productoId), Number(panaderoId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El panaderia completo conserva las rutas de Panaderos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el producto y el panadero.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('productos/:productoId/asignaciones/:panaderoId')",
-            "start": 856,
-            "end": 912,
+            "start": 1142,
+            "end": 1198,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(productoId), Number(panaderoId), datos.rol)",
-            "start": 1059,
-            "end": 1135,
+            "start": 1345,
+            "end": 1421,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n\n  async modificarRol(productoId: number, panaderoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ productoId, panaderoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { productoId, panaderoId, rol };\n  }\n\n  async eliminarAsignacion(productoId: number, panaderoId: number) {\n    await this.asignaciones.delete({ productoId, panaderoId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Producto } from '../productos/entities/producto.entity';\nimport { Panadero } from '../panaderos/entities/panadero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Producto) private readonly productos: Repository<Producto>,\n    @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>\n  ) {}\n\n  crearPanadero(nombre: string, apellidos: string, email: string) {\n    const panadero = this.panaderos.create({ nombre, apellidos, email });\n    return this.panaderos.save(panadero);\n  }\n\n  listarPanaderos() {\n    return this.panaderos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarPanadero(productoId: number, panaderoId: number, rol: string) {\n    const producto = await this.productos.findOneBy({ id: productoId });\n    const panadero = await this.panaderos.findOneBy({ id: panaderoId });\n    if (!producto || !panadero) {\n      throw new NotFoundException('No existe el producto o el panadero');\n    }\n    const asignacion = { productoId, panaderoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El panadero ya está asignado a ese producto');\n      }\n      throw error;\n    }\n  }\n\n  listarPorProducto(productoId: number) {\n    return this.asignaciones.find({ where: { productoId }, order: { panaderoId: 'ASC' } });\n  }\n\n  listarPorPanadero(panaderoId: number) {\n    return this.asignaciones.find({ where: { panaderoId }, order: { productoId: 'ASC' } });\n  }\n\n  async modificarRol(productoId: number, panaderoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ productoId, panaderoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { productoId, panaderoId, rol };\n  }\n\n  async eliminarAsignacion(productoId: number, panaderoId: number) {\n    await this.asignaciones.delete({ productoId, panaderoId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El panaderia completo conserva crearPanadero, listarPanaderos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el producto y el panadero siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(productoId: number, panaderoId: number)",
-            "start": 1997,
-            "end": 2061,
+            "start": 2271,
+            "end": 2335,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ productoId, panaderoId })",
-            "start": 2074,
-            "end": 2126,
+            "start": 2348,
+            "end": 2400,
             "note": "Borra el vínculo; conserva Producto y Panadero."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n\n  @Patch('productos/:productoId/asignaciones/:panaderoId')\n  modificarRol(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(productoId), Number(panaderoId), datos.rol);\n  }\n\n  @Delete('productos/:productoId/asignaciones/:panaderoId')\n  @HttpCode(204)\n  eliminar(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string) {\n    return this.service.eliminarAsignacion(Number(productoId), Number(panaderoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('panaderos')\n  crearPanadero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearPanadero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('panaderos')\n  listarPanaderos() {\n    return this.service.listarPanaderos();\n  }\n\n  @Post('productos/:productoId/asignaciones')\n  asignar(@Param('productoId') productoId: string, @Body() datos: { panaderoId: number; rol: string }) {\n    return this.service.asignarPanadero(Number(productoId), datos.panaderoId, datos.rol);\n  }\n\n  @Get('productos/:productoId/asignaciones')\n  listarPorProducto(@Param('productoId') productoId: string) {\n    return this.service.listarPorProducto(Number(productoId));\n  }\n\n  @Get('panaderos/:panaderoId/asignaciones')\n  listarPorPanadero(@Param('panaderoId') panaderoId: string) {\n    return this.service.listarPorPanadero(Number(panaderoId));\n  }\n\n  @Patch('productos/:productoId/asignaciones/:panaderoId')\n  modificarRol(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(productoId), Number(panaderoId), datos.rol);\n  }\n\n  @Delete('productos/:productoId/asignaciones/:panaderoId')\n  @HttpCode(204)\n  eliminar(@Param('productoId') productoId: string, @Param('panaderoId') panaderoId: string) {\n    return this.service.eliminarAsignacion(Number(productoId), Number(panaderoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El panaderia completo conserva las rutas de Panaderos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el producto y el panadero siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('productos/:productoId/asignaciones/:panaderoId')",
-            "start": 1162,
-            "end": 1219,
+            "start": 1448,
+            "end": 1505,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(productoId), Number(panaderoId))",
-            "start": 1343,
-            "end": 1414,
+            "start": 1629,
+            "end": 1700,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -996,7 +962,7 @@
         "kind": "review",
         "code": "",
         "path": "",
-        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro panadero, asígnalo a la misma producto y asigna un panadero a otra producto. Todos los datos se crean mediante los Controllers que has programado.",
+        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro panadero, asígnalo a el mismo producto y asigna un panadero a otro producto. Todos los datos se crean mediante los Controllers que has programado.",
         "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
         "focus": "model",
         "cues": [],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "panadero",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "panaderos-modulo": "asignaciones-modulo",
+    "asignar-panadero-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/productos/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "panaderos",
     "input": "panaderoId",
     "role": "Elaboración"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "panadero",
+      "asig-inversas",
+      "producto-inversa",
+      "panaderos-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-panadero-service",
+      "asignar-panadero-entry",
+      "asignar-panadero-registro",
+      "asignar-panadero-ejecutar",
+      "asignar-panadero-curl",
+      "listar-por-producto-service",
+      "listar-por-producto-entry",
+      "listar-por-producto-ejecutar",
+      "listar-por-producto-curl",
+      "listar-por-panadero-service",
+      "listar-por-panadero-entry",
+      "listar-por-panadero-ejecutar",
+      "listar-por-panadero-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "panaderos-modulo": "asignaciones-modulo",
+      "asignar-panadero-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "panadero",
+      "asig-inversas",
+      "producto-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-panadero-ejecutar",
+      "asignar-panadero-curl",
+      "listar-por-producto-ejecutar",
+      "listar-por-producto-curl",
+      "listar-por-panadero-ejecutar",
+      "listar-por-panadero-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

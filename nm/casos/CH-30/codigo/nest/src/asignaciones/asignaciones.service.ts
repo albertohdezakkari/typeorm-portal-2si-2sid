@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Interprete) private readonly interpretes: Repository<Interprete>
   ) {}
 
+  crearInterprete(nombre: string, apellidos: string, email: string) {
+    const interprete = this.interpretes.create({ nombre, apellidos, email });
+    return this.interpretes.save(interprete);
+  }
+
+  listarInterpretes() {
+    return this.interpretes.find({ order: { id: 'ASC' } });
+  }
+
   async asignarInterprete(funcionId: number, interpreteId: number, rol: string) {
     const funcion = await this.funciones.findOneBy({ id: funcionId });
     const interprete = await this.interpretes.findOneBy({ id: interpreteId });

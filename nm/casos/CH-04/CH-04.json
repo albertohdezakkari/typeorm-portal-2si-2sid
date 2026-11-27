@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'AUTOR' })\nexport class Autor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.autor)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/autores/entities/autor.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al autor y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al autor y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "publicacion-inversa",
         "chapter": 1,
-        "title": "Relaciona la Publicacion existente con Asignacion",
+        "title": "Relaciona el Publicacion existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Editorial } from '../../editoriales/entities/editorial.entity';\n\n@Entity({ name: 'PUBLICACION' })\nexport class Publicacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PAGINAS', type: 'integer' })\n  paginas!: number;\n\n  @ManyToOne(() => Editorial, editorial => editorial.publicaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_EDITORIAL' })\n  editorial!: Editorial;\n  @OneToMany(() => Asignacion, asignacion => asignacion.publicacion)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/publicaciones/entities/publicacion.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "autores-modulo",
-        "chapter": 1,
-        "title": "Prepara AutoresModule",
-        "kind": "module",
-        "path": "src/autores/autores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Autor } from './entities/autor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Autor])],\n  providers: [],\n  controllers: []\n})\nexport class AutoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/autores\ncode src/autores/autores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Autor])]",
-            "start": 152,
-            "end": 196,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Publicacion, Autor])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Publicacion, Autor y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo editorial. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PublicacionesModule } from './publicaciones/publicaciones.module';\nimport { AutoresModule } from './autores/autores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EditorialesModule } from './editoriales/editoriales.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EditorialesModule,\n    PublicacionesModule,\n    AutoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PublicacionesModule } from './publicaciones/publicaciones.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { EditorialesModule } from './editoriales/editoriales.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EditorialesModule,\n    PublicacionesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén PublicacionesModule y la conexión original. Añade AutoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Publicaciones y añade Autores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva EditorialesModule, PublicacionesModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira AutoresModule de AppModule y sus editoriales module, service y controller; conserva autor.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "AutoresModule,",
-            "start": 1241,
-            "end": 1255,
-            "note": "Carga el módulo que registra Autor."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1260,
-            "end": 1279,
+            "start": 1183,
+            "end": 1202,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea AUTOR y ASIGNACION desde las Entities y conserva EDITORIAL y PUBLICACION. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear AutoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Autor } from './entities/autor.entity';\n\n@Injectable()\nexport class AutoresService {\n  constructor(\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/autores/autores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Publicacion, Autor y Asignacion. Empieza con crearAutor y listarAutores; los siguientes casos amplían este mismo editorial.",
         "expect": "POST devuelve el autor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 397,
+            "end": 426
+          },
+          {
+            "token": "@InjectRepository(Publicacion)",
+            "note": "Repositorio del primer extremo: permite comprobar que la publicacion existe.",
+            "start": 486,
+            "end": 516
+          },
+          {
+            "token": "@InjectRepository(Autor)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los autores.",
+            "start": 578,
+            "end": 602
+          },
+          {
             "token": "this.autores.create({ nombre, apellidos, email })",
-            "start": 408,
-            "end": 457,
+            "start": 738,
+            "end": 787,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.autores.save(autor)",
-            "start": 470,
-            "end": 494,
+            "start": 800,
+            "end": 824,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.autores.find({ order: { id: 'ASC' } })",
-            "start": 532,
-            "end": 575,
+            "start": 862,
+            "end": 905,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/autores\ntouch src/autores/autores.service.ts\ncode src/autores/autores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear AutoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AutoresService } from './autores.service';\n\n@Controller('autores')\nexport class AutoresController {\n  constructor(private readonly service: AutoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAutores();\n  }\n}",
-        "path": "src/autores/autores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /autores y GET /autores. Las siguientes operaciones se añaden a este mismo editorial.",
         "expect": "POST devuelve el autor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('autores')",
-            "start": 115,
-            "end": 137,
-            "note": "Agrupa las rutas del catálogo de autores."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Autores y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 233,
-            "end": 240,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('autores')",
+            "note": "POST /autores crea un autor a través del mismo Service N:M.",
+            "start": 244,
+            "end": 260
+          },
+          {
+            "token": "@Get('autores')",
+            "note": "GET /autores lista los autores desde el mismo Service.",
+            "start": 432,
+            "end": 447
           },
           {
             "token": "this.service.crearAutor(datos.nombre, datos.apellidos, datos.email)",
-            "start": 331,
-            "end": 398,
+            "start": 356,
+            "end": 423,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 407,
-            "end": 413,
-            "note": "GET utiliza listarAutores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/autores\ntouch src/autores/autores.controller.ts\ncode src/autores/autores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Autores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Autor } from './entities/autor.entity';\nimport { AutoresService } from './autores.service';\nimport { AutoresController } from './autores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Autor])],\n  providers: [AutoresService],\n  controllers: [AutoresController]\n})\nexport class AutoresModule {}",
-        "path": "src/autores/autores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni PublicacionesModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Publicacion, Autor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el autor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [AutoresService]",
-            "start": 310,
-            "end": 337,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 499,
+            "end": 531,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [AutoresController]",
-            "start": 341,
-            "end": 373,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 535,
+            "end": 572,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/autores/autores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-autor-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarAutor al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El editorial completo conserva crearAutor, listarAutores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una publicacion existente con el autor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarAutor(publicacionId: number, autorId: number, rol: string)",
-            "start": 713,
-            "end": 784,
+            "start": 970,
+            "end": 1041,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.publicaciones.findOneBy({ id: publicacionId })",
-            "start": 817,
-            "end": 868,
+            "start": 1074,
+            "end": 1125,
             "note": "Lee la publicacion con el repositorio de TypeORM."
           },
           {
             "token": "this.autores.findOneBy({ id: autorId })",
-            "start": 894,
-            "end": 933,
+            "start": 1151,
+            "end": 1190,
             "note": "Lee el autor antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1127,
-            "end": 1163,
+            "start": 1384,
+            "end": 1420,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-autor-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El editorial completo conserva las rutas de Autores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una publicacion existente con el autor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('publicaciones/:publicacionId/asignaciones')",
-            "start": 246,
-            "end": 296,
+            "start": 523,
+            "end": 573,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol)",
-            "start": 416,
-            "end": 490,
+            "start": 693,
+            "end": 767,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-autor-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Publicacion, Autor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni PublicacionesModule.",
-        "expect": "POST crea la asignación de una publicacion existente con el autor que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 499,
-            "end": 531,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 535,
-            "end": 572,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-autor-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorPublicacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El editorial completo conserva crearAutor, listarAutores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa publicacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorPublicacion(publicacionId: number)",
-            "start": 1421,
-            "end": 1464,
+            "start": 1678,
+            "end": 1721,
             "note": "Recibe un ID de publicacion."
           },
           {
             "token": "this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } })",
-            "start": 1478,
-            "end": 1557,
+            "start": 1735,
+            "end": 1814,
             "note": "Filtra las asignaciones por publicacion y ordena por autor."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorPublicacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El editorial completo conserva las rutas de Autores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa publicacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('publicaciones/:publicacionId/asignaciones')",
-            "start": 504,
-            "end": 553,
+            "start": 776,
+            "end": 825,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorPublicacion(Number(publicacionId))",
-            "start": 637,
-            "end": 693,
+            "start": 909,
+            "end": 965,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorAutor al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las publicaciones en las que participa ese autor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El editorial completo conserva crearAutor, listarAutores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las publicaciones en los que participa ese autor. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorAutor(autorId: number)",
-            "start": 1566,
-            "end": 1597,
+            "start": 1823,
+            "end": 1854,
             "note": "Recibe un ID de autor."
           },
           {
             "token": "this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } })",
-            "start": 1611,
-            "end": 1690,
+            "start": 1868,
+            "end": 1947,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorAutor al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las publicaciones en las que participa ese autor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El editorial completo conserva las rutas de Autores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las publicaciones en los que participa ese autor. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('autores/:autorId/asignaciones')",
-            "start": 702,
-            "end": 739,
+            "start": 974,
+            "end": 1011,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorAutor(Number(autorId))",
-            "start": 805,
-            "end": 849,
+            "start": 1077,
+            "end": 1121,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las publicaciones en las que participa ese autor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las publicaciones en los que participa ese autor. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/autores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las publicaciones en las que participa ese autor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las publicaciones en los que participa ese autor. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El editorial completo conserva crearAutor, listarAutores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la publicacion y el autor.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(publicacionId: number, autorId: number, rol: string)",
-            "start": 1699,
-            "end": 1770,
+            "start": 1956,
+            "end": 2027,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ publicacionId, autorId }, { rol })",
-            "start": 1801,
-            "end": 1862,
+            "start": 2058,
+            "end": 2119,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1868,
-            "end": 1892,
+            "start": 2125,
+            "end": 2149,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El editorial completo conserva las rutas de Autores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la publicacion y el autor.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('publicaciones/:publicacionId/asignaciones/:autorId')",
-            "start": 865,
-            "end": 925,
+            "start": 1137,
+            "end": 1197,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol)",
-            "start": 1072,
-            "end": 1148,
+            "start": 1344,
+            "end": 1420,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n\n  async eliminarAsignacion(publicacionId: number, autorId: number) {\n    await this.asignaciones.delete({ publicacionId, autorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Publicacion } from '../publicaciones/entities/publicacion.entity';\nimport { Autor } from '../autores/entities/autor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Publicacion) private readonly publicaciones: Repository<Publicacion>,\n    @InjectRepository(Autor) private readonly autores: Repository<Autor>\n  ) {}\n\n  crearAutor(nombre: string, apellidos: string, email: string) {\n    const autor = this.autores.create({ nombre, apellidos, email });\n    return this.autores.save(autor);\n  }\n\n  listarAutores() {\n    return this.autores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarAutor(publicacionId: number, autorId: number, rol: string) {\n    const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });\n    const autor = await this.autores.findOneBy({ id: autorId });\n    if (!publicacion || !autor) {\n      throw new NotFoundException('No existe la publicacion o el autor');\n    }\n    const asignacion = { publicacionId, autorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El autor ya está asignado a esa publicacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPublicacion(publicacionId: number) {\n    return this.asignaciones.find({ where: { publicacionId }, order: { autorId: 'ASC' } });\n  }\n\n  listarPorAutor(autorId: number) {\n    return this.asignaciones.find({ where: { autorId }, order: { publicacionId: 'ASC' } });\n  }\n\n  async modificarRol(publicacionId: number, autorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ publicacionId, autorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { publicacionId, autorId, rol };\n  }\n\n  async eliminarAsignacion(publicacionId: number, autorId: number) {\n    await this.asignaciones.delete({ publicacionId, autorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El editorial completo conserva crearAutor, listarAutores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la publicacion y el autor siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(publicacionId: number, autorId: number)",
-            "start": 2000,
-            "end": 2064,
+            "start": 2257,
+            "end": 2321,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ publicacionId, autorId })",
-            "start": 2077,
-            "end": 2129,
+            "start": 2334,
+            "end": 2386,
             "note": "Borra el vínculo; conserva Publicacion y Autor."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n\n  @Delete('publicaciones/:publicacionId/asignaciones/:autorId')\n  @HttpCode(204)\n  eliminar(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string) {\n    return this.service.eliminarAsignacion(Number(publicacionId), Number(autorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('autores')\n  crearAutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearAutor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('autores')\n  listarAutores() {\n    return this.service.listarAutores();\n  }\n\n  @Post('publicaciones/:publicacionId/asignaciones')\n  asignar(@Param('publicacionId') publicacionId: string, @Body() datos: { autorId: number; rol: string }) {\n    return this.service.asignarAutor(Number(publicacionId), datos.autorId, datos.rol);\n  }\n\n  @Get('publicaciones/:publicacionId/asignaciones')\n  listarPorPublicacion(@Param('publicacionId') publicacionId: string) {\n    return this.service.listarPorPublicacion(Number(publicacionId));\n  }\n\n  @Get('autores/:autorId/asignaciones')\n  listarPorAutor(@Param('autorId') autorId: string) {\n    return this.service.listarPorAutor(Number(autorId));\n  }\n\n  @Patch('publicaciones/:publicacionId/asignaciones/:autorId')\n  modificarRol(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(publicacionId), Number(autorId), datos.rol);\n  }\n\n  @Delete('publicaciones/:publicacionId/asignaciones/:autorId')\n  @HttpCode(204)\n  eliminar(@Param('publicacionId') publicacionId: string, @Param('autorId') autorId: string) {\n    return this.service.eliminarAsignacion(Number(publicacionId), Number(autorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El editorial completo conserva las rutas de Autores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la publicacion y el autor siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('publicaciones/:publicacionId/asignaciones/:autorId')",
-            "start": 1175,
-            "end": 1236,
+            "start": 1447,
+            "end": 1508,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(publicacionId), Number(autorId))",
-            "start": 1360,
-            "end": 1431,
+            "start": 1632,
+            "end": 1703,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "autor",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "autores-modulo": "asignaciones-modulo",
+    "asignar-autor-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/publicaciones/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "autores",
     "input": "autorId",
     "role": "Redacción"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "autor",
+      "asig-inversas",
+      "publicacion-inversa",
+      "autores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-autor-service",
+      "asignar-autor-entry",
+      "asignar-autor-registro",
+      "asignar-autor-ejecutar",
+      "asignar-autor-curl",
+      "listar-por-publicacion-service",
+      "listar-por-publicacion-entry",
+      "listar-por-publicacion-ejecutar",
+      "listar-por-publicacion-curl",
+      "listar-por-autor-service",
+      "listar-por-autor-entry",
+      "listar-por-autor-ejecutar",
+      "listar-por-autor-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "autores-modulo": "asignaciones-modulo",
+      "asignar-autor-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "autor",
+      "asig-inversas",
+      "publicacion-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-autor-ejecutar",
+      "asignar-autor-curl",
+      "listar-por-publicacion-ejecutar",
+      "listar-por-publicacion-curl",
+      "listar-por-autor-ejecutar",
+      "listar-por-autor-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'ENTRENADOR' })\nexport class Entrenador {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.entrenador)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/entrenadores/entities/entrenador.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al entrenador y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al entrenador y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "pista-inversa",
         "chapter": 1,
-        "title": "Relaciona la Pista existente con Asignacion",
+        "title": "Relaciona el Pista existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Complejo } from '../../complejos/entities/complejo.entity';\n\n@Entity({ name: 'PISTA' })\nexport class Pista {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'SUPERFICIE_M2', type: 'integer' })\n  superficieM2!: number;\n\n  @ManyToOne(() => Complejo, complejo => complejo.pistas, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_COMPLEJO' })\n  complejo!: Complejo;\n  @OneToMany(() => Asignacion, asignacion => asignacion.pista)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/pistas/entities/pista.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "entrenadores-modulo",
-        "chapter": 1,
-        "title": "Prepara EntrenadoresModule",
-        "kind": "module",
-        "path": "src/entrenadores/entrenadores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Entrenador } from './entities/entrenador.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Entrenador])],\n  providers: [],\n  controllers: []\n})\nexport class EntrenadoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/entrenadores\ncode src/entrenadores/entrenadores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Entrenador])]",
-            "start": 162,
-            "end": 211,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Pista, Entrenador])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Pista, Entrenador y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo complejo. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PistasModule } from './pistas/pistas.module';\nimport { EntrenadoresModule } from './entrenadores/entrenadores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ComplejosModule } from './complejos/complejos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ComplejosModule,\n    PistasModule,\n    EntrenadoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PistasModule } from './pistas/pistas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ComplejosModule } from './complejos/complejos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ComplejosModule,\n    PistasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén PistasModule y la conexión original. Añade EntrenadoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Pistas y añade Entrenadores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva ComplejosModule, PistasModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira EntrenadoresModule de AppModule y sus complejos module, service y controller; conserva entrenador.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "EntrenadoresModule,",
-            "start": 1220,
-            "end": 1239,
-            "note": "Carga el módulo que registra Entrenador."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1244,
-            "end": 1263,
+            "start": 1147,
+            "end": 1166,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea ENTRENADOR y ASIGNACION desde las Entities y conserva COMPLEJO y PISTA. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear EntrenadoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Entrenador } from './entities/entrenador.entity';\n\n@Injectable()\nexport class EntrenadoresService {\n  constructor(\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/entrenadores/entrenadores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Pista, Entrenador y Asignacion. Empieza con crearEntrenador y listarEntrenadores; los siguientes casos amplían este mismo complejo.",
         "expect": "POST devuelve el entrenador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 393,
+            "end": 422
+          },
+          {
+            "token": "@InjectRepository(Pista)",
+            "note": "Repositorio del primer extremo: permite comprobar que la pista existe.",
+            "start": 482,
+            "end": 506
+          },
+          {
+            "token": "@InjectRepository(Entrenador)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los entrenadores.",
+            "start": 555,
+            "end": 584
+          },
+          {
             "token": "this.entrenadores.create({ nombre, apellidos, email })",
-            "start": 448,
-            "end": 502,
+            "start": 740,
+            "end": 794,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.entrenadores.save(entrenador)",
-            "start": 515,
-            "end": 549,
+            "start": 807,
+            "end": 841,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.entrenadores.find({ order: { id: 'ASC' } })",
-            "start": 592,
-            "end": 640,
+            "start": 884,
+            "end": 932,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/entrenadores\ntouch src/entrenadores/entrenadores.service.ts\ncode src/entrenadores/entrenadores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear EntrenadoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EntrenadoresService } from './entrenadores.service';\n\n@Controller('entrenadores')\nexport class EntrenadoresController {\n  constructor(private readonly service: EntrenadoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEntrenadores();\n  }\n}",
-        "path": "src/entrenadores/entrenadores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /entrenadores y GET /entrenadores. Las siguientes operaciones se añaden a este mismo complejo.",
         "expect": "POST devuelve el entrenador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('entrenadores')",
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Entrenadores y Asignaciones.",
             "start": 125,
-            "end": 152,
-            "note": "Agrupa las rutas del catálogo de entrenadores."
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 258,
-            "end": 265,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('entrenadores')",
+            "note": "POST /entrenadores crea un entrenador a través del mismo Service N:M.",
+            "start": 244,
+            "end": 265
+          },
+          {
+            "token": "@Get('entrenadores')",
+            "note": "GET /entrenadores lista los entrenadores desde el mismo Service.",
+            "start": 447,
+            "end": 467
           },
           {
             "token": "this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email)",
-            "start": 356,
-            "end": 428,
+            "start": 366,
+            "end": 438,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 437,
-            "end": 443,
-            "note": "GET utiliza listarEntrenadores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/entrenadores\ntouch src/entrenadores/entrenadores.controller.ts\ncode src/entrenadores/entrenadores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Entrenadores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Entrenador } from './entities/entrenador.entity';\nimport { EntrenadoresService } from './entrenadores.service';\nimport { EntrenadoresController } from './entrenadores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Entrenador])],\n  providers: [EntrenadoresService],\n  controllers: [EntrenadoresController]\n})\nexport class EntrenadoresModule {}",
-        "path": "src/entrenadores/entrenadores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni PistasModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Pista, Entrenador])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el entrenador creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [EntrenadoresService]",
-            "start": 345,
-            "end": 377,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 494,
+            "end": 526,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [EntrenadoresController]",
-            "start": 381,
-            "end": 418,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 530,
+            "end": 567,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/entrenadores/entrenadores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-entrenador-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarEntrenador al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El complejo completo conserva crearEntrenador, listarEntrenadores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una pista existente con el entrenador que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string)",
-            "start": 705,
-            "end": 780,
+            "start": 997,
+            "end": 1072,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.pistas.findOneBy({ id: pistaId })",
-            "start": 807,
-            "end": 845,
+            "start": 1099,
+            "end": 1137,
             "note": "Lee la pista con el repositorio de TypeORM."
           },
           {
             "token": "this.entrenadores.findOneBy({ id: entrenadorId })",
-            "start": 876,
-            "end": 925,
+            "start": 1168,
+            "end": 1217,
             "note": "Lee el entrenador antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1116,
-            "end": 1152,
+            "start": 1408,
+            "end": 1444,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-entrenador-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El complejo completo conserva las rutas de Entrenadores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una pista existente con el entrenador que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('pistas/:pistaId/asignaciones')",
-            "start": 246,
-            "end": 283,
+            "start": 553,
+            "end": 590,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol)",
-            "start": 396,
-            "end": 474,
+            "start": 703,
+            "end": 781,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-entrenador-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Pista, Entrenador])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni PistasModule.",
-        "expect": "POST crea la asignación de una pista existente con el entrenador que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 494,
-            "end": 526,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 530,
-            "end": 567,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-entrenador-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorPista al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El complejo completo conserva crearEntrenador, listarEntrenadores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa pista. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorPista(pistaId: number)",
-            "start": 1409,
-            "end": 1440,
+            "start": 1701,
+            "end": 1732,
             "note": "Recibe un ID de pista."
           },
           {
             "token": "this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } })",
-            "start": 1454,
-            "end": 1532,
+            "start": 1746,
+            "end": 1824,
             "note": "Filtra las asignaciones por pista y ordena por entrenador."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorPista al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El complejo completo conserva las rutas de Entrenadores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa pista. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('pistas/:pistaId/asignaciones')",
-            "start": 488,
-            "end": 524,
+            "start": 790,
+            "end": 826,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorPista(Number(pistaId))",
-            "start": 590,
-            "end": 634,
+            "start": 892,
+            "end": 936,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorEntrenador al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las pistas en las que participa ese entrenador. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El complejo completo conserva crearEntrenador, listarEntrenadores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las pistas en los que participa ese entrenador. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorEntrenador(entrenadorId: number)",
-            "start": 1541,
-            "end": 1582,
+            "start": 1833,
+            "end": 1874,
             "note": "Recibe un ID de entrenador."
           },
           {
             "token": "this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } })",
-            "start": 1596,
-            "end": 1674,
+            "start": 1888,
+            "end": 1966,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorEntrenador al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las pistas en las que participa ese entrenador. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El complejo completo conserva las rutas de Entrenadores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las pistas en los que participa ese entrenador. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('entrenadores/:entrenadorId/asignaciones')",
-            "start": 643,
-            "end": 690,
+            "start": 945,
+            "end": 992,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorEntrenador(Number(entrenadorId))",
-            "start": 771,
-            "end": 825,
+            "start": 1073,
+            "end": 1127,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las pistas en las que participa ese entrenador. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las pistas en los que participa ese entrenador. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/entrenadores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las pistas en las que participa ese entrenador. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las pistas en los que participa ese entrenador. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El complejo completo conserva crearEntrenador, listarEntrenadores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la pista y el entrenador.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(pistaId: number, entrenadorId: number, rol: string)",
-            "start": 1683,
-            "end": 1753,
+            "start": 1975,
+            "end": 2045,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ pistaId, entrenadorId }, { rol })",
-            "start": 1784,
-            "end": 1844,
+            "start": 2076,
+            "end": 2136,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1850,
-            "end": 1874,
+            "start": 2142,
+            "end": 2166,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El complejo completo conserva las rutas de Entrenadores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la pista y el entrenador.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('pistas/:pistaId/asignaciones/:entrenadorId')",
-            "start": 841,
-            "end": 893,
+            "start": 1143,
+            "end": 1195,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol)",
-            "start": 1038,
-            "end": 1113,
+            "start": 1340,
+            "end": 1415,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n\n  async eliminarAsignacion(pistaId: number, entrenadorId: number) {\n    await this.asignaciones.delete({ pistaId, entrenadorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\nimport { Entrenador } from '../entrenadores/entities/entrenador.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Pista) private readonly pistas: Repository<Pista>,\n    @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>\n  ) {}\n\n  crearEntrenador(nombre: string, apellidos: string, email: string) {\n    const entrenador = this.entrenadores.create({ nombre, apellidos, email });\n    return this.entrenadores.save(entrenador);\n  }\n\n  listarEntrenadores() {\n    return this.entrenadores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {\n    const pista = await this.pistas.findOneBy({ id: pistaId });\n    const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });\n    if (!pista || !entrenador) {\n      throw new NotFoundException('No existe la pista o el entrenador');\n    }\n    const asignacion = { pistaId, entrenadorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El entrenador ya está asignado a esa pista');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPista(pistaId: number) {\n    return this.asignaciones.find({ where: { pistaId }, order: { entrenadorId: 'ASC' } });\n  }\n\n  listarPorEntrenador(entrenadorId: number) {\n    return this.asignaciones.find({ where: { entrenadorId }, order: { pistaId: 'ASC' } });\n  }\n\n  async modificarRol(pistaId: number, entrenadorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ pistaId, entrenadorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { pistaId, entrenadorId, rol };\n  }\n\n  async eliminarAsignacion(pistaId: number, entrenadorId: number) {\n    await this.asignaciones.delete({ pistaId, entrenadorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El complejo completo conserva crearEntrenador, listarEntrenadores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la pista y el entrenador siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(pistaId: number, entrenadorId: number)",
-            "start": 1981,
-            "end": 2044,
+            "start": 2273,
+            "end": 2336,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ pistaId, entrenadorId })",
-            "start": 2057,
-            "end": 2108,
+            "start": 2349,
+            "end": 2400,
             "note": "Borra el vínculo; conserva Pista y Entrenador."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n\n  @Delete('pistas/:pistaId/asignaciones/:entrenadorId')\n  @HttpCode(204)\n  eliminar(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string) {\n    return this.service.eliminarAsignacion(Number(pistaId), Number(entrenadorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('entrenadores')\n  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('entrenadores')\n  listarEntrenadores() {\n    return this.service.listarEntrenadores();\n  }\n\n  @Post('pistas/:pistaId/asignaciones')\n  asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {\n    return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);\n  }\n\n  @Get('pistas/:pistaId/asignaciones')\n  listarPorPista(@Param('pistaId') pistaId: string) {\n    return this.service.listarPorPista(Number(pistaId));\n  }\n\n  @Get('entrenadores/:entrenadorId/asignaciones')\n  listarPorEntrenador(@Param('entrenadorId') entrenadorId: string) {\n    return this.service.listarPorEntrenador(Number(entrenadorId));\n  }\n\n  @Patch('pistas/:pistaId/asignaciones/:entrenadorId')\n  modificarRol(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(pistaId), Number(entrenadorId), datos.rol);\n  }\n\n  @Delete('pistas/:pistaId/asignaciones/:entrenadorId')\n  @HttpCode(204)\n  eliminar(@Param('pistaId') pistaId: string, @Param('entrenadorId') entrenadorId: string) {\n    return this.service.eliminarAsignacion(Number(pistaId), Number(entrenadorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El complejo completo conserva las rutas de Entrenadores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la pista y el entrenador siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('pistas/:pistaId/asignaciones/:entrenadorId')",
-            "start": 1140,
-            "end": 1193,
+            "start": 1442,
+            "end": 1495,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(pistaId), Number(entrenadorId))",
-            "start": 1315,
-            "end": 1385,
+            "start": 1617,
+            "end": 1687,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "entrenador",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "entrenadores-modulo": "asignaciones-modulo",
+    "asignar-entrenador-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/pistas/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "entrenadores",
     "input": "entrenadorId",
     "role": "Entrenamiento"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "entrenador",
+      "asig-inversas",
+      "pista-inversa",
+      "entrenadores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-entrenador-service",
+      "asignar-entrenador-entry",
+      "asignar-entrenador-registro",
+      "asignar-entrenador-ejecutar",
+      "asignar-entrenador-curl",
+      "listar-por-pista-service",
+      "listar-por-pista-entry",
+      "listar-por-pista-ejecutar",
+      "listar-por-pista-curl",
+      "listar-por-entrenador-service",
+      "listar-por-entrenador-entry",
+      "listar-por-entrenador-ejecutar",
+      "listar-por-entrenador-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "entrenadores-modulo": "asignaciones-modulo",
+      "asignar-entrenador-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "entrenador",
+      "asig-inversas",
+      "pista-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-entrenador-ejecutar",
+      "asignar-entrenador-curl",
+      "listar-por-pista-ejecutar",
+      "listar-por-pista-curl",
+      "listar-por-entrenador-ejecutar",
+      "listar-por-entrenador-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

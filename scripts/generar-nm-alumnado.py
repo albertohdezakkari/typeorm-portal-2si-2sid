@@ -126,7 +126,7 @@ for case_id, config in CONFIG.items():
 
 write(NM/'contextos.json',json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
 rows=['# Recorridos N:M de todo el alumnado','',
-      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 38 pasos Nest sencillos, con synchronize: true, dos Entities nuevas y altas mediante los Controllers, sin otra precarga ni SQL externo. Serverless tiene 58 pasos, sin precarga: las altas pasan por sus Handlers y Services.','',
+      'En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. Todos los contextos tienen 36 pasos Nest sencillos, con synchronize: true, dos Entities nuevas y altas mediante los Controllers, sin otra precarga ni SQL externo. Serverless tiene 58 pasos, sin precarga: las altas pasan por sus Handlers y Services.','',
       '| Caso | Proyecto 1:N existente | Ampliación N:M | Material |',
       '| --- | --- | --- | --- |']
 for case_id,meta in manifest.items():
@@ -135,5 +135,5 @@ for case_id,meta in manifest.items():
     pdf='fichas-nm-ch22.pdf' if case_id=='CH-22' else relative+'/fichas-nm.pdf'
     rows.append(f'| {case_id} | {meta["baselineTitle"]} | {meta["title"]} | [Recorrido]({relative}/) · [PDF]({pdf}) · [Código]({relative}/codigo) |')
 rows+=['','Ejemplo docente adicional: [Cine–Proyección–Técnico](casos/CH-13/) · [PDF](casos/CH-13/fichas-nm.pdf).',
-       '', 'Cada caso incluye Entities de TypeORM completas, módulo acumulativo y Controller → Service → Entity; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.']
+       '', 'Cada caso incluye Entities de TypeORM completas, un único módulo N:M, un Controller y un Service con los tres repositorios; en Serverless, YAML, Table + Entity, Handler → Service → Repository, curl e Invoke. Las lecturas inversas usan Query sobre el índice y conservan el mismo vínculo.']
 write(NM/'RECORRIDOS.md','\n'.join(rows)+'\n')

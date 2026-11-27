@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { resolve } from 'node:path';
 import { SaludController } from './salud.controller';
 import { HabitacionesModule } from './habitaciones/habitaciones.module';
-import { EnfermerosModule } from './enfermeros/enfermeros.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
 import { HospitalesModule } from './hospitales/hospitales.module';
@@ -30,7 +29,6 @@ import { HospitalesModule } from './hospitales/hospitales.module';
     }),
     HospitalesModule,
     HabitacionesModule,
-    EnfermerosModule,
     AsignacionesModule
   ],
   controllers: [SaludController]

@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('locutores')
+  crearLocutor(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearLocutor(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('locutores')
+  listarLocutores() {
+    return this.service.listarLocutores();
+  }
+
   @Post('programas/:programaId/asignaciones')
   asignar(@Param('programaId') programaId: string, @Body() datos: { locutorId: number; rol: string }) {
     return this.service.asignarLocutor(Number(programaId), datos.locutorId, datos.rol);

@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Artista) private readonly artistas: Repository<Artista>
   ) {}
 
+  crearArtista(nombre: string, apellidos: string, email: string) {
+    const artista = this.artistas.create({ nombre, apellidos, email });
+    return this.artistas.save(artista);
+  }
+
+  listarArtistas() {
+    return this.artistas.find({ order: { id: 'ASC' } });
+  }
+
   async asignarArtista(actuacionId: number, artistaId: number, rol: string) {
     const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });
     const artista = await this.artistas.findOneBy({ id: artistaId });

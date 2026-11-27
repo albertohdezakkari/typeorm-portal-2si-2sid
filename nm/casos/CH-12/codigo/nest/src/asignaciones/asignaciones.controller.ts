@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('inspectores')
+  crearInspector(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearInspector(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('inspectores')
+  listarInspectores() {
+    return this.service.listarInspectores();
+  }
+
   @Post('lotes/:loteId/asignaciones')
   asignar(@Param('loteId') loteId: string, @Body() datos: { inspectorId: number; rol: string }) {
     return this.service.asignarInspector(Number(loteId), datos.inspectorId, datos.rol);

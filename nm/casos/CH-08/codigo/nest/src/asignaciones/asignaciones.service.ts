@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Panadero) private readonly panaderos: Repository<Panadero>
   ) {}
 
+  crearPanadero(nombre: string, apellidos: string, email: string) {
+    const panadero = this.panaderos.create({ nombre, apellidos, email });
+    return this.panaderos.save(panadero);
+  }
+
+  listarPanaderos() {
+    return this.panaderos.find({ order: { id: 'ASC' } });
+  }
+
   async asignarPanadero(productoId: number, panaderoId: number, rol: string) {
     const producto = await this.productos.findOneBy({ id: productoId });
     const panadero = await this.panaderos.findOneBy({ id: panaderoId });

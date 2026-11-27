@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Autor) private readonly autores: Repository<Autor>
   ) {}
 
+  crearAutor(nombre: string, apellidos: string, email: string) {
+    const autor = this.autores.create({ nombre, apellidos, email });
+    return this.autores.save(autor);
+  }
+
+  listarAutores() {
+    return this.autores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarAutor(publicacionId: number, autorId: number, rol: string) {
     const publicacion = await this.publicaciones.findOneBy({ id: publicacionId });
     const autor = await this.autores.findOneBy({ id: autorId });

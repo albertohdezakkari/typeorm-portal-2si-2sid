@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'ARTISTA' })\nexport class Artista {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.artista)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/artistas/entities/artista.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al artista y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al artista y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "actuacion-inversa",
         "chapter": 1,
-        "title": "Relaciona la Actuacion existente con Asignacion",
+        "title": "Relaciona el Actuacion existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Festival } from '../../festivales/entities/festival.entity';\n\n@Entity({ name: 'ACTUACION' })\nexport class Actuacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'DURACION_MINUTOS', type: 'integer' })\n  duracionMinutos!: number;\n\n  @ManyToOne(() => Festival, festival => festival.actuaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_FESTIVAL' })\n  festival!: Festival;\n  @OneToMany(() => Asignacion, asignacion => asignacion.actuacion)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/actuaciones/entities/actuacion.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "artistas-modulo",
-        "chapter": 1,
-        "title": "Prepara ArtistasModule",
-        "kind": "module",
-        "path": "src/artistas/artistas.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Artista } from './entities/artista.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Artista])],\n  providers: [],\n  controllers: []\n})\nexport class ArtistasModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/artistas\ncode src/artistas/artistas.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Artista])]",
-            "start": 156,
-            "end": 202,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actuacion, Artista])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Actuacion, Artista y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo festival. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ActuacionesModule } from './actuaciones/actuaciones.module';\nimport { ArtistasModule } from './artistas/artistas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { FestivalesModule } from './festivales/festivales.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    FestivalesModule,\n    ActuacionesModule,\n    ArtistasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ActuacionesModule } from './actuaciones/actuaciones.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { FestivalesModule } from './festivales/festivales.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    FestivalesModule,\n    ActuacionesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ActuacionesModule y la conexión original. Añade ArtistasModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Actuaciones y añade Artistas y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva FestivalesModule, ActuacionesModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira ArtistasModule de AppModule y sus festivales module, service y controller; conserva artista.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "ArtistasModule,",
-            "start": 1232,
-            "end": 1247,
-            "note": "Carga el módulo que registra Artista."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1252,
-            "end": 1271,
+            "start": 1171,
+            "end": 1190,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea ARTISTA y ASIGNACION desde las Entities y conserva FESTIVAL y ACTUACION. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear ArtistasService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Artista } from './entities/artista.entity';\n\n@Injectable()\nexport class ArtistasService {\n  constructor(\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/artistas/artistas.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Actuacion, Artista y Asignacion. Empieza con crearArtista y listarArtistas; los siguientes casos amplían este mismo festival.",
         "expect": "POST devuelve el artista creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 396,
+            "end": 425
+          },
+          {
+            "token": "@InjectRepository(Actuacion)",
+            "note": "Repositorio del primer extremo: permite comprobar que la actuacion existe.",
+            "start": 485,
+            "end": 513
+          },
+          {
+            "token": "@InjectRepository(Artista)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los artistas.",
+            "start": 571,
+            "end": 597
+          },
+          {
             "token": "this.artistas.create({ nombre, apellidos, email })",
-            "start": 422,
-            "end": 472,
+            "start": 740,
+            "end": 790,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.artistas.save(artista)",
-            "start": 485,
-            "end": 512,
+            "start": 803,
+            "end": 830,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.artistas.find({ order: { id: 'ASC' } })",
-            "start": 551,
-            "end": 595,
+            "start": 869,
+            "end": 913,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/artistas\ntouch src/artistas/artistas.service.ts\ncode src/artistas/artistas.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear ArtistasController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ArtistasService } from './artistas.service';\n\n@Controller('artistas')\nexport class ArtistasController {\n  constructor(private readonly service: ArtistasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarArtistas();\n  }\n}",
-        "path": "src/artistas/artistas.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /artistas y GET /artistas. Las siguientes operaciones se añaden a este mismo festival.",
         "expect": "POST devuelve el artista creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('artistas')",
-            "start": 117,
-            "end": 140,
-            "note": "Agrupa las rutas del catálogo de artistas."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Artistas y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 238,
-            "end": 245,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('artistas')",
+            "note": "POST /artistas crea un artista a través del mismo Service N:M.",
+            "start": 244,
+            "end": 261
+          },
+          {
+            "token": "@Get('artistas')",
+            "note": "GET /artistas lista los artistas desde el mismo Service.",
+            "start": 437,
+            "end": 453
           },
           {
             "token": "this.service.crearArtista(datos.nombre, datos.apellidos, datos.email)",
-            "start": 336,
-            "end": 405,
+            "start": 359,
+            "end": 428,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 414,
-            "end": 420,
-            "note": "GET utiliza listarArtistas en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/artistas\ntouch src/artistas/artistas.controller.ts\ncode src/artistas/artistas.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Artistas una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Artista } from './entities/artista.entity';\nimport { ArtistasService } from './artistas.service';\nimport { ArtistasController } from './artistas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Artista])],\n  providers: [ArtistasService],\n  controllers: [ArtistasController]\n})\nexport class ArtistasModule {}",
-        "path": "src/artistas/artistas.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ActuacionesModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actuacion, Artista])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el artista creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [ArtistasService]",
-            "start": 320,
-            "end": 348,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 498,
+            "end": 530,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [ArtistasController]",
-            "start": 352,
-            "end": 385,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 534,
+            "end": 571,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/artistas/artistas.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-artista-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarArtista al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El festival completo conserva crearArtista, listarArtistas y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una actuacion existente con el artista que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarArtista(actuacionId: number, artistaId: number, rol: string)",
-            "start": 711,
-            "end": 784,
+            "start": 978,
+            "end": 1051,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.actuaciones.findOneBy({ id: actuacionId })",
-            "start": 815,
-            "end": 862,
+            "start": 1082,
+            "end": 1129,
             "note": "Lee la actuacion con el repositorio de TypeORM."
           },
           {
             "token": "this.artistas.findOneBy({ id: artistaId })",
-            "start": 890,
-            "end": 932,
+            "start": 1157,
+            "end": 1199,
             "note": "Lee el artista antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1126,
-            "end": 1162,
+            "start": 1393,
+            "end": 1429,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-artista-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El festival completo conserva las rutas de Artistas y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una actuacion existente con el artista que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('actuaciones/:actuacionId/asignaciones')",
-            "start": 246,
-            "end": 292,
+            "start": 531,
+            "end": 577,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol)",
-            "start": 410,
-            "end": 486,
+            "start": 695,
+            "end": 771,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-artista-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actuacion, Artista])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ActuacionesModule.",
-        "expect": "POST crea la asignación de una actuacion existente con el artista que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 498,
-            "end": 530,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 534,
-            "end": 571,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-artista-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorActuacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El festival completo conserva crearArtista, listarArtistas y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa actuacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorActuacion(actuacionId: number)",
-            "start": 1420,
-            "end": 1459,
+            "start": 1687,
+            "end": 1726,
             "note": "Recibe un ID de actuacion."
           },
           {
             "token": "this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } })",
-            "start": 1473,
-            "end": 1552,
+            "start": 1740,
+            "end": 1819,
             "note": "Filtra las asignaciones por actuacion y ordena por artista."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorActuacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El festival completo conserva las rutas de Artistas y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa actuacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('actuaciones/:actuacionId/asignaciones')",
-            "start": 500,
-            "end": 545,
+            "start": 780,
+            "end": 825,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorActuacion(Number(actuacionId))",
-            "start": 623,
-            "end": 675,
+            "start": 903,
+            "end": 955,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorArtista al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las actuaciones en las que participa ese artista. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El festival completo conserva crearArtista, listarArtistas y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las actuaciones en los que participa ese artista. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorArtista(artistaId: number)",
-            "start": 1561,
-            "end": 1596,
+            "start": 1828,
+            "end": 1863,
             "note": "Recibe un ID de artista."
           },
           {
             "token": "this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } })",
-            "start": 1610,
-            "end": 1689,
+            "start": 1877,
+            "end": 1956,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorArtista al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las actuaciones en las que participa ese artista. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El festival completo conserva las rutas de Artistas y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las actuaciones en los que participa ese artista. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('artistas/:artistaId/asignaciones')",
-            "start": 684,
-            "end": 724,
+            "start": 964,
+            "end": 1004,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorArtista(Number(artistaId))",
-            "start": 796,
-            "end": 844,
+            "start": 1076,
+            "end": 1124,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las actuaciones en las que participa ese artista. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las actuaciones en los que participa ese artista. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/artistas/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las actuaciones en las que participa ese artista. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las actuaciones en los que participa ese artista. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n\n  async modificarRol(actuacionId: number, artistaId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actuacionId, artistaId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actuacionId, artistaId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n\n  async modificarRol(actuacionId: number, artistaId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actuacionId, artistaId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actuacionId, artistaId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El festival completo conserva crearArtista, listarArtistas y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la actuacion y el artista.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(actuacionId: number, artistaId: number, rol: string)",
-            "start": 1698,
-            "end": 1769,
+            "start": 1965,
+            "end": 2036,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ actuacionId, artistaId }, { rol })",
-            "start": 1800,
-            "end": 1861,
+            "start": 2067,
+            "end": 2128,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1867,
-            "end": 1891,
+            "start": 2134,
+            "end": 2158,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n\n  @Patch('actuaciones/:actuacionId/asignaciones/:artistaId')\n  modificarRol(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actuacionId), Number(artistaId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n\n  @Patch('actuaciones/:actuacionId/asignaciones/:artistaId')\n  modificarRol(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actuacionId), Number(artistaId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El festival completo conserva las rutas de Artistas y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la actuacion y el artista.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('actuaciones/:actuacionId/asignaciones/:artistaId')",
-            "start": 860,
-            "end": 918,
+            "start": 1140,
+            "end": 1198,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(actuacionId), Number(artistaId), datos.rol)",
-            "start": 1065,
-            "end": 1141,
+            "start": 1345,
+            "end": 1421,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n\n  async modificarRol(actuacionId: number, artistaId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actuacionId, artistaId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actuacionId, artistaId, rol };\n  }\n\n  async eliminarAsignacion(actuacionId: number, artistaId: number) {\n    await this.asignaciones.delete({ actuacionId, artistaId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actuacion } from '../actuaciones/entities/actuacion.entity';\nimport { Artista } from '../artistas/entities/artista.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actuacion) private readonly actuaciones: Repository<Actuacion>,\n    @InjectRepository(Artista) private readonly artistas: Repository<Artista>\n  ) {}\n\n  crearArtista(nombre: string, apellidos: string, email: string) {\n    const artista = this.artistas.create({ nombre, apellidos, email });\n    return this.artistas.save(artista);\n  }\n\n  listarArtistas() {\n    return this.artistas.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarArtista(actuacionId: number, artistaId: number, rol: string) {\n    const actuacion = await this.actuaciones.findOneBy({ id: actuacionId });\n    const artista = await this.artistas.findOneBy({ id: artistaId });\n    if (!actuacion || !artista) {\n      throw new NotFoundException('No existe la actuacion o el artista');\n    }\n    const asignacion = { actuacionId, artistaId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El artista ya está asignado a esa actuacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActuacion(actuacionId: number) {\n    return this.asignaciones.find({ where: { actuacionId }, order: { artistaId: 'ASC' } });\n  }\n\n  listarPorArtista(artistaId: number) {\n    return this.asignaciones.find({ where: { artistaId }, order: { actuacionId: 'ASC' } });\n  }\n\n  async modificarRol(actuacionId: number, artistaId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actuacionId, artistaId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actuacionId, artistaId, rol };\n  }\n\n  async eliminarAsignacion(actuacionId: number, artistaId: number) {\n    await this.asignaciones.delete({ actuacionId, artistaId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El festival completo conserva crearArtista, listarArtistas y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la actuacion y el artista siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(actuacionId: number, artistaId: number)",
-            "start": 1999,
-            "end": 2063,
+            "start": 2266,
+            "end": 2330,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ actuacionId, artistaId })",
-            "start": 2076,
-            "end": 2128,
+            "start": 2343,
+            "end": 2395,
             "note": "Borra el vínculo; conserva Actuacion y Artista."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n\n  @Patch('actuaciones/:actuacionId/asignaciones/:artistaId')\n  modificarRol(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actuacionId), Number(artistaId), datos.rol);\n  }\n\n  @Delete('actuaciones/:actuacionId/asignaciones/:artistaId')\n  @HttpCode(204)\n  eliminar(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string) {\n    return this.service.eliminarAsignacion(Number(actuacionId), Number(artistaId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('artistas')\n  crearArtista(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearArtista(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('artistas')\n  listarArtistas() {\n    return this.service.listarArtistas();\n  }\n\n  @Post('actuaciones/:actuacionId/asignaciones')\n  asignar(@Param('actuacionId') actuacionId: string, @Body() datos: { artistaId: number; rol: string }) {\n    return this.service.asignarArtista(Number(actuacionId), datos.artistaId, datos.rol);\n  }\n\n  @Get('actuaciones/:actuacionId/asignaciones')\n  listarPorActuacion(@Param('actuacionId') actuacionId: string) {\n    return this.service.listarPorActuacion(Number(actuacionId));\n  }\n\n  @Get('artistas/:artistaId/asignaciones')\n  listarPorArtista(@Param('artistaId') artistaId: string) {\n    return this.service.listarPorArtista(Number(artistaId));\n  }\n\n  @Patch('actuaciones/:actuacionId/asignaciones/:artistaId')\n  modificarRol(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actuacionId), Number(artistaId), datos.rol);\n  }\n\n  @Delete('actuaciones/:actuacionId/asignaciones/:artistaId')\n  @HttpCode(204)\n  eliminar(@Param('actuacionId') actuacionId: string, @Param('artistaId') artistaId: string) {\n    return this.service.eliminarAsignacion(Number(actuacionId), Number(artistaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El festival completo conserva las rutas de Artistas y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la actuacion y el artista siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('actuaciones/:actuacionId/asignaciones/:artistaId')",
-            "start": 1168,
-            "end": 1227,
+            "start": 1448,
+            "end": 1507,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(actuacionId), Number(artistaId))",
-            "start": 1351,
-            "end": 1422,
+            "start": 1631,
+            "end": 1702,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "artista",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "artistas-modulo": "asignaciones-modulo",
+    "asignar-artista-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/actuaciones/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "artistas",
     "input": "artistaId",
     "role": "Interpretación"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "artista",
+      "asig-inversas",
+      "actuacion-inversa",
+      "artistas-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-artista-service",
+      "asignar-artista-entry",
+      "asignar-artista-registro",
+      "asignar-artista-ejecutar",
+      "asignar-artista-curl",
+      "listar-por-actuacion-service",
+      "listar-por-actuacion-entry",
+      "listar-por-actuacion-ejecutar",
+      "listar-por-actuacion-curl",
+      "listar-por-artista-service",
+      "listar-por-artista-entry",
+      "listar-por-artista-ejecutar",
+      "listar-por-artista-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "artistas-modulo": "asignaciones-modulo",
+      "asignar-artista-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "artista",
+      "asig-inversas",
+      "actuacion-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-artista-ejecutar",
+      "asignar-artista-curl",
+      "listar-por-actuacion-ejecutar",
+      "listar-por-actuacion-curl",
+      "listar-por-artista-ejecutar",
+      "listar-por-artista-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

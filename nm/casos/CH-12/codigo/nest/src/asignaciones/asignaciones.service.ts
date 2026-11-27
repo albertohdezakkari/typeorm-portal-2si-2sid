@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Inspector) private readonly inspectores: Repository<Inspector>
   ) {}
 
+  crearInspector(nombre: string, apellidos: string, email: string) {
+    const inspector = this.inspectores.create({ nombre, apellidos, email });
+    return this.inspectores.save(inspector);
+  }
+
+  listarInspectores() {
+    return this.inspectores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarInspector(loteId: number, inspectorId: number, rol: string) {
     const lote = await this.lotes.findOneBy({ id: loteId });
     const inspector = await this.inspectores.findOneBy({ id: inspectorId });

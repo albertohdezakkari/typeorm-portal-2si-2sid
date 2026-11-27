@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Entrenador) private readonly entrenadores: Repository<Entrenador>
   ) {}
 
+  crearEntrenador(nombre: string, apellidos: string, email: string) {
+    const entrenador = this.entrenadores.create({ nombre, apellidos, email });
+    return this.entrenadores.save(entrenador);
+  }
+
+  listarEntrenadores() {
+    return this.entrenadores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarEntrenador(pistaId: number, entrenadorId: number, rol: string) {
     const pista = await this.pistas.findOneBy({ id: pistaId });
     const entrenador = await this.entrenadores.findOneBy({ id: entrenadorId });

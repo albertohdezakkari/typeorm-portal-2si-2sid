@@ -1,4 +1,4 @@
-# Alejandro · Documento ↔ Revisor
+# CH-31 · Documento ↔ Revisor
 
 La ampliación N:M continúa el proyecto 1:N. Usa un único AsignacionesModule,
 que registra Documento, Revisor y Asignacion. Un AsignacionesService recibe

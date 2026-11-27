@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Agricultor) private readonly agricultores: Repository<Agricultor>
   ) {}
 
+  crearAgricultor(nombre: string, apellidos: string, email: string) {
+    const agricultor = this.agricultores.create({ nombre, apellidos, email });
+    return this.agricultores.save(agricultor);
+  }
+
+  listarAgricultores() {
+    return this.agricultores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarAgricultor(cosechaId: number, agricultorId: number, rol: string) {
     const cosecha = await this.cosechas.findOneBy({ id: cosechaId });
     const agricultor = await this.agricultores.findOneBy({ id: agricultorId });

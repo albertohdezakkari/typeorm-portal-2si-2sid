@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('interpretes')
+  crearInterprete(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearInterprete(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('interpretes')
+  listarInterpretes() {
+    return this.service.listarInterpretes();
+  }
+
   @Post('funciones/:funcionId/asignaciones')
   asignar(@Param('funcionId') funcionId: string, @Body() datos: { interpreteId: number; rol: string }) {
     return this.service.asignarInterprete(Number(funcionId), datos.interpreteId, datos.rol);

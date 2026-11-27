@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Vendedor) private readonly vendedores: Repository<Vendedor>
   ) {}
 
+  crearVendedor(nombre: string, apellidos: string, email: string) {
+    const vendedor = this.vendedores.create({ nombre, apellidos, email });
+    return this.vendedores.save(vendedor);
+  }
+
+  listarVendedores() {
+    return this.vendedores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarVendedor(articuloId: number, vendedorId: number, rol: string) {
     const articulo = await this.articulos.findOneBy({ id: articuloId });
     const vendedor = await this.vendedores.findOneBy({ id: vendedorId });

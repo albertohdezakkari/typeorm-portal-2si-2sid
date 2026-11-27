@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Enfermero) private readonly enfermeros: Repository<Enfermero>
   ) {}
 
+  crearEnfermero(nombre: string, apellidos: string, email: string) {
+    const enfermero = this.enfermeros.create({ nombre, apellidos, email });
+    return this.enfermeros.save(enfermero);
+  }
+
+  listarEnfermeros() {
+    return this.enfermeros.find({ order: { id: 'ASC' } });
+  }
+
   async asignarEnfermero(habitacionId: number, enfermeroId: number, rol: string) {
     const habitacion = await this.habitaciones.findOneBy({ id: habitacionId });
     const enfermero = await this.enfermeros.findOneBy({ id: enfermeroId });

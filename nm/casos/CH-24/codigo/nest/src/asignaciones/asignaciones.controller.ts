@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('entrenadores')
+  crearEntrenador(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearEntrenador(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('entrenadores')
+  listarEntrenadores() {
+    return this.service.listarEntrenadores();
+  }
+
   @Post('pistas/:pistaId/asignaciones')
   asignar(@Param('pistaId') pistaId: string, @Body() datos: { entrenadorId: number; rol: string }) {
     return this.service.asignarEntrenador(Number(pistaId), datos.entrenadorId, datos.rol);

@@ -12,6 +12,7 @@ const stop=()=>{clearTimeout(timer);timer=null;if(ready&&$('[data-action=play]')
 const hasCode=s=>Boolean(s.code)&&!['logical','mapping'].includes(s.kind);
 function resize(){send('nm:height',{height:Math.ceil(document.documentElement.getBoundingClientRect().height)});}
 function defaults(saved){
+ const modulePositionIsOld=saved?.nestSimpleRevision===D.nestSimpleRevision&&saved?.apiRevision===D.apiRevision;
  if(D.nestSimpleRevision&&saved?.nestSimpleRevision!==D.nestSimpleRevision){
   saved=saved?structuredClone(saved):null;
   if(saved){
@@ -36,10 +37,21 @@ function defaults(saved){
 
  if(D.apiRevision&&saved&&saved.apiRevision!==D.apiRevision){
   saved=structuredClone(saved);
-  for(const t of ['nest','cloud']){const id=D.apiPreviousIds?.[t]?.[saved.positions?.[t]];const target=['datos','leer-datos','cargar'].includes(id)?'crear-listar-repository':id;const i=D.tracks[t].findIndex(x=>x.id===target);if(saved.positions)saved.positions[t]=Math.max(0,i);}
+  for(const t of ['nest','cloud']){const id=D.apiPreviousIds?.[t]?.[saved.positions?.[t]];const target=['datos','leer-datos','cargar'].includes(id)?'crear-listar-repository':((t==='nest'?D.nmModuleMigration?.aliases[id]:null)||id);const i=D.tracks[t].findIndex(x=>x.id===target);if(saved.positions)saved.positions[t]=Math.max(0,i);}
   saved.checked=(saved.checked||[]).filter(k=>!k.startsWith('cloud:')||!/(datos|curl|evento|persistencia)/.test(k));
  }
- const s={apiRevision:D.apiRevision??0,version:1,unit:'nm',caseId:'CH-19',...(D.ormDataRevision?{ormDataRevision:D.ormDataRevision}:{}),...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
+ if(D.nmModuleRevision&&saved&&saved.nmModuleRevision!==D.nmModuleRevision){
+  saved=structuredClone(saved);
+  if(modulePositionIsOld){
+   const id=D.nmModuleMigration.previousIds[saved.positions?.nest],target=D.nmModuleMigration.aliases[id]||id;
+   if(saved.positions)saved.positions.nest=Math.max(0,D.tracks.nest.findIndex(x=>x.id===target));
+  }
+  const keep=k=>!String(k).startsWith('nest:')||D.nmModuleMigration.retained.includes(String(k).slice(5));
+  saved.answers=Object.fromEntries(Object.entries(saved.answers||{}).filter(([k])=>keep(k)));
+  saved.solved=(saved.solved||[]).filter(keep);saved.checked=(saved.checked||[]).filter(keep);
+  if(saved.track==='nest'){saved.cue=0;saved.mode='observe';saved.full=true;}
+ }
+ const s={nmModuleRevision:D.nmModuleRevision??0,apiRevision:D.apiRevision??0,version:1,unit:'nm',caseId:'CH-19',...(D.ormDataRevision?{ormDataRevision:D.ormDataRevision}:{}),...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
  if(saved?.version===1&&saved.unit==='nm'&&saved.caseId==='CH-19'){
   s.track=saved.track==='cloud'?'cloud':'nest';
   for(const t of ['nest','cloud'])if(Number.isInteger(saved.positions?.[t])&&D.tracks[t][saved.positions[t]])s.positions[t]=saved.positions[t];
@@ -98,8 +110,8 @@ function scene(){
  if(s.runbook)return `<div class="nm-scene-header"><span>ARRANCAR ANTES DE CONSULTAR</span><b>Dos terminales</b></div><div class="nm-startup-diagram"><article><span class="nm-startup-symbol">BD</span><div><strong>PostgreSQL</strong><small>Servidor encendido · base 1:N conservada</small></div></article><div class="nm-startup-link"><span>↑ consulta a la base · datos ↓</span></div><article class="nm-startup-server"><span class="nm-startup-symbol">1</span><div><strong>Terminal 1 · Nest</strong><code>${D.projectBase?'npm run start:dev':'npm run build<br>npm run start'}</code><small>Se queda ejecutándose y atiende peticiones</small></div></article><div class="nm-startup-link"><span>↑ petición HTTP · respuesta JSON ↓</span></div><article><span class="nm-startup-symbol">2</span><div><strong>Terminal 2 · pruebas</strong><code>curl /salud<br>curl /embarcaciones</code><small>Escribes las consultas sin cerrar Nest</small></div></article></div><p class="nm-startup-caption">Ejecuta el proyecto en la Terminal 1 y déjala abierta. En la Terminal 2 comprueba que la API responde. Si Nest ya estaba arrancado, empieza directamente por las pruebas.</p>`;
  if(D.projectBase&&S.track==='nest'&&s.kind==='module'){
   const app=s.path==='src/app.module.ts',entities=s.code.match(/forFeature\(\[([^\]]+)\]/)?.[1]||'',registered=/providers: \[[A-Za-z]/.test(s.code);
-  const cards=app?[['AppModule','Conserva la conexión de tu base'],['EmbarcacionesModule','Mantiene los casos 1:N'],['TripulantesModule + AsignacionesModule','Añade los dos recursos N:M']]:[['Entities',entities],['TypeOrmModule.forFeature','Prepara sus repositorios de TypeORM'],[registered?'Service y Controller registrados':'Service y Controller · siguiente caso',registered?'providers crea el Service; controllers conecta las rutas':'Primero crea los archivos; después los registrarás aquí']];
-  return `<div class="nm-scene-header"><span>${app?'CONECTA LOS MÓDULOS':'UN MÓDULO POR RECURSO'}</span><b>Nest</b></div><div class="nm-startup-diagram">${cards.map(([name,note],i)=>`<article><span class="nm-startup-symbol">${i+1}</span><div><strong>${esc(name)}</strong><small>${esc(note)}</small></div></article>${i<cards.length-1?'<div class="nm-startup-link">↓</div>':''}`).join('')}</div>`;
+  const cards=app?[['AppModule','Conserva la conexión de tu base'],['EmbarcacionesModule','Mantiene los casos 1:N'],['AsignacionesModule','Un único módulo reúne Embarcacion, Tripulante y Asignacion']]:[['Entities',entities],['TypeOrmModule.forFeature','Prepara sus repositorios de TypeORM'],[registered?'Service y Controller registrados':'Service y Controller · siguiente caso',registered?'providers crea el Service; controllers conecta las rutas':'Primero crea los archivos; después los registrarás aquí']];
+  return `<div class="nm-scene-header"><span>${app?'CONECTA LOS MÓDULOS':'UN MÓDULO PARA TODA LA N:M'}</span><b>Nest</b></div><div class="nm-startup-diagram">${cards.map(([name,note],i)=>`<article><span class="nm-startup-symbol">${i+1}</span><div><strong>${esc(name)}</strong><small>${esc(note)}</small></div></article>${i<cards.length-1?'<div class="nm-startup-link">↓</div>':''}`).join('')}</div>`;
  }
  if(s.kind==='logical')return `<div class="nm-scene-header"><span>UNA CLAVE, DOS VALORES</span><b>1:N + N:M</b></div><div class="nm-pair-diagram"><div><b>EMBARCACION</b><strong>ID = 7</strong></div><span>↘</span><div><b>TRIPULANTE</b><strong>ID = 1</strong></div><div class="nm-link-card"><b>ASIGNACION</b><strong>(7, 1)</strong><span>ROL = Navegación</span></div></div><p>El par (7,1) identifica una fila. (7,2) es otra fila: cambia el tripulante.</p>`;
  if(s.kind==='story')return `<div class="nm-scene-header"><span>EL MISMO TRIPULANTE, OTRA EMBARCACION</span><b>${D.nestWithoutSeed&&S.track==='nest'?'Ejemplo de la relación':'Datos iniciales'}</b></div>${dataCards('tripulante')}<p>Diego (ID 1) es Navegación en la embarcacion 7 y Coordinación en la 8. El rol pertenece a la asignación.</p>`;
@@ -289,7 +301,7 @@ function startAtBeginning(){
 }
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-19.json?v=altas-api-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
+ try{D=await (await fetch('CH-19.json?v=nm-unico-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:start')startAtBeginning();if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

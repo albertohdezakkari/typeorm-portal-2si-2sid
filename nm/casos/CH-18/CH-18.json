@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'MONITOR' })\nexport class Monitor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.monitor)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/monitores/entities/monitor.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al monitor y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al monitor y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "actividad-inversa",
         "chapter": 1,
-        "title": "Relaciona la Actividad existente con Asignacion",
+        "title": "Relaciona el Actividad existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Club } from '../../clubes/entities/club.entity';\n\n@Entity({ name: 'ACTIVIDAD' })\nexport class Actividad {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PLAZAS', type: 'integer' })\n  plazas!: number;\n\n  @ManyToOne(() => Club, club => club.actividades, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_CLUB' })\n  club!: Club;\n  @OneToMany(() => Asignacion, asignacion => asignacion.actividad)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/actividades/entities/actividad.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "monitores-modulo",
-        "chapter": 1,
-        "title": "Prepara MonitoresModule",
-        "kind": "module",
-        "path": "src/monitores/monitores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Monitor } from './entities/monitor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Monitor])],\n  providers: [],\n  controllers: []\n})\nexport class MonitoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/monitores\ncode src/monitores/monitores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Monitor])]",
-            "start": 156,
-            "end": 202,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actividad, Monitor])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Actividad, Monitor y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo club. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ActividadesModule } from './actividades/actividades.module';\nimport { MonitoresModule } from './monitores/monitores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ClubesModule } from './clubes/clubes.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ClubesModule,\n    ActividadesModule,\n    MonitoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ActividadesModule } from './actividades/actividades.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ClubesModule } from './clubes/clubes.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ClubesModule,\n    ActividadesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ActividadesModule y la conexión original. Añade MonitoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Actividades y añade Monitores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva ClubesModule, ActividadesModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira MonitoresModule de AppModule y sus clubes module, service y controller; conserva monitor.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "MonitoresModule,",
-            "start": 1219,
-            "end": 1235,
-            "note": "Carga el módulo que registra Monitor."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1240,
-            "end": 1259,
+            "start": 1155,
+            "end": 1174,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea MONITOR y ASIGNACION desde las Entities y conserva CLUB y ACTIVIDAD. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear MonitoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Monitor } from './entities/monitor.entity';\n\n@Injectable()\nexport class MonitoresService {\n  constructor(\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/monitores/monitores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Actividad, Monitor y Asignacion. Empieza con crearMonitor y listarMonitores; los siguientes casos amplían este mismo club.",
         "expect": "POST devuelve el monitor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 397,
+            "end": 426
+          },
+          {
+            "token": "@InjectRepository(Actividad)",
+            "note": "Repositorio del primer extremo: permite comprobar que la actividad existe.",
+            "start": 486,
+            "end": 514
+          },
+          {
+            "token": "@InjectRepository(Monitor)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los monitores.",
+            "start": 572,
+            "end": 598
+          },
+          {
             "token": "this.monitores.create({ nombre, apellidos, email })",
-            "start": 424,
-            "end": 475,
+            "start": 742,
+            "end": 793,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.monitores.save(monitor)",
-            "start": 488,
-            "end": 516,
+            "start": 806,
+            "end": 834,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.monitores.find({ order: { id: 'ASC' } })",
-            "start": 556,
-            "end": 601,
+            "start": 874,
+            "end": 919,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/monitores\ntouch src/monitores/monitores.service.ts\ncode src/monitores/monitores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear MonitoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MonitoresService } from './monitores.service';\n\n@Controller('monitores')\nexport class MonitoresController {\n  constructor(private readonly service: MonitoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarMonitores();\n  }\n}",
-        "path": "src/monitores/monitores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /monitores y GET /monitores. Las siguientes operaciones se añaden a este mismo club.",
         "expect": "POST devuelve el monitor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('monitores')",
-            "start": 119,
-            "end": 143,
-            "note": "Agrupa las rutas del catálogo de monitores."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Monitores y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 243,
-            "end": 250,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('monitores')",
+            "note": "POST /monitores crea un monitor a través del mismo Service N:M.",
+            "start": 244,
+            "end": 262
+          },
+          {
+            "token": "@Get('monitores')",
+            "note": "GET /monitores lista los monitores desde el mismo Service.",
+            "start": 438,
+            "end": 455
           },
           {
             "token": "this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email)",
-            "start": 341,
-            "end": 410,
+            "start": 360,
+            "end": 429,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 419,
-            "end": 425,
-            "note": "GET utiliza listarMonitores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/monitores\ntouch src/monitores/monitores.controller.ts\ncode src/monitores/monitores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Monitores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Monitor } from './entities/monitor.entity';\nimport { MonitoresService } from './monitores.service';\nimport { MonitoresController } from './monitores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Monitor])],\n  providers: [MonitoresService],\n  controllers: [MonitoresController]\n})\nexport class MonitoresModule {}",
-        "path": "src/monitores/monitores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ActividadesModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actividad, Monitor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el monitor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [MonitoresService]",
-            "start": 324,
-            "end": 353,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 499,
+            "end": 531,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [MonitoresController]",
-            "start": 357,
-            "end": 391,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 535,
+            "end": 572,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/monitores/monitores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-monitor-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarMonitor al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El club completo conserva crearMonitor, listarMonitores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una actividad existente con el monitor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarMonitor(actividadId: number, monitorId: number, rol: string)",
-            "start": 713,
-            "end": 786,
+            "start": 984,
+            "end": 1057,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.actividades.findOneBy({ id: actividadId })",
-            "start": 817,
-            "end": 864,
+            "start": 1088,
+            "end": 1135,
             "note": "Lee la actividad con el repositorio de TypeORM."
           },
           {
             "token": "this.monitores.findOneBy({ id: monitorId })",
-            "start": 892,
-            "end": 935,
+            "start": 1163,
+            "end": 1206,
             "note": "Lee el monitor antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1129,
-            "end": 1165,
+            "start": 1400,
+            "end": 1436,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-monitor-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El club completo conserva las rutas de Monitores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una actividad existente con el monitor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('actividades/:actividadId/asignaciones')",
-            "start": 246,
-            "end": 292,
+            "start": 535,
+            "end": 581,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol)",
-            "start": 410,
-            "end": 486,
+            "start": 699,
+            "end": 775,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-monitor-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Actividad, Monitor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ActividadesModule.",
-        "expect": "POST crea la asignación de una actividad existente con el monitor que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 499,
-            "end": 531,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 535,
-            "end": 572,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-monitor-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorActividad al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El club completo conserva crearMonitor, listarMonitores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa actividad. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorActividad(actividadId: number)",
-            "start": 1423,
-            "end": 1462,
+            "start": 1694,
+            "end": 1733,
             "note": "Recibe un ID de actividad."
           },
           {
             "token": "this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } })",
-            "start": 1476,
-            "end": 1555,
+            "start": 1747,
+            "end": 1826,
             "note": "Filtra las asignaciones por actividad y ordena por monitor."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorActividad al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El club completo conserva las rutas de Monitores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa actividad. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('actividades/:actividadId/asignaciones')",
-            "start": 500,
-            "end": 545,
+            "start": 784,
+            "end": 829,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorActividad(Number(actividadId))",
-            "start": 623,
-            "end": 675,
+            "start": 907,
+            "end": 959,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorMonitor al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las actividades en las que participa ese monitor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El club completo conserva crearMonitor, listarMonitores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las actividades en los que participa ese monitor. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorMonitor(monitorId: number)",
-            "start": 1564,
-            "end": 1599,
+            "start": 1835,
+            "end": 1870,
             "note": "Recibe un ID de monitor."
           },
           {
             "token": "this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } })",
-            "start": 1613,
-            "end": 1692,
+            "start": 1884,
+            "end": 1963,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorMonitor al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las actividades en las que participa ese monitor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El club completo conserva las rutas de Monitores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las actividades en los que participa ese monitor. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('monitores/:monitorId/asignaciones')",
-            "start": 684,
-            "end": 725,
+            "start": 968,
+            "end": 1009,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorMonitor(Number(monitorId))",
-            "start": 797,
-            "end": 845,
+            "start": 1081,
+            "end": 1129,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las actividades en las que participa ese monitor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las actividades en los que participa ese monitor. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/monitores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las actividades en las que participa ese monitor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las actividades en los que participa ese monitor. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n\n  async modificarRol(actividadId: number, monitorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actividadId, monitorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actividadId, monitorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n\n  async modificarRol(actividadId: number, monitorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actividadId, monitorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actividadId, monitorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El club completo conserva crearMonitor, listarMonitores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la actividad y el monitor.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(actividadId: number, monitorId: number, rol: string)",
-            "start": 1701,
-            "end": 1772,
+            "start": 1972,
+            "end": 2043,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ actividadId, monitorId }, { rol })",
-            "start": 1803,
-            "end": 1864,
+            "start": 2074,
+            "end": 2135,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1870,
-            "end": 1894,
+            "start": 2141,
+            "end": 2165,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n\n  @Patch('actividades/:actividadId/asignaciones/:monitorId')\n  modificarRol(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actividadId), Number(monitorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n\n  @Patch('actividades/:actividadId/asignaciones/:monitorId')\n  modificarRol(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actividadId), Number(monitorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El club completo conserva las rutas de Monitores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la actividad y el monitor.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('actividades/:actividadId/asignaciones/:monitorId')",
-            "start": 861,
-            "end": 919,
+            "start": 1145,
+            "end": 1203,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(actividadId), Number(monitorId), datos.rol)",
-            "start": 1066,
-            "end": 1142,
+            "start": 1350,
+            "end": 1426,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n\n  async modificarRol(actividadId: number, monitorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actividadId, monitorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actividadId, monitorId, rol };\n  }\n\n  async eliminarAsignacion(actividadId: number, monitorId: number) {\n    await this.asignaciones.delete({ actividadId, monitorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Actividad } from '../actividades/entities/actividad.entity';\nimport { Monitor } from '../monitores/entities/monitor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,\n    @InjectRepository(Monitor) private readonly monitores: Repository<Monitor>\n  ) {}\n\n  crearMonitor(nombre: string, apellidos: string, email: string) {\n    const monitor = this.monitores.create({ nombre, apellidos, email });\n    return this.monitores.save(monitor);\n  }\n\n  listarMonitores() {\n    return this.monitores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMonitor(actividadId: number, monitorId: number, rol: string) {\n    const actividad = await this.actividades.findOneBy({ id: actividadId });\n    const monitor = await this.monitores.findOneBy({ id: monitorId });\n    if (!actividad || !monitor) {\n      throw new NotFoundException('No existe la actividad o el monitor');\n    }\n    const asignacion = { actividadId, monitorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El monitor ya está asignado a esa actividad');\n      }\n      throw error;\n    }\n  }\n\n  listarPorActividad(actividadId: number) {\n    return this.asignaciones.find({ where: { actividadId }, order: { monitorId: 'ASC' } });\n  }\n\n  listarPorMonitor(monitorId: number) {\n    return this.asignaciones.find({ where: { monitorId }, order: { actividadId: 'ASC' } });\n  }\n\n  async modificarRol(actividadId: number, monitorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ actividadId, monitorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { actividadId, monitorId, rol };\n  }\n\n  async eliminarAsignacion(actividadId: number, monitorId: number) {\n    await this.asignaciones.delete({ actividadId, monitorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El club completo conserva crearMonitor, listarMonitores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la actividad y el monitor siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(actividadId: number, monitorId: number)",
-            "start": 2002,
-            "end": 2066,
+            "start": 2273,
+            "end": 2337,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ actividadId, monitorId })",
-            "start": 2079,
-            "end": 2131,
+            "start": 2350,
+            "end": 2402,
             "note": "Borra el vínculo; conserva Actividad y Monitor."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n\n  @Patch('actividades/:actividadId/asignaciones/:monitorId')\n  modificarRol(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actividadId), Number(monitorId), datos.rol);\n  }\n\n  @Delete('actividades/:actividadId/asignaciones/:monitorId')\n  @HttpCode(204)\n  eliminar(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string) {\n    return this.service.eliminarAsignacion(Number(actividadId), Number(monitorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('monitores')\n  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('monitores')\n  listarMonitores() {\n    return this.service.listarMonitores();\n  }\n\n  @Post('actividades/:actividadId/asignaciones')\n  asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {\n    return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);\n  }\n\n  @Get('actividades/:actividadId/asignaciones')\n  listarPorActividad(@Param('actividadId') actividadId: string) {\n    return this.service.listarPorActividad(Number(actividadId));\n  }\n\n  @Get('monitores/:monitorId/asignaciones')\n  listarPorMonitor(@Param('monitorId') monitorId: string) {\n    return this.service.listarPorMonitor(Number(monitorId));\n  }\n\n  @Patch('actividades/:actividadId/asignaciones/:monitorId')\n  modificarRol(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(actividadId), Number(monitorId), datos.rol);\n  }\n\n  @Delete('actividades/:actividadId/asignaciones/:monitorId')\n  @HttpCode(204)\n  eliminar(@Param('actividadId') actividadId: string, @Param('monitorId') monitorId: string) {\n    return this.service.eliminarAsignacion(Number(actividadId), Number(monitorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El club completo conserva las rutas de Monitores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la actividad y el monitor siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('actividades/:actividadId/asignaciones/:monitorId')",
-            "start": 1169,
-            "end": 1228,
+            "start": 1453,
+            "end": 1512,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(actividadId), Number(monitorId))",
-            "start": 1352,
-            "end": 1423,
+            "start": 1636,
+            "end": 1707,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "monitor",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "monitores-modulo": "asignaciones-modulo",
+    "asignar-monitor-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/actividades/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "monitores",
     "input": "monitorId",
     "role": "Dinamización"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "monitor",
+      "asig-inversas",
+      "actividad-inversa",
+      "monitores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-monitor-service",
+      "asignar-monitor-entry",
+      "asignar-monitor-registro",
+      "asignar-monitor-ejecutar",
+      "asignar-monitor-curl",
+      "listar-por-actividad-service",
+      "listar-por-actividad-entry",
+      "listar-por-actividad-ejecutar",
+      "listar-por-actividad-curl",
+      "listar-por-monitor-service",
+      "listar-por-monitor-entry",
+      "listar-por-monitor-ejecutar",
+      "listar-por-monitor-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "monitores-modulo": "asignaciones-modulo",
+      "asignar-monitor-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "monitor",
+      "asig-inversas",
+      "actividad-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-monitor-ejecutar",
+      "asignar-monitor-curl",
+      "listar-por-actividad-ejecutar",
+      "listar-por-actividad-curl",
+      "listar-por-monitor-ejecutar",
+      "listar-por-monitor-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

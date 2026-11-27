@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Restaurador) private readonly restauradores: Repository<Restaurador>
   ) {}
 
+  crearRestaurador(nombre: string, apellidos: string, email: string) {
+    const restaurador = this.restauradores.create({ nombre, apellidos, email });
+    return this.restauradores.save(restaurador);
+  }
+
+  listarRestauradores() {
+    return this.restauradores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarRestaurador(piezaId: number, restauradorId: number, rol: string) {
     const pieza = await this.piezas.findOneBy({ id: piezaId });
     const restaurador = await this.restauradores.findOneBy({ id: restauradorId });

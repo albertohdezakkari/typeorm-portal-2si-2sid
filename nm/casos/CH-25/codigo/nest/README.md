@@ -1,3 +1,12 @@
-# Emisora → Programa · API del proyecto
+# CH-25 · Programa ↔ Locutor
 
-Continúa tu backend preparado siguiendo el README de la base docente. Crea las Entities, sus módulos, Services y Controllers. Todas las altas 1:N y N:M se hacen mediante POST y los listados mediante GET. Conserva los IDs devueltos; no hay scripts de carga ni ficheros de IDs. Mantén npm run start:dev abierto y ejecuta cada curl en otra terminal.
+La ampliación N:M continúa el proyecto 1:N. Usa un único AsignacionesModule,
+que registra Programa, Locutor y Asignacion. Un AsignacionesService recibe
+los tres repositorios y un AsignacionesController atiende todas las rutas N:M,
+incluidos POST /locutores y GET /locutores. AppModule importa este módulo una vez.
+Los módulos existentes del 1:N conservan sus operaciones.
+
+No crees LocutoresModule, LocutoresService ni LocutoresController. La Entity
+Locutor sigue en src/locutores/entities/locutor.entity.ts. Las altas se hacen
+mediante POST, usando los IDs reales de las respuestas; no hay scripts de carga.
+Mantén npm run start:dev abierto y ejecuta los curl en otra terminal.

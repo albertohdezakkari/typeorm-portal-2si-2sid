@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'MECANICO' })\nexport class Mecanico {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.mecanico)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/mecanicos/entities/mecanico.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al mecanico y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al mecanico y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "reparacion-inversa",
         "chapter": 1,
-        "title": "Relaciona la Reparacion existente con Asignacion",
+        "title": "Relaciona el Reparacion existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Taller } from '../../talleres/entities/taller.entity';\n\n@Entity({ name: 'REPARACION' })\nexport class Reparacion {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'COSTE_CENTIMOS', type: 'integer' })\n  costeCentimos!: number;\n\n  @ManyToOne(() => Taller, taller => taller.reparaciones, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_TALLER' })\n  taller!: Taller;\n  @OneToMany(() => Asignacion, asignacion => asignacion.reparacion)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/reparaciones/entities/reparacion.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "mecanicos-modulo",
-        "chapter": 1,
-        "title": "Prepara MecanicosModule",
-        "kind": "module",
-        "path": "src/mecanicos/mecanicos.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Mecanico } from './entities/mecanico.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Mecanico])],\n  providers: [],\n  controllers: []\n})\nexport class MecanicosModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/mecanicos\ncode src/mecanicos/mecanicos.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Mecanico])]",
-            "start": 158,
-            "end": 205,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reparacion, Mecanico])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Reparacion, Mecanico y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo taller. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\nimport { MecanicosModule } from './mecanicos/mecanicos.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule,\n    MecanicosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén ReparacionesModule y la conexión original. Añade MecanicosModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Reparaciones y añade Mecanicos y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva TalleresModule, ReparacionesModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira MecanicosModule de AppModule y sus talleres module, service y controller; conserva mecanico.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "MecanicosModule,",
-            "start": 1231,
-            "end": 1247,
-            "note": "Carga el módulo que registra Mecanico."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1252,
-            "end": 1271,
+            "start": 1167,
+            "end": 1186,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea MECANICO y ASIGNACION desde las Entities y conserva TALLER y REPARACION. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear MecanicosService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Mecanico } from './entities/mecanico.entity';\n\n@Injectable()\nexport class MecanicosService {\n  constructor(\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/mecanicos/mecanicos.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Reparacion, Mecanico y Asignacion. Empieza con crearMecanico y listarMecanicos; los siguientes casos amplían este mismo taller.",
         "expect": "POST devuelve el mecanico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 402,
+            "end": 431
+          },
+          {
+            "token": "@InjectRepository(Reparacion)",
+            "note": "Repositorio del primer extremo: permite comprobar que la reparacion existe.",
+            "start": 491,
+            "end": 520
+          },
+          {
+            "token": "@InjectRepository(Mecanico)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los mecanicos.",
+            "start": 580,
+            "end": 607
+          },
+          {
             "token": "this.mecanicos.create({ nombre, apellidos, email })",
-            "start": 430,
-            "end": 481,
+            "start": 754,
+            "end": 805,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.mecanicos.save(mecanico)",
-            "start": 494,
-            "end": 523,
+            "start": 818,
+            "end": 847,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.mecanicos.find({ order: { id: 'ASC' } })",
-            "start": 563,
-            "end": 608,
+            "start": 887,
+            "end": 932,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/mecanicos\ntouch src/mecanicos/mecanicos.service.ts\ncode src/mecanicos/mecanicos.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear MecanicosController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MecanicosService } from './mecanicos.service';\n\n@Controller('mecanicos')\nexport class MecanicosController {\n  constructor(private readonly service: MecanicosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarMecanicos();\n  }\n}",
-        "path": "src/mecanicos/mecanicos.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /mecanicos y GET /mecanicos. Las siguientes operaciones se añaden a este mismo taller.",
         "expect": "POST devuelve el mecanico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('mecanicos')",
-            "start": 119,
-            "end": 143,
-            "note": "Agrupa las rutas del catálogo de mecanicos."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Mecanicos y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 243,
-            "end": 250,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('mecanicos')",
+            "note": "POST /mecanicos crea un mecanico a través del mismo Service N:M.",
+            "start": 244,
+            "end": 262
+          },
+          {
+            "token": "@Get('mecanicos')",
+            "note": "GET /mecanicos lista los mecanicos desde el mismo Service.",
+            "start": 440,
+            "end": 457
           },
           {
             "token": "this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email)",
-            "start": 341,
-            "end": 411,
+            "start": 361,
+            "end": 431,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 420,
-            "end": 426,
-            "note": "GET utiliza listarMecanicos en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/mecanicos\ntouch src/mecanicos/mecanicos.controller.ts\ncode src/mecanicos/mecanicos.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Mecanicos una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Mecanico } from './entities/mecanico.entity';\nimport { MecanicosService } from './mecanicos.service';\nimport { MecanicosController } from './mecanicos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Mecanico])],\n  providers: [MecanicosService],\n  controllers: [MecanicosController]\n})\nexport class MecanicosModule {}",
-        "path": "src/mecanicos/mecanicos.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ReparacionesModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reparacion, Mecanico])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el mecanico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [MecanicosService]",
-            "start": 327,
-            "end": 356,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 506,
+            "end": 538,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [MecanicosController]",
-            "start": 360,
-            "end": 394,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 542,
+            "end": 579,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/mecanicos/mecanicos.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-mecanico-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarMecanico al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El taller completo conserva crearMecanico, listarMecanicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una reparacion existente con el mecanico que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string)",
-            "start": 723,
-            "end": 799,
+            "start": 997,
+            "end": 1073,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.reparaciones.findOneBy({ id: reparacionId })",
-            "start": 831,
-            "end": 880,
+            "start": 1105,
+            "end": 1154,
             "note": "Lee la reparacion con el repositorio de TypeORM."
           },
           {
             "token": "this.mecanicos.findOneBy({ id: mecanicoId })",
-            "start": 909,
-            "end": 953,
+            "start": 1183,
+            "end": 1227,
             "note": "Lee el mecanico antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1153,
-            "end": 1189,
+            "start": 1427,
+            "end": 1463,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-mecanico-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El taller completo conserva las rutas de Mecanicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una reparacion existente con el mecanico que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('reparaciones/:reparacionId/asignaciones')",
-            "start": 246,
-            "end": 294,
+            "start": 537,
+            "end": 585,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol)",
-            "start": 415,
-            "end": 494,
+            "start": 706,
+            "end": 785,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-mecanico-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Reparacion, Mecanico])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ReparacionesModule.",
-        "expect": "POST crea la asignación de una reparacion existente con el mecanico que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 506,
-            "end": 538,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 542,
-            "end": 579,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-mecanico-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorReparacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El taller completo conserva crearMecanico, listarMecanicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa reparacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorReparacion(reparacionId: number)",
-            "start": 1449,
-            "end": 1490,
+            "start": 1723,
+            "end": 1764,
             "note": "Recibe un ID de reparacion."
           },
           {
             "token": "this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } })",
-            "start": 1504,
-            "end": 1585,
+            "start": 1778,
+            "end": 1859,
             "note": "Filtra las asignaciones por reparacion y ordena por mecanico."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorReparacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El taller completo conserva las rutas de Mecanicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa reparacion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('reparaciones/:reparacionId/asignaciones')",
-            "start": 508,
-            "end": 555,
+            "start": 794,
+            "end": 841,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorReparacion(Number(reparacionId))",
-            "start": 636,
-            "end": 690,
+            "start": 922,
+            "end": 976,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorMecanico al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las reparaciones en las que participa ese mecanico. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El taller completo conserva crearMecanico, listarMecanicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las reparaciones en los que participa ese mecanico. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorMecanico(mecanicoId: number)",
-            "start": 1594,
-            "end": 1631,
+            "start": 1868,
+            "end": 1905,
             "note": "Recibe un ID de mecanico."
           },
           {
             "token": "this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } })",
-            "start": 1645,
-            "end": 1726,
+            "start": 1919,
+            "end": 2000,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorMecanico al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las reparaciones en las que participa ese mecanico. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El taller completo conserva las rutas de Mecanicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las reparaciones en los que participa ese mecanico. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('mecanicos/:mecanicoId/asignaciones')",
-            "start": 699,
-            "end": 741,
+            "start": 985,
+            "end": 1027,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorMecanico(Number(mecanicoId))",
-            "start": 816,
-            "end": 866,
+            "start": 1102,
+            "end": 1152,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las reparaciones en las que participa ese mecanico. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las reparaciones en los que participa ese mecanico. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/mecanicos/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las reparaciones en las que participa ese mecanico. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve las reparaciones en los que participa ese mecanico. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El taller completo conserva crearMecanico, listarMecanicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la reparacion y el mecanico.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(reparacionId: number, mecanicoId: number, rol: string)",
-            "start": 1735,
-            "end": 1808,
+            "start": 2009,
+            "end": 2082,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ reparacionId, mecanicoId }, { rol })",
-            "start": 1839,
-            "end": 1902,
+            "start": 2113,
+            "end": 2176,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1908,
-            "end": 1932,
+            "start": 2182,
+            "end": 2206,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El taller completo conserva las rutas de Mecanicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la reparacion y el mecanico.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')",
-            "start": 882,
-            "end": 943,
+            "start": 1168,
+            "end": 1229,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol)",
-            "start": 1094,
-            "end": 1172,
+            "start": 1380,
+            "end": 1458,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n\n  async eliminarAsignacion(reparacionId: number, mecanicoId: number) {\n    await this.asignaciones.delete({ reparacionId, mecanicoId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\nimport { Mecanico } from '../mecanicos/entities/mecanico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Mecanico) private readonly mecanicos: Repository<Mecanico>\n  ) {}\n\n  crearMecanico(nombre: string, apellidos: string, email: string) {\n    const mecanico = this.mecanicos.create({ nombre, apellidos, email });\n    return this.mecanicos.save(mecanico);\n  }\n\n  listarMecanicos() {\n    return this.mecanicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarMecanico(reparacionId: number, mecanicoId: number, rol: string) {\n    const reparacion = await this.reparaciones.findOneBy({ id: reparacionId });\n    const mecanico = await this.mecanicos.findOneBy({ id: mecanicoId });\n    if (!reparacion || !mecanico) {\n      throw new NotFoundException('No existe la reparacion o el mecanico');\n    }\n    const asignacion = { reparacionId, mecanicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El mecanico ya está asignado a esa reparacion');\n      }\n      throw error;\n    }\n  }\n\n  listarPorReparacion(reparacionId: number) {\n    return this.asignaciones.find({ where: { reparacionId }, order: { mecanicoId: 'ASC' } });\n  }\n\n  listarPorMecanico(mecanicoId: number) {\n    return this.asignaciones.find({ where: { mecanicoId }, order: { reparacionId: 'ASC' } });\n  }\n\n  async modificarRol(reparacionId: number, mecanicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ reparacionId, mecanicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { reparacionId, mecanicoId, rol };\n  }\n\n  async eliminarAsignacion(reparacionId: number, mecanicoId: number) {\n    await this.asignaciones.delete({ reparacionId, mecanicoId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El taller completo conserva crearMecanico, listarMecanicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la reparacion y el mecanico siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(reparacionId: number, mecanicoId: number)",
-            "start": 2042,
-            "end": 2108,
+            "start": 2316,
+            "end": 2382,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ reparacionId, mecanicoId })",
-            "start": 2121,
-            "end": 2175,
+            "start": 2395,
+            "end": 2449,
             "note": "Borra el vínculo; conserva Reparacion y Mecanico."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n\n  @Delete('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string) {\n    return this.service.eliminarAsignacion(Number(reparacionId), Number(mecanicoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('mecanicos')\n  crearMecanico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearMecanico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('mecanicos')\n  listarMecanicos() {\n    return this.service.listarMecanicos();\n  }\n\n  @Post('reparaciones/:reparacionId/asignaciones')\n  asignar(@Param('reparacionId') reparacionId: string, @Body() datos: { mecanicoId: number; rol: string }) {\n    return this.service.asignarMecanico(Number(reparacionId), datos.mecanicoId, datos.rol);\n  }\n\n  @Get('reparaciones/:reparacionId/asignaciones')\n  listarPorReparacion(@Param('reparacionId') reparacionId: string) {\n    return this.service.listarPorReparacion(Number(reparacionId));\n  }\n\n  @Get('mecanicos/:mecanicoId/asignaciones')\n  listarPorMecanico(@Param('mecanicoId') mecanicoId: string) {\n    return this.service.listarPorMecanico(Number(mecanicoId));\n  }\n\n  @Patch('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  modificarRol(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(reparacionId), Number(mecanicoId), datos.rol);\n  }\n\n  @Delete('reparaciones/:reparacionId/asignaciones/:mecanicoId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string, @Param('mecanicoId') mecanicoId: string) {\n    return this.service.eliminarAsignacion(Number(reparacionId), Number(mecanicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El taller completo conserva las rutas de Mecanicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la reparacion y el mecanico siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('reparaciones/:reparacionId/asignaciones/:mecanicoId')",
-            "start": 1199,
-            "end": 1261,
+            "start": 1485,
+            "end": 1547,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(reparacionId), Number(mecanicoId))",
-            "start": 1389,
-            "end": 1462,
+            "start": 1675,
+            "end": 1748,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "mecanico",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "mecanicos-modulo": "asignaciones-modulo",
+    "asignar-mecanico-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/reparaciones/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "mecanicos",
     "input": "mecanicoId",
     "role": "Diagnóstico"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "mecanico",
+      "asig-inversas",
+      "reparacion-inversa",
+      "mecanicos-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-mecanico-service",
+      "asignar-mecanico-entry",
+      "asignar-mecanico-registro",
+      "asignar-mecanico-ejecutar",
+      "asignar-mecanico-curl",
+      "listar-por-reparacion-service",
+      "listar-por-reparacion-entry",
+      "listar-por-reparacion-ejecutar",
+      "listar-por-reparacion-curl",
+      "listar-por-mecanico-service",
+      "listar-por-mecanico-entry",
+      "listar-por-mecanico-ejecutar",
+      "listar-por-mecanico-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "mecanicos-modulo": "asignaciones-modulo",
+      "asignar-mecanico-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "mecanico",
+      "asig-inversas",
+      "reparacion-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-mecanico-ejecutar",
+      "asignar-mecanico-curl",
+      "listar-por-reparacion-ejecutar",
+      "listar-por-reparacion-curl",
+      "listar-por-mecanico-ejecutar",
+      "listar-por-mecanico-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

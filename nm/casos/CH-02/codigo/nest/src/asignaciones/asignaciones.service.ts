@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Cultivador) private readonly cultivadores: Repository<Cultivador>
   ) {}
 
+  crearCultivador(nombre: string, apellidos: string, email: string) {
+    const cultivador = this.cultivadores.create({ nombre, apellidos, email });
+    return this.cultivadores.save(cultivador);
+  }
+
+  listarCultivadores() {
+    return this.cultivadores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarCultivador(parcelaId: number, cultivadorId: number, rol: string) {
     const parcela = await this.parcelas.findOneBy({ id: parcelaId });
     const cultivador = await this.cultivadores.findOneBy({ id: cultivadorId });

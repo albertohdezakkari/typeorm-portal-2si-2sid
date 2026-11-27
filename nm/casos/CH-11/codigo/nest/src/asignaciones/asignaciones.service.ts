@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Huesped) private readonly huespedes: Repository<Huesped>
   ) {}
 
+  crearHuesped(nombre: string, apellidos: string, email: string) {
+    const huesped = this.huespedes.create({ nombre, apellidos, email });
+    return this.huespedes.save(huesped);
+  }
+
+  listarHuespedes() {
+    return this.huespedes.find({ order: { id: 'ASC' } });
+  }
+
   async asignarHuesped(reservaId: number, huespedId: number, rol: string) {
     const reserva = await this.reservas.findOneBy({ id: reservaId });
     const huesped = await this.huespedes.findOneBy({ id: huespedId });

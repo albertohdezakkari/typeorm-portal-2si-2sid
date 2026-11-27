@@ -5,6 +5,16 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly service: AsignacionesService) {}
 
+  @Post('monitores')
+  crearMonitor(@Body() datos: { nombre: string; apellidos: string; email: string }) {
+    return this.service.crearMonitor(datos.nombre, datos.apellidos, datos.email);
+  }
+
+  @Get('monitores')
+  listarMonitores() {
+    return this.service.listarMonitores();
+  }
+
   @Post('actividades/:actividadId/asignaciones')
   asignar(@Param('actividadId') actividadId: string, @Body() datos: { monitorId: number; rol: string }) {
     return this.service.asignarMonitor(Number(actividadId), datos.monitorId, datos.rol);

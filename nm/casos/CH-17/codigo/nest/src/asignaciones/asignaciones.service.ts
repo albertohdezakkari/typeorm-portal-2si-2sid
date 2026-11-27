@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Actor) private readonly actores: Repository<Actor>
   ) {}
 
+  crearActor(nombre: string, apellidos: string, email: string) {
+    const actor = this.actores.create({ nombre, apellidos, email });
+    return this.actores.save(actor);
+  }
+
+  listarActores() {
+    return this.actores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarActor(escenaId: number, actorId: number, rol: string) {
     const escena = await this.escenas.findOneBy({ id: escenaId });
     const actor = await this.actores.findOneBy({ id: actorId });

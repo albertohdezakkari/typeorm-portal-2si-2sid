@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Instructor) private readonly instructores: Repository<Instructor>
   ) {}
 
+  crearInstructor(nombre: string, apellidos: string, email: string) {
+    const instructor = this.instructores.create({ nombre, apellidos, email });
+    return this.instructores.save(instructor);
+  }
+
+  listarInstructores() {
+    return this.instructores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarInstructor(sesionId: number, instructorId: number, rol: string) {
     const sesion = await this.sesiones.findOneBy({ id: sesionId });
     const instructor = await this.instructores.findOneBy({ id: instructorId });

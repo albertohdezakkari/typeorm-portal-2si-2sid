@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>
   ) {}
 
+  crearJardinero(nombre: string, apellidos: string, email: string) {
+    const jardinero = this.jardineros.create({ nombre, apellidos, email });
+    return this.jardineros.save(jardinero);
+  }
+
+  listarJardineros() {
+    return this.jardineros.find({ order: { id: 'ASC' } });
+  }
+
   async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {
     const planta = await this.plantas.findOneBy({ id: plantaId });
     const jardinero = await this.jardineros.findOneBy({ id: jardineroId });
