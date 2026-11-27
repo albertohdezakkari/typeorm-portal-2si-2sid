@@ -37,12 +37,12 @@
   function renderBases() {
     const pilot=Boolean(data.projectBase);
     const repo=pilot?data.projectBase.url:'https://github.com/albertohdezakkari/typeorm-base';
-    panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', `Elige la base que vas a preparar. Después vuelve al taller de ${data.context.title} para construir tus entidades y tus cinco casos.`) +
+    panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', pilot?'Prepara TypeORM siguiendo el README del repositorio. Después continúa en «2 · Entrenar con mis fichas» para trabajar tu caso.':`Elige la base que vas a preparar. Después vuelve al taller de ${data.context.title} para construir tus entidades y tus cinco casos.`) +
       `<div class="mq-repositories">
-        <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="${repo}" target="_blank" rel="noopener">albertohdezakkari / ${pilot?'examen-typeorm-27-11-26-01':'typeorm-base'} ↗</a>
+        <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="${repo}${pilot?'#readme':''}" target="_blank" rel="noopener">albertohdezakkari / ${pilot?'examen-typeorm-27-11-26-01':'typeorm-base'} ↗</a>
         ${flow([['backend/','Tu proyecto Nest'],['Entities',data.context.parent.entity+' · '+data.context.child.entity],[data.nestSimpleRevision?'Service':'Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
         <ul class="mq-facts"><li><b>Carpeta de trabajo</b><code>backend/</code></li><li><b>Configuración que carga esta base</b><code>${pilot?'backend/.env + .env.example':'backend/.env.example'}</code></li><li><b>Comprobación de conexión</b><code>GET /salud</code></li></ul>
-        ${pilot?'<button type="button" class="mq-button" data-mq-prepare>Preparar mi backend paso a paso</button>':'<a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a>'}</div></article>
+        ${pilot?'<p class="mq-note">Sigue el README de este repositorio para instalar y arrancar el backend. Después continúa en «2 · Entrenar con mis fichas».</p>':'<a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a>'}</div></article>
         <article class="mq-repo mq-cloud"><div class="mq-repo-label"><span>02 / NoSQL</span><b>Ejemplo funcional</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">λ</i><h3>Serverless + Toolbox</h3><p>AWS · Lambda · DynamoDB</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/festival-checkin-01" target="_blank" rel="noopener">albertohdezakkari / festival-checkin-01 ↗</a>
         ${flow([['YAML','Crea recursos AWS'],['Table + Entity','Describe tus datos'],['Repository','Envía el comando']],'Desde la infraestructura a la escritura')}
         <ul class="mq-facts"><li><b>Guía de arranque</b><code>0-codespaces.md</code></li><li><b>Framework local</b><code>Serverless 3.40.0</code></li><li><b>Ejemplo que ya funciona</b><span>Festival: 3 tablas · 6 Lambdas</span></li></ul>
@@ -196,7 +196,6 @@
 
   workspace.addEventListener('click', async event => {
     if (!mounted) return;
-    if(event.target.closest('[data-mq-prepare]')){window.abrirPreparacionGuiada?.('nest');return;}
     const go = event.target.closest('[data-mq-go]');
     if (go) { show(go.dataset.mqGo); return; }
     const tech = event.target.closest('[data-mq-track]');
