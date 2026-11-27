@@ -2,6 +2,7 @@ export function montarTaller(data, {estadoInicial=null, guardar=()=>{}}={}) {
 
 const root=document.getElementById('pdf-taller'),D=data,C=D.context,P=C.parent,N=C.child,M=C.metric;
 const simpleNest=Boolean(D.nestSimpleRevision);
+const readingMode=Boolean(D.projectBase);
 const guidedExplanation=root.dataset.tabsLayout==='wrap';
 const schemaGuide=guidedExplanation&&Boolean(D.fieldGuide);
 const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)];
@@ -101,6 +102,13 @@ function renderER(){
 }
 function renderCode(){
  erObserver?.disconnect();cancelAnimationFrame(erRaf);erObserver=null;
+ if(readingMode){
+  $('[data-er-work]').hidden=!isRelation();$('[data-code]').hidden=isRelation();$('[data-full]').hidden=true;
+  $('[data-dots]').hidden=true;
+  if(isRelation())renderER();
+  else{$('[data-er-work]').innerHTML='';$('[data-code]').innerHTML=stage().code.split('\n').map((line,i)=>`<span class="p-line" data-line="${i+1}">${syntax(line)||'&nbsp;'}</span>`).join('');}
+  return;
+ }
  $('[data-er-work]').hidden=!isRelation();$('[data-code]').hidden=isRelation();$('[data-full]').hidden=isRelation();
  if(isRelation()){
   $('[data-code]').innerHTML='';
@@ -161,7 +169,7 @@ function nestDiagram(){
 }
 function nestUse(){return `<div class="p-model-use"><span class="p-model-label">${simpleNest?'EL SERVICE UTILIZA LAS ENTITIES':'ESTE REPOSITORY UTILIZA LAS ENTITIES'}</span><code>${stage().chapter===5?'@InjectRepository('+esc(P.entity)+') → Repository&lt;'+esc(P.entity)+'&gt;<br>':''}@InjectRepository(${esc(N.entity)}) → Repository&lt;${esc(N.entity)}&gt;</code><button type="button" class="p-btn cursor-interaction" data-entity-review>Revisar Entities y relación ↗</button></div>`;}
 function renderScene(){
-const s=stage(),cue=s.cues[frame],c=s.chapter,after=(s.name==='Repository'||(simpleNest&&track==='nest'&&s.name==='Service')||s.scene==='result')&&(solved.has(key())||(mode==='observe'&&frame===s.cues.length-1)),isCloud=track==='cloud';
+const s=stage(),cue=s.cues[frame],c=s.chapter,after=(s.name==='Repository'||(simpleNest&&track==='nest'&&s.name==='Service')||s.scene==='result')&&(readingMode||solved.has(key())||(mode==='observe'&&frame===s.cues.length-1)),isCloud=track==='cloud';
 let html='';
 if(isRelation()){
  html=`<div class="p-er-example"><div class="p-er-example-head">La misma relación, con datos</div><div class="p-er-owner"><div><b>${esc(P.examples[0])}</b><small>${esc(P.sql)}</small></div><span class="p-er-id">ID = 1</span></div><div class="p-er-fan" aria-hidden="true"></div><div class="p-er-children">${D.fixtures.filter(p=>p.parent===1).map(p=>`<div class="p-er-child" data-lit="${frame===1}"><b>${esc(p.name)}</b><small>PK · ID = ${p.id}</small><span class="p-er-fk-value">${mode==='build'?'FK':esc(C.foreignKey)} = 1</span></div>`).join('')}</div><p class="p-er-example-note">Dos IDs distintos, <b>7 y 9</b>. La misma referencia al <b>ID 1 de ${esc(P.entity)}</b>.</p></div>`;
@@ -189,6 +197,7 @@ const review=$('[data-model-review]');if(review)review.onclick=()=>{modelReturn=
 const back=$('[data-model-return]');if(back)back.onclick=()=>{const target=modelReturn;modelReturn=null;go(target);};
 $$('[data-nest-step]').forEach(b=>b.onclick=()=>go(+b.dataset.nestStep));
 const entities=$('[data-entity-review]');if(entities)entities.onclick=()=>{entityReturn=index;go(1);};
+if(readingMode)$('[data-cue]').innerHTML=`<div class="reading-notes"><h3>Cómo leer este archivo</h3>${s.cues.map(c=>`<section><b>${esc(c.title)}</b><code>${esc(c.text)}</code><p>${esc(c.note)}</p></section>`).join('')}</div>`;
 const entityBack=$('[data-entity-return]');if(entityBack)entityBack.onclick=()=>{const target=entityReturn;entityReturn=null;go(target);};
 }
 function renderNav(){
@@ -222,10 +231,26 @@ function syncExplanationProgress(){
   $('[data-frame]').textContent=frame===total-1?(total===1?'Repetir explicación ↻':'Volver a explicación 1 ↻'):`Siguiente explicación · ${frame+2} de ${total} →`;
  }
 }
-function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.entityAccess?'acceso uniforme con EntityRepository':s.exact?(s.annotated?'modelo de la ficha · comentado':'modelo de la ficha'):'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();updateGuidance();}
+function controls(){const s=stage();
+ if(readingMode){
+  $('[data-next]').disabled=index===D.steps[track].length-1;$('[data-back]').disabled=index===0;
+  $('[data-title]').textContent=s.name;$('[data-path]').textContent=s.path;updateGuidance();return;
+ }
+$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.entityAccess?'acceso uniforme con EntityRepository':s.exact?(s.annotated?'modelo de la ficha · comentado':'modelo de la ficha'):'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();updateGuidance();}
 function setupGuidance(){
  if(!D.projectBase)return;
  root.dataset.guidedCourse='true';
+ root.toggleAttribute('data-reading-mode',readingMode);
+ if(readingMode){
+  $('.p-top h1').textContent='Lee. Copia. Comprueba.';
+  $('.p-editor').setAttribute('aria-label','Archivo completo');
+  const copy=document.createElement('button');copy.type='button';copy.className='p-btn';copy.dataset.copyFile='';copy.textContent='Copiar contenido completo';
+  copy.onclick=async()=>{try{await navigator.clipboard.writeText(stage().code);copy.textContent='Copiado';}catch{copy.textContent='Selecciona el código para copiarlo';}};
+  $('.p-editor-top').append(copy);
+  $('[data-play]').closest('.p-modebar').hidden=true;$('[data-bank-wrap]').hidden=true;$('[data-feedback]').hidden=true;
+  $('[data-context-footer]').textContent='Lee el archivo completo, cópialo en tu proyecto y ejecuta las comprobaciones indicadas.';
+ }
+
  const header=document.createElement('section');header.className='p-guidance';
  header.innerHTML='<div class="p-guide-context"><span data-guide-route></span><details class="p-guide-map" open><summary>Recorrido y tecnología</summary><div data-guide-map-content></div></details></div><p class="p-guide-case" data-guide-case></p><div data-guide-heading></div><ol class="p-guide-stages" aria-label="Cómo trabajar este archivo"><li>1 · Mira</li><li>2 · Monta</li><li>3 · Comprueba</li></ol><p class="p-guide-instruction" data-guide-instruction role="status" aria-live="polite"></p><div class="p-guide-actions"><button type="button" class="p-btn" data-guide-back>Anterior</button><button type="button" class="p-btn p-primary" data-guide-primary></button></div>';
  root.prepend(header);
@@ -235,6 +260,7 @@ function setupGuidance(){
  $('[data-guide-primary]').onclick=()=>{
   stop();
   const returning=$('[data-entity-return],[data-model-return]');if(returning){returning.click();return;}
+  if(readingMode){observed.add(key());persist();if(index<D.steps[track].length-1)go(index+1);else controls();return;}
   if(solved.has(key())){
    if(index<D.steps[track].length-1)$('[data-next]').click();else $('.p-guide-map').open=true;
   }else if(mode==='build')$('[data-check]').click();
@@ -250,6 +276,16 @@ function updateGuidance(){
  $('[data-guide-case]').textContent=(s.chapter===0?'PREPARACIÓN DEL MODELO':'CASO '+s.chapter+' DE 5')+' · '+D.chapters[s.chapter];
  $('[data-meta]').textContent='Archivo '+position+' de '+group.length+' de este bloque · Paso '+(index+1)+' de '+list.length;
  const completed=list.filter((_,i)=>solved.has(track+':'+i)).length;$('[data-progress]').textContent=completed+(completed===1?' archivo completado':' archivos completados');
+ if(readingMode){
+  $('.p-guide-stages').hidden=true;
+  const reviewed=list.filter((_,i)=>observed.has(track+':'+i)||solved.has(track+':'+i)).length;
+  $('[data-progress]').textContent=reviewed+' / '+list.length+' archivos revisados';
+  $('[data-guide-instruction]').textContent=s.scene==='result'?'Ejecuta las comprobaciones en tu terminal. Después continúa con el siguiente caso.':'Lee el archivo completo y las notas. Copia el contenido en el archivo indicado y guárdalo antes de continuar.';
+  const returning=Boolean($('[data-entity-return],[data-model-return]'));
+  primary.textContent=returning?'Volver al caso':index===list.length-1?(observed.has(key())?'Recorrido revisado':'Marcar como revisado'):'Continuar: '+list[index+1].name;
+  primary.disabled=!returning&&index===list.length-1&&observed.has(key());
+  $('[data-guide-back]').disabled=index===0;$('[data-copy-file]').textContent='Copiar contenido completo';return;
+ }
  const phase=done?2:mode==='build'?1:0;
  $$('.p-guide-stages li').forEach((el,i)=>{if(i===phase)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');el.dataset.done=String(i<phase);});
  const missing=s.cues.filter((_,i)=>!answers[key()]?.[i]).length;
@@ -292,7 +328,7 @@ function renderPractice(){
   const code=b.code?codeBox(b.code,b.kind==='file'?'Contenido completo · guarda el archivo':'Ejecuta en tu terminal'):'';
   const explanation=(b.explain||'').replace(' PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.',track==='nest'?' PostgreSQL genera el ID mediante @PrimaryGeneratedColumn.':' El Service genera el ID con Date.now. Scan no garantiza el orden del listado.');
   const inner=instructions+create+code+(explanation?`<p>${esc(explanation)}</p>`:'');
-  return b.kind==='file'?`<details class="p-practice-block"><summary>${esc(b.path)}</summary>${inner}</details>`:`<section class="p-practice-block"><h3>${esc(b.title)}</h3>${inner}</section>`;
+  return b.kind==='file'?`<details class="p-practice-block"${readingMode?' open':''}><summary>${esc(b.path)}</summary>${inner}</details>`:`<section class="p-practice-block"><h3>${esc(b.title)}</h3>${inner}</section>`;
  }).join('');
  host.innerHTML=`<header><span class="p-label">EN TU PROYECTO · ${track==='nest'?'NEST + TYPEORM':'SERVERLESS + TOOLBOX'}</span><h2>${models?'Aplica el modelo y prepara los datos':'Prueba este caso desde tu terminal'}</h2><p>${models?'Continúa en el backend que ya preparaste siguiendo su README. Los archivos de las Entities y las capas están arriba; aquí tienes su conexión con la aplicación y los datos de ejemplo.':track==='nest'?'Guarda los archivos del caso y mantén Nest abierto en Terminal 1. Ejecuta las pruebas en Terminal 2, dentro de backend. Sigue los casos en orden; conserva el ID devuelto al crear.':'Guarda los archivos del caso. Usa la sesión AWS y API_URL de tu proyecto; estos comandos se ejecutan en su terminal. Sigue los casos en orden y conserva el ID devuelto al crear.'}</p></header>${content}<div class="p-practice-expect"><strong>Qué debes comprobar</strong><p>${esc(models?phases.find(x=>x.id==='datos').expect:phase.expect)}</p><small>El cuaderno explica y copia los comandos. Las peticiones se ejecutan en tu terminal y las respuestas las devuelve tu backend.</small></div>`;
  host.querySelectorAll('[data-practice-copy]').forEach(button=>button.onclick=async()=>{
@@ -301,7 +337,7 @@ function renderPractice(){
  });
 }
 
-function render(){renderNav();renderCode();renderScene();controls();renderPractice();}
+function render(){if(readingMode){stop();mode="observe";full=true;}renderNav();renderCode();renderScene();controls();renderPractice();}
 function go(i){stop();const mapWasOpen=D.projectBase&&$('.p-guide-map').open;index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();if(mapWasOpen)$('[data-guide-primary]').focus({preventScroll:true});}
 function fly(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=$('[data-cue] code'),b=isRelation()?$(`[data-er-focus="${frame}"]`):$('[data-code] .p-line[data-active=true]');if(!a||!b)return;const r=root.getBoundingClientRect(),ar=a.getBoundingClientRect(),br=b.getBoundingClientRect(),el=document.createElement('span');el.className='p-fly';el.textContent=stage().cues[frame].text;el.style.left=(ar.left-r.left)+'px';el.style.top=(ar.top-r.top)+'px';root.appendChild(el);const animation=el.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${br.left-ar.left+(isRelation()?0:32)}px,${br.top-ar.top}px)`,opacity:.25}],{duration:850,easing:'cubic-bezier(.4,0,.2,1)'});animation.onfinish=()=>el.remove();}
 function playTick(){render();fly();timer=setTimeout(()=>{if(!playing)return;if(frame<stage().cues.length-1){frame++;playTick();}else{observed.add(key());stop();controls();feedback('Ya has visto el archivo. Pulsa «Ahora lo monto yo».','good');persist();}},2400);}
@@ -319,7 +355,7 @@ function place(slot,id){
 }
 $('[data-check]').onclick=()=>{const s=stage(),a=answers[key()]||{},bad=s.cues.findIndex((_,i)=>!pieceMatches(s,i,a[i]));if(bad>=0){frame=bad;renderCode();renderScene();const slot=$(`[data-slot="${bad}"]`);if(slot)slot.dataset.bad=true;feedback(`Revisa la pieza ${bad+1}: ${s.cues[bad].note}`,'error');return;}
 solved.add(key());$$('[data-slot]').forEach(x=>x.dataset.good=true);renderScene();renderNav();controls();$('[data-scene]').classList.remove('p-breathe');void $('[data-scene]').offsetWidth;$('[data-scene]').classList.add('p-breathe');feedback(index===D.steps[track].length-1?'Recorrido completado. Cambia de tecnología y compara el mismo caso.':'Archivo correcto. Sigue con el siguiente y conserva el recorrido.','good');persist();};
-$('[data-next]').onclick=()=>{if(!solved.has(key()))return;if(index<D.steps[track].length-1)go(index+1);};$('[data-back]').onclick=()=>{if(index>0)go(index-1);};
+$('[data-next]').onclick=()=>{if(!readingMode&&!solved.has(key()))return;if(readingMode){observed.add(key());persist();}if(index<D.steps[track].length-1)go(index+1);};$('[data-back]').onclick=()=>{if(index>0)go(index-1);};
 $$('[data-tech]').forEach(b=>b.onclick=()=>{stop();const chapter=stage().chapter;track=b.dataset.tech;index=D.steps[track].findIndex(s=>s.chapter===chapter);frame=0;mode='observe';full=false;selected=null;render();feedback('Mismo caso y mismos datos. Ahora mira qué archivos cambian.');persist();if(D.projectBase)$('[data-guide-primary]').focus({preventScroll:true});});
 $('[data-context-title]').textContent=(D.source.kind==='teacher'?'Ejemplo docente':D.source.label)+' · '+C.title;
 $('[data-context-footer]').textContent='Observa y monta el código de tu ficha. Prueba las operaciones en tu proyecto.';

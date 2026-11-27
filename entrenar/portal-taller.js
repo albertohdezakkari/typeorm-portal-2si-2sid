@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=recorrido-abierto-1';
+      frame.src = 'entrenar/?v=lectura-1';
       // Arturo empieza en Preparar; los demás conservan sus enlaces directos.
       if (caseData.id !== 'CH-22' && location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {

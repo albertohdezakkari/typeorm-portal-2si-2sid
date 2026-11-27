@@ -53,6 +53,7 @@ function defaults(saved){
 }
 function shell(){
  root.toggleAttribute('data-project-base',Boolean(D.projectBase));
+ root.toggleAttribute('data-reading-mode',Boolean(D.projectBase));
  root.innerHTML=`<div class="nm-app"><div class="nm-menu"><div class="nm-menu-content"><header class="nm-top"><div><span class="nm-eyebrow">CH-22 · AMPLIACIÓN N:M</span><h1>Obras y profesionales</h1><p>Entiende la relación. Construye las dos versiones. Comprueba tus datos.</p></div><div class="nm-tech" aria-label="Tecnología">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([t,label])=>`<button type="button" data-action="track" data-track="${t}">${label}</button>`).join('')}</div></header><div class="nm-toolbar"><button type="button" data-action="baseline">Abrir preparación 1:N</button><a href="fichas-nm-ch22.pdf" target="_blank" rel="noopener">Fichas N:M para imprimir ↗</a><a data-reference target="_blank" rel="noopener">Código completo ↗</a></div><nav class="nm-chapters" aria-label="Orden de la ampliación"></nav><nav class="nm-files" aria-label="Pasos y archivos de este apartado"></nav></div><button type="button" class="nm-summary" data-action="expand" aria-expanded="false" hidden></button></div><div class="nm-work"></div><p class="nm-announcement" role="status" aria-live="polite"></p></div>`;
  if(D.projectBase)root.querySelector('.nm-toolbar').innerHTML='<p style="margin:0;line-height:1.6">Continúa en el mismo proyecto 1:N que ya tienes preparado. La relación N:M amplía ese backend.</p>';
  else if(D.nestSimpleRevision){
@@ -105,6 +106,7 @@ function scene(){
 }
 function sourceHTML(){
  const s=stage(),answers=S.answers[key()]||{};
+ if(D.projectBase)return s.code.split('\n').map((line,i)=>`<span class="nm-line" data-line="${i+1}">${esc(line)||' '}</span>`).join('');
  const sorted=s.cues.map((cue,i)=>({...cue,i})).sort((a,b)=>a.start-b.start);
  let pos=0,html='';
  for(const cue of sorted){
@@ -136,28 +138,17 @@ function setupNMGuidance(){
 }
 function updateNMGuidance(){
  if(!D.projectBase)return;
- const s=stage(),list=D.tracks[S.track],group=list.filter(x=>x.chapter===s.chapter),done=S.solved.includes(key())||S.checked.includes(key())||!s.cues.length;
+ const s=stage(),list=D.tracks[S.track],group=list.filter(x=>x.chapter===s.chapter),next=list[S.positions[S.track]+1];
  $('[data-nm-guide-route]').textContent='Relación N:M · '+(S.track==='nest'?'Nest + TypeORM':'Serverless + Toolbox');
- const guide=document.createElement('section');guide.className='nm-guidance';
- const phase=done?2:S.mode==='build'?1:0;
- const steps=['1 · Mira','2 · Monta','3 · Comprueba'].map((label,i)=>`<li${i===phase?' aria-current="step"':''}>${label}</li>`).join('');
- const instruction=done?(s.cues.length?'Archivo completado. Revisa la comprobación del paso antes de continuar.':'Lee las instrucciones y realiza la comprobación indicada antes de continuar.'):S.mode==='build'?'Coloca las piezas que aparecen junto al código y comprueba el montaje.':'Sigue la explicación '+(S.cue+1)+' de '+s.cues.length+'. Después montarás este mismo archivo.';
- const next=list[S.positions[S.track]+1];
- const label=done?(next?'Continuar: '+next.title:'Elegir qué repasar'):S.mode==='build'?'Comprobar las piezas':S.cue<s.cues.length-1?'Siguiente explicación · '+(S.cue+2)+' de '+s.cues.length:'Montar este archivo';
- const returning=$('[data-action=return-case]');
- guide.innerHTML=`<p class="nm-guide-case">${esc(D.chapters[s.chapter])} · Archivo ${group.indexOf(s)+1} de ${group.length}</p>${s.cues.length?`<ol class="nm-guide-stages" aria-label="Cómo trabajar este archivo">${steps}</ol>`:''}<p class="nm-guide-instruction" role="status" aria-live="polite">${esc(instruction)}</p><div class="nm-guide-actions"><button type="button" data-nm-guide-back ${S.positions[S.track]===0&&!returning?'disabled':''}>Anterior</button><button type="button" data-nm-guide-primary>${esc(returning?'Volver al caso':label)}</button></div>`;
+ const returning=$('[data-action=return-case]'),guide=document.createElement('section');guide.className='nm-guidance';
+ guide.innerHTML=`<p class="nm-guide-case">${esc(D.chapters[s.chapter])} · Archivo ${group.indexOf(s)+1} de ${group.length}</p><p class="nm-guide-instruction">${hasCode(s)?'Lee el archivo completo y las notas. Copia el contenido en el archivo indicado, guárdalo y realiza la comprobación.':'Lee el esquema y sus explicaciones antes de continuar.'}</p><div class="nm-guide-actions"><button type="button" data-nm-guide-back ${S.positions[S.track]===0?'disabled':''}>Anterior</button><button type="button" data-nm-guide-primary ${!next&&!returning?'disabled':''}>${esc(returning?'Volver al caso':next?'Continuar: '+next.title:'Fin del recorrido')}</button></div>`;
  $('.nm-heading').after(guide);
  $('[data-nm-guide-back]').onclick=()=>{ $('[data-action=previous]').click(); };
- $('[data-nm-guide-primary]').onclick=()=>{
-  if(returning){returning.click();return;}
-  if(done){if(next)$('[data-action=next]').click();else $('.nm-guide-map').open=true;}
-  else if(S.mode==='build')$('[data-action=check]').click();
-  else if(S.cue<s.cues.length-1)$('[data-action=next-cue]').click();
-  else{S.cue=0;$('[data-action=build]').click();}
- };
+ $('[data-nm-guide-primary]').onclick=()=>{if(returning)returning.click();else if(next)$('[data-action=next]').click();};
 }
 
 function render(){
+ if(D.projectBase){stop();S.mode="observe";S.full=true;}
  const before=document.activeElement;
  const guidedFocus=before?.hasAttribute('data-nm-guide-primary')?'[data-nm-guide-primary]':before?.hasAttribute('data-nm-guide-back')?'[data-nm-guide-back]':'';
  const focus=before&&root.contains(before)?['action','track','chapter','step','cue','slot','piece','block'].filter(k=>before.dataset[k]!==undefined).map(k=>`[data-${k}="${CSS.escape(before.dataset[k])}"]`).join(''):'';
@@ -188,6 +179,11 @@ function render(){
  }
  $('.nm-app').dataset.mode=S.mode;
  $('.nm-summary').innerHTML=`<b>Paso ${S.positions[S.track]+1} de ${list.length}</b><span>${esc(s.title)}</span><strong>Mostrar menú ⌄</strong>`;
+ if(D.projectBase){
+  $$('.nm-explain-nav,.nm-modes,.nm-bank,.nm-feedback,[data-action=full]').forEach(el=>el.remove());
+  $('[data-action=next]').disabled=S.positions[S.track]===list.length-1;
+  const notes=$('.nm-explanation');if(notes)notes.innerHTML=`<div class="reading-notes"><h3>Cómo leer este archivo</h3>${s.cues.map(c=>`<section><code>${esc(c.token)}</code><p>${esc(c.note)}</p></section>`).join('')}</div>`;
+ }
  updateNMGuidance();
  if(guidedFocus)root.querySelector(guidedFocus)?.focus({preventScroll:true});
  else if(focus)root.querySelector(focus)?.focus({preventScroll:true});

@@ -1,5 +1,9 @@
 # Taller integrado en las fichas
 
+## Piloto Arturo · lectura completa · 27/11/2026
+
+Arturo (CH-22) estudia 1:N y N:M con los archivos completos visibles y un botón para copiar su contenido. No hay animaciones, puzles ni requisitos de montaje para avanzar. Las explicaciones y los dibujos permanecen como apoyo estático. Tecnología, caso y archivo seleccionado comparten sus colores en las dos relaciones mediante `lectura.css`. Se conservan la posición y las marcas anteriores. Los demás alumnos mantienen su recorrido hasta validar este piloto.
+
 Acceso: [portal habitual → elegir correo → 10 · Entrenar con mis fichas](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#entrenar).
 
 El selector existente conserva sus asignaciones. Cada contexto ofrece 26 pasos

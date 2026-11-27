@@ -1,5 +1,9 @@
 # Recorridos N:M · todo el alumnado
 
+## Piloto Arturo · lectura completa · 27/11/2026
+
+Arturo (CH-22) estudia 1:N y N:M con los archivos completos visibles y un botón para copiar su contenido. No hay animaciones, puzles ni requisitos de montaje para avanzar. Las explicaciones y los dibujos permanecen como apoyo estático. Tecnología, caso y archivo seleccionado comparten sus colores en las dos relaciones mediante `lectura.css`. Se conservan la posición y las marcas anteriores. Los demás alumnos mantienen su recorrido hasta validar este piloto.
+
 Abre el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), selecciona tu correo y elige **Relación N:M**. Los 30 alumnos tienen su ampliación contextualizada: modelos, código por capas, seis casos, animaciones, puzles y fichas imprimibles. **Relación 1:N** conserva el proyecto anterior y su avance.
 
 Consulta el [índice de los 30 recorridos, sus PDF y su código](RECORRIDOS.md). La ampliación continúa la carpeta real del backend ya preparado; no repite su instalación ni su configuración. Los recorridos conservan 60 pasos Serverless. Nest tiene 38 pasos en todos los contextos, con Entities completas y Service y Controller compartidos por recurso. Sus datos de avance se guardan por correo, contexto y unidad, separados del 1:N.
