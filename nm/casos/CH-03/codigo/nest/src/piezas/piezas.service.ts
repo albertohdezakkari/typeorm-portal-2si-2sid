@@ -21,7 +21,7 @@ export class PiezasService {
   }
 
   listarPiezas() {
-    return this.piezas.find({ order: { id: 'ASC' } });
+    return this.piezas.find({ relations: { museo: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPieza(piezaId: number) {

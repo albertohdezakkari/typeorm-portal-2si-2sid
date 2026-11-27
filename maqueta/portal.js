@@ -56,8 +56,8 @@
 
   function renderSheets() {
     if(data.projectBase&&track==='nest'){
-      const entity=data.steps.nest.find(s=>s.name==='Crear Entity Obra');
-      panel('fichas-duales').innerHTML=head('Tu material de estudio','El mismo código que estás construyendo','Estudia las Entities, el módulo y las llamadas entre Service y Controller. El recorrido N:M continúa este mismo backend.')+techTabs()+`<div class="mq-split"><div>${flow([['Entities','Ayuntamiento y Obra'],['ObrasModule','Registra Entities, Service y Controller'],['Service','Repository de TypeORM inyectado'],['Controller','Recibe las peticiones HTTP']],'Los archivos del proyecto de Arturo')}${action('training','Observar y montar el código')}</div><div>${sourceCode(entity.path,entity.code)}</div></div>`;
+      const entity=data.steps.nest.find(s=>s.name==='Crear Entity '+data.context.child.entity);
+      panel('fichas-duales').innerHTML=head('Tu material de estudio','El mismo código que estás construyendo','Estudia las Entities, el módulo y las llamadas entre Service y Controller. El recorrido N:M continúa este mismo backend.')+techTabs()+`<div class="mq-split"><div>${flow([['Entities',data.context.parent.entity+' y '+data.context.child.entity],[data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Module','Registra Entities, Service y Controller'],['Service','Repository de TypeORM inyectado'],['Controller','Recibe las peticiones HTTP']],'Los archivos de tu proyecto')}${action('training','Leer y copiar el código')}</div><div>${sourceCode(entity.path,entity.code)}</div></div>`;
       return;
     }
     const models = data.steps[track].filter(s => s.chapter === 0 && /Entity|Table/.test(s.name));
@@ -71,7 +71,7 @@
     const step = data.steps[track].find(s => s.chapter === operation && s.name === (simple?'Service':'Repository'));
     const op = data.operations.find(x => x.ch === operation);
     panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', simple?'Selecciona una operación. Todas se añaden al mismo '+data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Service, que utiliza las Entities de TypeORM.':'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
-      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller',data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Controller'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div>${data.projectBase?'':`<div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`}`;
+      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller',data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Controller'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Leer los archivos completos')}</div></div>${data.projectBase?'':`<div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`}`;
   }
 
   function renderChecks() {
@@ -136,7 +136,7 @@
     data = null; preparation = null;
     track = 'nest'; operation = 1; archiveChoice = 'animation';
     mountedContext = context.id;
-    if(context.id==='CH-22')workspace.dataset.guidedCourse='true';
+    workspace.dataset.guidedCourse='true';
     if (!mounted) {
       mounted = true;
       workspace.dataset.cuaderno = context.id;
@@ -162,7 +162,7 @@
       }
       const training = originalButtons.find(b => b.dataset.tab === 'training');
       // El taller y su iframe se mantienen intactos; solo cambia su posición en el índice exterior.
-      const visibleTitles=context.id==='CH-22'?titles.filter(([name])=>['bases','training'].includes(name)):titles;
+      const visibleTitles=titles.filter(([name])=>['bases','training'].includes(name));
       const visibleButtons = visibleTitles.map(([name,label]) => {
         if (name === 'training') { training.textContent = label; return training; }
         const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role','tab'); b.setAttribute('aria-selected','false'); b.dataset.tab = name; b.textContent = label;
@@ -172,16 +172,15 @@
       preparationButton.hidden = true; // Puente existente desde Entrenar a la preparación guiada.
       mainNav.replaceChildren(...visibleButtons, preparationButton);
       panel('bases').innerHTML = '<p role="status">Preparando las bases de tu contexto…</p>';
-      if(context.id!=='CH-22')renderSimulation();
       for (const name of ['fichas-duales','consultas-duales','pruebas-duales']) panel(name).innerHTML = '<p role="status">Cargando las referencias del taller…</p>';
     }
-    show(context.id==='CH-22'?'bases':location.hash === '#entrenar' ? 'training' : 'bases');
-    if(context.id==='CH-22'){
+    show('bases');
+    {
       history.replaceState(null,'','#1n');
       mainNav.querySelector('[data-tab="bases"]').focus({preventScroll:true});
     }
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=recorrido-abierto-1`, `preparar/${encodeURIComponent(context.id)}.json?v=recorrido-abierto-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=estudio-todos-1`, `preparar/${encodeURIComponent(context.id)}.json?v=estudio-todos-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;

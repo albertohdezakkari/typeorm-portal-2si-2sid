@@ -21,10 +21,10 @@
   if(!current)return;
   if(relation==='nm'){
    if(current.relation!=='nm')current.lastOneTab=document.getElementById('panel-preparation')?.classList.contains('active')?'preparation':current.mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases';
-   if(current.caseId==='CH-22')current.startPending=true;
+   current.startPending=true;
    category('nm');
    current.nmButton.click();
-   if(current.caseId==='CH-22'&&current.loaded)current.frame.contentWindow.postMessage({type:'nm:start',binding:current.binding},location.origin);
+   if(current.loaded)current.frame.contentWindow.postMessage({type:'nm:start',binding:current.binding},location.origin);
    history.replaceState(null,'','#nm');
    viewport();
   }else{
@@ -83,7 +83,7 @@
   const banner=workspace.querySelector('.mq-pilot-banner');
   const categories=document.createElement('section');categories.className='nm-category-picker';
   categories.innerHTML='<p class="nm-category-heading">¿Qué relación vas a practicar?</p><nav class="nm-category-nav" aria-label="Elegir el recorrido de relaciones"><button type="button" data-relation="one" aria-pressed="true"><span class="nm-category-badge" aria-hidden="true">1:N</span><span><strong>Relación 1:N</strong><small>'+escapeHtml(metadata.baselineTitle)+' · proyecto base y cinco casos</small></span></button><button type="button" data-relation="nm" aria-pressed="false"><span class="nm-category-badge" aria-hidden="true">N:M</span><span><strong>Relación N:M</strong><small>'+escapeHtml(metadata.title)+' · ampliación del proyecto</small></span></button></nav>';
-  if(context.id==='CH-22'){
+  {
    const content=[...categories.childNodes],details=document.createElement('details');details.className='guided-relation-choice';details.open=true;
    details.innerHTML='<summary><strong data-relation-caption>Relación 1:N</strong><span>Cambiar relación</span></summary>';
    details.append(...content);categories.replaceChildren(details);
@@ -93,28 +93,26 @@
   // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
   const simulation=mainNav.querySelector('[data-tab="simulacion"]');if(simulation)simulation.before(button);else mainNav.append(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=tecnologia-derecha-2';}});
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=estudio-todos-1';}});
   const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,loaded:false,startPending:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
-  if(context.id!=='CH-22'&&location.hash==='#nm')choose('nm');
  };
  window.addEventListener('message',event=>{
   if(!current||event.origin!==location.origin||event.source!==current.frame.contentWindow)return;
   const data=event.data;
-  if(data?.type==='nm:ready'){current.frame.contentWindow.postMessage({type:'nm:init',binding:current.binding,state:current.state,startAtBeginning:current.caseId==='CH-22'&&current.startPending},location.origin);return;}
+  if(data?.type==='nm:ready'){current.frame.contentWindow.postMessage({type:'nm:init',binding:current.binding,state:current.state,startAtBeginning:current.startPending},location.origin);return;}
   if(data?.binding!==current.binding)return;
   if(data.type==='nm:loaded')current.loaded=true;
-  if(data.type==='nm:started'&&current.caseId==='CH-22'&&current.startPending){
+  if(data.type==='nm:started'&&current.startPending){
    current.startPending=false;
    if(current.relation==='nm')document.getElementById('panel-nm').scrollIntoView({block:'start',behavior:'instant'});
   }
-  if(data.type==='nm:height'&&Number.isFinite(data.height)){current.frame.style.height=Math.max(800,Math.min(28000,data.height+8))+'px';viewport();}
+  if(data.type==='nm:height'&&Number.isFinite(data.height)){current.frame.style.height=Math.max(800,Math.min(100000,data.height+8))+'px';viewport();}
   if(data.type==='nm:progress'&&data.state?.version===1&&data.state.caseId===current.caseId&&data.state.unit==='nm'){
    try{const json=JSON.stringify(data.state);if(json.length<180000){localStorage.setItem(current.key,json);current.state=data.state;document.getElementById('nm-status').textContent='Avance N:M guardado en este navegador. Tu progreso 1:N se conserva por separado.';}}catch{}
   }
   if(data.type==='nm:baseline'){
-   if(current.caseId==='CH-22'){choose('one');current.mainNav.querySelector('[data-tab="training"]').click();}
-   else window.abrirPreparacionGuiada?.(data.track);
+   choose('one');current.mainNav.querySelector('[data-tab="training"]').click();
   }
   if(data.type==='nm:error')document.getElementById('nm-status').textContent='No se ha podido abrir la ampliación. Recarga la página y elige tu correo.';
  });

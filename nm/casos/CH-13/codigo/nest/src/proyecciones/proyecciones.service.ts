@@ -21,7 +21,7 @@ export class ProyeccionesService {
   }
 
   listarProyecciones() {
-    return this.proyecciones.find({ order: { id: 'ASC' } });
+    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });
   }
 
   async eliminarProyeccion(proyeccionId: number) {

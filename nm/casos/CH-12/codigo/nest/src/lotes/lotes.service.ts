@@ -21,7 +21,7 @@ export class LotesService {
   }
 
   listarLotes() {
-    return this.lotes.find({ order: { id: 'ASC' } });
+    return this.lotes.find({ relations: { cooperativa: true }, order: { id: 'ASC' } });
   }
 
   async eliminarLote(loteId: number) {

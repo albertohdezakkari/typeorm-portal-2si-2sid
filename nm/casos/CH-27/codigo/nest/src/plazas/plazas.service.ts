@@ -21,7 +21,7 @@ export class PlazasService {
   }
 
   listarPlazas() {
-    return this.plazas.find({ order: { id: 'ASC' } });
+    return this.plazas.find({ relations: { urbanizacion: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPlaza(plazaId: number) {

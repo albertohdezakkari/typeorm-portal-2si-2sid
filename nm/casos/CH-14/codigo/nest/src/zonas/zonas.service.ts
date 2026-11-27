@@ -21,7 +21,7 @@ export class ZonasService {
   }
 
   listarZonas() {
-    return this.zonas.find({ order: { id: 'ASC' } });
+    return this.zonas.find({ relations: { parque: true }, order: { id: 'ASC' } });
   }
 
   async eliminarZona(zonaId: number) {

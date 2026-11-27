@@ -21,7 +21,7 @@ export class MuestrasService {
   }
 
   listarMuestras() {
-    return this.muestras.find({ order: { id: 'ASC' } });
+    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });
   }
 
   async eliminarMuestra(muestraId: number) {

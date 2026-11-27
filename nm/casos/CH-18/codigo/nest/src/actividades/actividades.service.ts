@@ -21,7 +21,7 @@ export class ActividadesService {
   }
 
   listarActividades() {
-    return this.actividades.find({ order: { id: 'ASC' } });
+    return this.actividades.find({ relations: { club: true }, order: { id: 'ASC' } });
   }
 
   async eliminarActividad(actividadId: number) {

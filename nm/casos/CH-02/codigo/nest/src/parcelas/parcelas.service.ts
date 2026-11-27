@@ -21,7 +21,7 @@ export class ParcelasService {
   }
 
   listarParcelas() {
-    return this.parcelas.find({ order: { id: 'ASC' } });
+    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });
   }
 
   async eliminarParcela(parcelaId: number) {

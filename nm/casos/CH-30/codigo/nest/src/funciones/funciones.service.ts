@@ -21,7 +21,7 @@ export class FuncionesService {
   }
 
   listarFunciones() {
-    return this.funciones.find({ order: { id: 'ASC' } });
+    return this.funciones.find({ relations: { teatro: true }, order: { id: 'ASC' } });
   }
 
   async eliminarFuncion(funcionId: number) {

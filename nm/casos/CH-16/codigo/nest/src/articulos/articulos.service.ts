@@ -21,7 +21,7 @@ export class ArticulosService {
   }
 
   listarArticulos() {
-    return this.articulos.find({ order: { id: 'ASC' } });
+    return this.articulos.find({ relations: { tienda: true }, order: { id: 'ASC' } });
   }
 
   async eliminarArticulo(articuloId: number) {

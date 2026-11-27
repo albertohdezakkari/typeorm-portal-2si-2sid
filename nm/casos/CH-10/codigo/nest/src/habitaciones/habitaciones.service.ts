@@ -21,7 +21,7 @@ export class HabitacionesService {
   }
 
   listarHabitaciones() {
-    return this.habitaciones.find({ order: { id: 'ASC' } });
+    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });
   }
 
   async eliminarHabitacion(habitacionId: number) {

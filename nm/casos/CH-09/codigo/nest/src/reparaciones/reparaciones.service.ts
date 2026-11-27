@@ -21,7 +21,7 @@ export class ReparacionesService {
   }
 
   listarReparaciones() {
-    return this.reparaciones.find({ order: { id: 'ASC' } });
+    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });
   }
 
   async eliminarReparacion(reparacionId: number) {

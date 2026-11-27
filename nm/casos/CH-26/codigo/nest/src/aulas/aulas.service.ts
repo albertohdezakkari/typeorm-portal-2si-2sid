@@ -21,7 +21,7 @@ export class AulasService {
   }
 
   listarAulas() {
-    return this.aulas.find({ order: { id: 'ASC' } });
+    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });
   }
 
   async eliminarAula(aulaId: number) {

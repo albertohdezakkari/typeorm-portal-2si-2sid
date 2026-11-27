@@ -21,7 +21,7 @@ export class EmbarcacionesService {
   }
 
   listarEmbarcaciones() {
-    return this.embarcaciones.find({ order: { id: 'ASC' } });
+    return this.embarcaciones.find({ relations: { puerto: true }, order: { id: 'ASC' } });
   }
 
   async eliminarEmbarcacion(embarcacionId: number) {

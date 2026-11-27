@@ -21,7 +21,7 @@ export class ComandasService {
   }
 
   listarComandas() {
-    return this.comandas.find({ order: { id: 'ASC' } });
+    return this.comandas.find({ relations: { cafeteria: true }, order: { id: 'ASC' } });
   }
 
   async eliminarComanda(comandaId: number) {

@@ -21,7 +21,7 @@ export class CosechasService {
   }
 
   listarCosechas() {
-    return this.cosechas.find({ order: { id: 'ASC' } });
+    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });
   }
 
   async eliminarCosecha(cosechaId: number) {

@@ -21,7 +21,7 @@ export class PlantasService {
   }
 
   listarPlantas() {
-    return this.plantas.find({ order: { id: 'ASC' } });
+    return this.plantas.find({ relations: { vivero: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPlanta(plantaId: number) {

@@ -2,9 +2,8 @@
   "version": 5,
   "source": {
     "kind": "pilot",
-    "label": "Versión sencilla · CH-02",
-    "sha256": "02b159e5bcf6dddf85202aadc67ce99759d7f84016e3cf3eb82c8b4f829c68c5",
-    "pages": 4
+    "label": "CH-02 · Nest + TypeORM",
+    "url": "https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01"
   },
   "chapters": [
     "Preparar el modelo",
@@ -143,23 +142,13 @@
       {
         "chapter": 0,
         "name": "Registrar las Entities",
-        "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from './huertos/entities/huerto.entity';\nimport { Parcela } from './parcelas/entities/parcela.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto, Parcela])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
+        "path": "src/parcelas/parcelas.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from '../huertos/entities/huerto.entity';\nimport { Parcela } from './entities/parcela.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto, Parcela])],\n  providers: [],\n  controllers: []\n})\nexport class ParcelasModule {}",
         "cues": [
           {
-            "text": "import { Huerto }",
-            "title": "Importar Huerto",
-            "note": "Es la clase que acabas de preparar."
-          },
-          {
-            "text": "import { Parcela }",
-            "title": "Importar Parcela",
-            "note": "El módulo reúne las dos Entities."
-          },
-          {
             "text": "TypeOrmModule.forFeature([Huerto, Parcela])",
-            "title": "Preparar las dos Entities",
-            "note": "Permite inyectar sus repositorios de TypeORM. Todavía no hay Service ni Controller registrados."
+            "title": "Registra las Entities de este módulo",
+            "note": "Nest prepara Repository<Huerto> y Repository<Parcela> para el Service."
           }
         ],
         "page": 2,
@@ -196,7 +185,7 @@
         "chapter": 1,
         "name": "Service",
         "path": "src/parcelas/parcelas.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ order: { id: 'ASC' } });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });\n  }\n}",
         "cues": [
           {
             "text": "this.parcelas.create({",
@@ -214,9 +203,9 @@
             "note": "save escribe la fila y devuelve la Parcela con el ID generado por PostgreSQL."
           },
           {
-            "text": "this.parcelas.find({ order: { id: 'ASC' } })",
+            "text": "this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } })",
             "title": "Listar las parcelas",
-            "note": "find lee las filas usando la Entity; order las ordena por ID."
+            "note": "find devuelve las parcelas; relations carga el huerto asociado y order las ordena por ID."
           }
         ],
         "page": 4,
@@ -257,18 +246,23 @@
       {
         "chapter": 1,
         "name": "Registrar Service y Controller",
-        "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from './huertos/entities/huerto.entity';\nimport { Parcela } from './parcelas/entities/parcela.entity';\nimport { ParcelasService } from './parcelas/parcelas.service';\nimport { ParcelasController } from './parcelas/parcelas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto, Parcela])],\n  controllers: [ParcelasController],\n  providers: [ParcelasService]\n})\nexport class TallerModule {}",
+        "path": "src/parcelas/parcelas.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from '../huertos/entities/huerto.entity';\nimport { Parcela } from './entities/parcela.entity';\nimport { ParcelasService } from './parcelas.service';\nimport { ParcelasController } from './parcelas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto, Parcela])],\n  providers: [ParcelasService],\n  controllers: [ParcelasController]\n})\nexport class ParcelasModule {}",
         "cues": [
           {
-            "text": "controllers: [ParcelasController]",
-            "title": "Un Controller",
-            "note": "Este Controller contiene las rutas de parcelas."
+            "text": "TypeOrmModule.forFeature([Huerto, Parcela])",
+            "title": "Registra las Entities de este módulo",
+            "note": "Nest prepara Repository<Huerto> y Repository<Parcela> para el Service."
           },
           {
             "text": "providers: [ParcelasService]",
-            "title": "Un Service",
-            "note": "Nest entrega ParcelasService al Controller por su constructor."
+            "title": "Registra el Service",
+            "note": "Es el mismo Service al que añades los métodos de cada caso."
+          },
+          {
+            "text": "controllers: [ParcelasController]",
+            "title": "Registra el Controller",
+            "note": "Es el mismo Controller que recibe las peticiones HTTP de este recurso."
           }
         ],
         "page": 3,
@@ -279,7 +273,7 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /parcelas\n{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}\n\n201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas\n\nID 10: valor ficticio de la animación; usa el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "POST /parcelas\n{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}\n\n201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas\n\nID 10: valor ficticio de la animación; usa el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "201 · Parcela 10 creada → GET /parcelas → 200 · aparecen 4 parcelas",
@@ -295,7 +289,7 @@
         "chapter": 2,
         "name": "Service",
         "path": "src/parcelas/parcelas.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n}",
         "cues": [
           {
             "text": "async eliminarParcela(parcelaId: number)",
@@ -344,7 +338,7 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /parcelas/10\n\n204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "DELETE /parcelas/10\n\n204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "204 · Parcela 10 eliminada → GET /parcelas → 200 · quedan 7, 8 y 9",
@@ -360,7 +354,7 @@
         "chapter": 3,
         "name": "Service",
         "path": "src/parcelas/parcelas.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n}",
         "cues": [
           {
             "text": "async modificarSuperficieM2(parcelaId: number, superficieM2: number)",
@@ -415,7 +409,7 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /parcelas/7\n{\"superficieM2\":65}\n\n200 · Parcela 7 · superficie 65 m² · continúa en huerto 1\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "PATCH /parcelas/7\n{\"superficieM2\":65}\n\n200 · Parcela 7 · superficie 65 m² · continúa en huerto 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
@@ -431,7 +425,7 @@
         "chapter": 4,
         "name": "Service",
         "path": "src/parcelas/parcelas.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async cambiarHuerto(parcelaId: number, huertoId: number) {\n    await this.parcelas.update(parcelaId, { huerto: { id: huertoId } });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async cambiarHuerto(parcelaId: number, huertoId: number) {\n    await this.parcelas.update(parcelaId, { huerto: { id: huertoId } });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n}",
         "cues": [
           {
             "text": "async cambiarHuerto(parcelaId: number, huertoId: number)",
@@ -486,7 +480,7 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /parcelas/7/huerto\n{\"huertoId\":2}\n\n200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "PATCH /parcelas/7/huerto\n{\"huertoId\":2}\n\n200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
@@ -502,7 +496,7 @@
         "chapter": 5,
         "name": "Service",
         "path": "src/parcelas/parcelas.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async cambiarHuerto(parcelaId: number, huertoId: number) {\n    await this.parcelas.update(parcelaId, { huerto: { id: huertoId } });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async consultarHuerto(huertoId: number, minimo: number) {\n    const huerto = await this.huertos.findOneBy({ id: huertoId });\n    const parcelas = await this.parcelas.find({\n      where: {\n        huerto: { id: huertoId },\n        superficieM2: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { huerto, parcelas };\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Parcela } from './entities/parcela.entity';\nimport { Huerto } from '../huertos/entities/huerto.entity';\n\n@Injectable()\nexport class ParcelasService {\n  constructor(\n    @InjectRepository(Parcela) private readonly parcelas: Repository<Parcela>,\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearParcela(nombre: string, superficieM2: number, huertoId: number) {\n    const parcela = this.parcelas.create({\n      nombre,\n      superficieM2,\n      huerto: { id: huertoId }\n    });\n    return this.parcelas.save(parcela);\n  }\n\n  listarParcelas() {\n    return this.parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarParcela(parcelaId: number) {\n    await this.parcelas.delete(parcelaId);\n  }\n\n  async modificarSuperficieM2(parcelaId: number, superficieM2: number) {\n    await this.parcelas.update(parcelaId, { superficieM2 });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async cambiarHuerto(parcelaId: number, huertoId: number) {\n    await this.parcelas.update(parcelaId, { huerto: { id: huertoId } });\n    return this.parcelas.findOneBy({ id: parcelaId });\n  }\n\n  async consultarHuerto(huertoId: number, minimo: number) {\n    const huerto = await this.huertos.findOneBy({ id: huertoId });\n    const parcelas = await this.parcelas.find({\n      where: {\n        huerto: { id: huertoId },\n        superficieM2: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { huerto, parcelas };\n  }\n}",
         "cues": [
           {
             "text": "this.huertos.findOneBy({ id: huertoId })",
@@ -563,7 +557,7 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /huertos/2/parcelas?minimo=60\n\n200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "GET /huertos/2/parcelas?minimo=60\n\n200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
@@ -1597,7 +1591,7 @@
     "sha256": "02b159e5bcf6dddf85202aadc67ce99759d7f84016e3cf3eb82c8b4f829c68c5",
     "pages": 4
   },
-  "nestSimpleRevision": 1,
+  "nestSimpleRevision": 3,
   "legacyNestChapters": [
     0,
     0,
@@ -1629,5 +1623,50 @@
   "nestSimpleFiles": {
     "service": "src/parcelas/parcelas.service.ts",
     "controller": "src/parcelas/parcelas.controller.ts"
+  },
+  "projectBase": {
+    "url": "https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01",
+    "revision": "87d14758960120570436906207b09073bb3731c3",
+    "backend": "backend",
+    "pilot": false
+  },
+  "nestMigration": {
+    "fromRevision": 1,
+    "positions": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    "retained": [
+      "nest:0",
+      "nest:1",
+      "nest:2",
+      "nest:3",
+      "nest:5",
+      "nest:7",
+      "nest:11",
+      "nest:14",
+      "nest:17",
+      "nest:20"
+    ]
   }
 }

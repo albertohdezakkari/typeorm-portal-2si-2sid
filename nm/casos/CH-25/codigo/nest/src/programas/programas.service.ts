@@ -21,7 +21,7 @@ export class ProgramasService {
   }
 
   listarProgramas() {
-    return this.programas.find({ order: { id: 'ASC' } });
+    return this.programas.find({ relations: { emisora: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPrograma(programaId: number) {

@@ -21,7 +21,7 @@ export class ProyectosService {
   }
 
   listarProyectos() {
-    return this.proyectos.find({ order: { id: 'ASC' } });
+    return this.proyectos.find({ relations: { empresa: true }, order: { id: 'ASC' } });
   }
 
   async eliminarProyecto(proyectoId: number) {

@@ -21,7 +21,7 @@ export class DocumentosService {
   }
 
   listarDocumentos() {
-    return this.documentos.find({ order: { id: 'ASC' } });
+    return this.documentos.find({ relations: { archivo: true }, order: { id: 'ASC' } });
   }
 
   async eliminarDocumento(documentoId: number) {

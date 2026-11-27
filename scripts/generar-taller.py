@@ -168,7 +168,7 @@ def compile_case(case, classic, base, sources, pdf_folder):
                 assert cue['text'] in step['code'],(cid,step['name'],cue['text'])
     from nest_sencillo import apply_training
     result=apply_training(d)
-    from examen_base_arturo import training
+    from version_estudio import training
     return training(result)
 
 def main():

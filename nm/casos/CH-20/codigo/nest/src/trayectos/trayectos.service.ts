@@ -21,7 +21,7 @@ export class TrayectosService {
   }
 
   listarTrayectos() {
-    return this.trayectos.find({ order: { id: 'ASC' } });
+    return this.trayectos.find({ relations: { estacion: true }, order: { id: 'ASC' } });
   }
 
   async eliminarTrayecto(trayectoId: number) {

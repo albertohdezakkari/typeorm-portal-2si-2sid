@@ -21,7 +21,7 @@ export class ReservasService {
   }
 
   listarReservas() {
-    return this.reservas.find({ order: { id: 'ASC' } });
+    return this.reservas.find({ relations: { hotel: true }, order: { id: 'ASC' } });
   }
 
   async eliminarReserva(reservaId: number) {

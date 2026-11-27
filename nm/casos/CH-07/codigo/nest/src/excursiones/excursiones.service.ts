@@ -21,7 +21,7 @@ export class ExcursionesService {
   }
 
   listarExcursiones() {
-    return this.excursiones.find({ order: { id: 'ASC' } });
+    return this.excursiones.find({ relations: { agencia: true }, order: { id: 'ASC' } });
   }
 
   async eliminarExcursion(excursionId: number) {

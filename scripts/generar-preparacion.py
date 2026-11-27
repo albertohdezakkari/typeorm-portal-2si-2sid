@@ -223,7 +223,7 @@ curl -i "{route}"''','Si cambias de terminal, recupera el ID de registro-creado.
     result = dict(version=1,caseId=c['id'],title=c['title'],context=c,fieldGuide=d['fieldGuide'],profile='default',team='equipo01',tracks=tracks)
     from nest_sencillo import apply_preparation
     apply_preparation(result,d)
-    from examen_base_arturo import preparation
+    from version_estudio import preparation
     preparation(result,d)
     (ROOT/'preparar'/source.name).write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     return c['id'],len(nest),len(cloud)

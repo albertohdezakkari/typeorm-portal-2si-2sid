@@ -21,7 +21,7 @@ export class ActuacionesService {
   }
 
   listarActuaciones() {
-    return this.actuaciones.find({ order: { id: 'ASC' } });
+    return this.actuaciones.find({ relations: { festival: true }, order: { id: 'ASC' } });
   }
 
   async eliminarActuacion(actuacionId: number) {

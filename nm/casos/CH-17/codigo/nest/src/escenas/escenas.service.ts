@@ -21,7 +21,7 @@ export class EscenasService {
   }
 
   listarEscenas() {
-    return this.escenas.find({ order: { id: 'ASC' } });
+    return this.escenas.find({ relations: { estudio: true }, order: { id: 'ASC' } });
   }
 
   async eliminarEscena(escenaId: number) {

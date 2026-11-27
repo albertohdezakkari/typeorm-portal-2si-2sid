@@ -21,7 +21,7 @@ export class SesionesService {
   }
 
   listarSesiones() {
-    return this.sesiones.find({ order: { id: 'ASC' } });
+    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });
   }
 
   async eliminarSesion(sesionId: number) {

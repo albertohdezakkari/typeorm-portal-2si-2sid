@@ -1,22 +1,18 @@
 # Taller integrado en las fichas
 
-## Piloto Arturo · lectura completa · 27/11/2026
+La versión validada con Arturo está aplicada a todos los alumnos. En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo, abre **1 · Preparar proyecto base**, lee su README completo y continúa en **2 · Entrenar con mis fichas**.
 
-Arturo (CH-22) estudia 1:N y N:M con los archivos completos visibles y un botón para copiar su contenido. No hay animaciones, puzles ni requisitos de montaje para avanzar. Las explicaciones y los dibujos permanecen como apoyo estático. Tecnología, caso y archivo seleccionado comparten sus colores en las dos relaciones mediante `lectura.css`. Se conservan las marcas anteriores y la posición del recorrido 1:N. Al abrir N:M, Arturo empieza en «01 · Entender la N:M», con su cabecera visible desde arriba. Los demás alumnos mantienen su recorrido hasta validar este piloto.
+Cada contexto conserva sus entidades, campos y cinco casos 1:N: 22 pasos Nest/TypeORM y 26 Serverless/DynamoDB Toolbox. Los archivos completos se ven y se copian directamente, con sus explicaciones y dibujos estáticos. No hay animaciones, puzles ni montaje obligatorio. Las comprobaciones reales se ejecutan en el backend del alumno.
 
-Acceso: [portal habitual → elegir correo → 10 · Entrenar con mis fichas](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#entrenar).
+La ampliación N:M continúa ese mismo proyecto. Los dos recorridos comparten sus colores, menús abiertos a todo el ancho y selector de tecnología compacto a la derecha. Nest organiza Entities → módulo → Service → Controller, con un Service y Controller por recurso. Serverless conserva YAML → Table + Entity → Handler → Service → Repository, con las operaciones desde EntityRepository.
 
-El selector existente conserva sus asignaciones. Cada contexto ofrece 26 pasos
-de Nest/TypeORM y 26 de Serverless/DynamoDB Toolbox: observar, montar y comprobar.
-Las explicaciones de Entities y de Table/Entity enlazan con los repositories.
-Los ejercicios son simulaciones visuales; las operaciones reales se prueban en
-el proyecto del alumno.
+Las marcas anteriores y la posición 1:N se conservan. Al abrir N:M se muestra el primer apartado y la cabecera desde arriba. El progreso pertenece a este navegador y se guarda por correo, contexto y relación.
 
 ## Integración
 
 - `portal-taller.js` recibe el contexto del selector existente y abre el taller.
 - `inicio.js` carga la plantilla, el contexto y el estado del mismo navegador.
-- `taller.js` contiene el motor compartido de animación, dibujo y puzles.
+- `taller.js` muestra los archivos completos y el apoyo gráfico común.
 - `casos/` contiene solo contextos y ejemplos educativos, sin identidades.
 - `verificacion.json` conserva las huellas de cada contexto y de su PDF fuente.
 

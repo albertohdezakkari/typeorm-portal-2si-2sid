@@ -45,9 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=tecnologia-derecha-2';
-      // Arturo empieza en Preparar; los demás conservan sus enlaces directos.
-      if (caseData.id !== 'CH-22' && location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
+      frame.src = 'entrenar/?v=estudio-todos-1';
     } catch {
       status.textContent = 'No se ha podido preparar el taller. Recarga la página e inténtalo de nuevo.';
     }
@@ -67,7 +65,7 @@
       if (current.target) frame.contentWindow.postMessage({type:'taller:go', binding:current.binding, ...current.target}, location.origin);
       status.textContent = 'Tu avance se guarda en este navegador, separado por correo y contexto.';
     } else if (data.type === 'taller:height' && Number.isFinite(data.height)) {
-      frame.style.height = `${Math.max(420, Math.min(18000, data.height + 4))}px`;
+      frame.style.height = `${Math.max(420, Math.min(100000, data.height + 4))}px`;
     } else if (data.type === 'taller:progress' && data.state?.caseId === current.caseId && data.state.version === 5) {
       try {
         const serialized = JSON.stringify(data.state);

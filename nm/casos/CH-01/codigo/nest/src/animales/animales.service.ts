@@ -21,7 +21,7 @@ export class AnimalesService {
   }
 
   listarAnimales() {
-    return this.animales.find({ order: { id: 'ASC' } });
+    return this.animales.find({ relations: { refugio: true }, order: { id: 'ASC' } });
   }
 
   async eliminarAnimal(animalId: number) {

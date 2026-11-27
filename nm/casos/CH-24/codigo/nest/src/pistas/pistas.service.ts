@@ -21,7 +21,7 @@ export class PistasService {
   }
 
   listarPistas() {
-    return this.pistas.find({ order: { id: 'ASC' } });
+    return this.pistas.find({ relations: { complejo: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPista(pistaId: number) {

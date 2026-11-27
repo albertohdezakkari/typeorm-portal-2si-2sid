@@ -21,7 +21,7 @@ export class PublicacionesService {
   }
 
   listarPublicaciones() {
-    return this.publicaciones.find({ order: { id: 'ASC' } });
+    return this.publicaciones.find({ relations: { editorial: true }, order: { id: 'ASC' } });
   }
 
   async eliminarPublicacion(publicacionId: number) {

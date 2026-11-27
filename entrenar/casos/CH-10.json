@@ -2,9 +2,8 @@
   "version": 5,
   "source": {
     "kind": "pilot",
-    "label": "Versión sencilla · CH-10",
-    "sha256": "8e0c413873deae1b6d51b87ed213c192c38e86a9aa17bea0d7a30e611a093ac4",
-    "pages": 4
+    "label": "CH-10 · Nest + TypeORM",
+    "url": "https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01"
   },
   "chapters": [
     "Preparar el modelo",
@@ -143,23 +142,13 @@
       {
         "chapter": 0,
         "name": "Registrar las Entities",
-        "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hospital } from './hospitales/entities/hospital.entity';\nimport { Habitacion } from './habitaciones/entities/habitacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hospital, Habitacion])],\n  controllers: [],\n  providers: []\n})\nexport class TallerModule {}",
+        "path": "src/habitaciones/habitaciones.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\nimport { Habitacion } from './entities/habitacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hospital, Habitacion])],\n  providers: [],\n  controllers: []\n})\nexport class HabitacionesModule {}",
         "cues": [
           {
-            "text": "import { Hospital }",
-            "title": "Importar Hospital",
-            "note": "Es la clase que acabas de preparar."
-          },
-          {
-            "text": "import { Habitacion }",
-            "title": "Importar Habitacion",
-            "note": "El módulo reúne las dos Entities."
-          },
-          {
             "text": "TypeOrmModule.forFeature([Hospital, Habitacion])",
-            "title": "Preparar las dos Entities",
-            "note": "Permite inyectar sus repositorios de TypeORM. Todavía no hay Service ni Controller registrados."
+            "title": "Registra las Entities de este módulo",
+            "note": "Nest prepara Repository<Hospital> y Repository<Habitacion> para el Service."
           }
         ],
         "page": 2,
@@ -196,7 +185,7 @@
         "chapter": 1,
         "name": "Service",
         "path": "src/habitaciones/habitaciones.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ order: { id: 'ASC' } });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });\n  }\n}",
         "cues": [
           {
             "text": "this.habitaciones.create({",
@@ -214,9 +203,9 @@
             "note": "save escribe la fila y devuelve la Habitacion con el ID generado por PostgreSQL."
           },
           {
-            "text": "this.habitaciones.find({ order: { id: 'ASC' } })",
+            "text": "this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } })",
             "title": "Listar las habitaciones",
-            "note": "find lee las filas usando la Entity; order las ordena por ID."
+            "note": "find devuelve las habitaciones; relations carga el hospital asociado y order las ordena por ID."
           }
         ],
         "page": 4,
@@ -257,18 +246,23 @@
       {
         "chapter": 1,
         "name": "Registrar Service y Controller",
-        "path": "src/taller.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hospital } from './hospitales/entities/hospital.entity';\nimport { Habitacion } from './habitaciones/entities/habitacion.entity';\nimport { HabitacionesService } from './habitaciones/habitaciones.service';\nimport { HabitacionesController } from './habitaciones/habitaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hospital, Habitacion])],\n  controllers: [HabitacionesController],\n  providers: [HabitacionesService]\n})\nexport class TallerModule {}",
+        "path": "src/habitaciones/habitaciones.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { HabitacionesService } from './habitaciones.service';\nimport { HabitacionesController } from './habitaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Hospital, Habitacion])],\n  providers: [HabitacionesService],\n  controllers: [HabitacionesController]\n})\nexport class HabitacionesModule {}",
         "cues": [
           {
-            "text": "controllers: [HabitacionesController]",
-            "title": "Un Controller",
-            "note": "Este Controller contiene las rutas de habitaciones."
+            "text": "TypeOrmModule.forFeature([Hospital, Habitacion])",
+            "title": "Registra las Entities de este módulo",
+            "note": "Nest prepara Repository<Hospital> y Repository<Habitacion> para el Service."
           },
           {
             "text": "providers: [HabitacionesService]",
-            "title": "Un Service",
-            "note": "Nest entrega HabitacionesService al Controller por su constructor."
+            "title": "Registra el Service",
+            "note": "Es el mismo Service al que añades los métodos de cada caso."
+          },
+          {
+            "text": "controllers: [HabitacionesController]",
+            "title": "Registra el Controller",
+            "note": "Es el mismo Controller que recibe las peticiones HTTP de este recurso."
           }
         ],
         "page": 3,
@@ -279,7 +273,7 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /habitaciones\n{\"nombre\":\"Registro de prueba\",\"camas\":2,\"hospitalId\":2}\n\n201 · Registro 10 creado → GET /habitaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "POST /habitaciones\n{\"nombre\":\"Registro de prueba\",\"camas\":2,\"hospitalId\":2}\n\n201 · Registro 10 creado → GET /habitaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "201 · Registro 10 creado → GET /habitaciones → 200 · aparecen 4 registros",
@@ -295,7 +289,7 @@
         "chapter": 2,
         "name": "Service",
         "path": "src/habitaciones/habitaciones.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n}",
         "cues": [
           {
             "text": "async eliminarHabitacion(habitacionId: number)",
@@ -344,7 +338,7 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /habitaciones/10\n\n204 · Registro 10 eliminado → GET /habitaciones → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "DELETE /habitaciones/10\n\n204 · Registro 10 eliminado → GET /habitaciones → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "204 · Registro 10 eliminado → GET /habitaciones → 200 · quedan 7, 8 y 9",
@@ -360,7 +354,7 @@
         "chapter": 3,
         "name": "Service",
         "path": "src/habitaciones/habitaciones.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n}",
         "cues": [
           {
             "text": "async modificarCamas(habitacionId: number, camas: number)",
@@ -415,7 +409,7 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /habitaciones/7\n{\"camas\":4}\n\n200 · Registro 7 · camas = 4 camas · hospitalId = 1\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "PATCH /habitaciones/7\n{\"camas\":4}\n\n200 · Registro 7 · camas = 4 camas · hospitalId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Registro 7 · camas = 4 camas · hospitalId = 1",
@@ -431,7 +425,7 @@
         "chapter": 4,
         "name": "Service",
         "path": "src/habitaciones/habitaciones.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async cambiarHospital(habitacionId: number, hospitalId: number) {\n    await this.habitaciones.update(habitacionId, { hospital: { id: hospitalId } });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async cambiarHospital(habitacionId: number, hospitalId: number) {\n    await this.habitaciones.update(habitacionId, { hospital: { id: hospitalId } });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n}",
         "cues": [
           {
             "text": "async cambiarHospital(habitacionId: number, hospitalId: number)",
@@ -486,7 +480,7 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /habitaciones/7/hospital\n{\"hospitalId\":2}\n\n200 · Registro 7 · camas = 4 camas · hospitalId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "PATCH /habitaciones/7/hospital\n{\"hospitalId\":2}\n\n200 · Registro 7 · camas = 4 camas · hospitalId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Registro 7 · camas = 4 camas · hospitalId pasa de 1 a 2",
@@ -502,7 +496,7 @@
         "chapter": 5,
         "name": "Service",
         "path": "src/habitaciones/habitaciones.service.ts",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async cambiarHospital(habitacionId: number, hospitalId: number) {\n    await this.habitaciones.update(habitacionId, { hospital: { id: hospitalId } });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async consultarHospital(hospitalId: number, minimo: number) {\n    const hospital = await this.hospitales.findOneBy({ id: hospitalId });\n    const habitaciones = await this.habitaciones.find({\n      where: {\n        hospital: { id: hospitalId },\n        camas: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { hospital, habitaciones };\n  }\n}",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Habitacion } from './entities/habitacion.entity';\nimport { Hospital } from '../hospitales/entities/hospital.entity';\n\n@Injectable()\nexport class HabitacionesService {\n  constructor(\n    @InjectRepository(Habitacion) private readonly habitaciones: Repository<Habitacion>,\n    @InjectRepository(Hospital) private readonly hospitales: Repository<Hospital>\n  ) {}\n\n  crearHabitacion(nombre: string, camas: number, hospitalId: number) {\n    const habitacion = this.habitaciones.create({\n      nombre,\n      camas,\n      hospital: { id: hospitalId }\n    });\n    return this.habitaciones.save(habitacion);\n  }\n\n  listarHabitaciones() {\n    return this.habitaciones.find({ relations: { hospital: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarHabitacion(habitacionId: number) {\n    await this.habitaciones.delete(habitacionId);\n  }\n\n  async modificarCamas(habitacionId: number, camas: number) {\n    await this.habitaciones.update(habitacionId, { camas });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async cambiarHospital(habitacionId: number, hospitalId: number) {\n    await this.habitaciones.update(habitacionId, { hospital: { id: hospitalId } });\n    return this.habitaciones.findOneBy({ id: habitacionId });\n  }\n\n  async consultarHospital(hospitalId: number, minimo: number) {\n    const hospital = await this.hospitales.findOneBy({ id: hospitalId });\n    const habitaciones = await this.habitaciones.find({\n      where: {\n        hospital: { id: hospitalId },\n        camas: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { hospital, habitaciones };\n  }\n}",
         "cues": [
           {
             "text": "this.hospitales.findOneBy({ id: hospitalId })",
@@ -563,7 +557,7 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /hospitales/2/habitaciones?minimo=4\n\n200 · Hospital del Valle + registro 7 (4 camas). Excluye el 8 (3 camas) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.",
+        "code": "GET /hospitales/2/habitaciones?minimo=4\n\n200 · Hospital del Valle + registro 7 (4 camas). Excluye el 8 (3 camas) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
         "cues": [
           {
             "text": "200 · Hospital del Valle + registro 7 (4 camas). Excluye el 8 (3 camas) y el 9 (pertenece al ID 1).",
@@ -1597,7 +1591,7 @@
     "sha256": "8e0c413873deae1b6d51b87ed213c192c38e86a9aa17bea0d7a30e611a093ac4",
     "pages": 4
   },
-  "nestSimpleRevision": 1,
+  "nestSimpleRevision": 3,
   "legacyNestChapters": [
     0,
     0,
@@ -1629,5 +1623,50 @@
   "nestSimpleFiles": {
     "service": "src/habitaciones/habitaciones.service.ts",
     "controller": "src/habitaciones/habitaciones.controller.ts"
+  },
+  "projectBase": {
+    "url": "https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01",
+    "revision": "87d14758960120570436906207b09073bb3731c3",
+    "backend": "backend",
+    "pilot": false
+  },
+  "nestMigration": {
+    "fromRevision": 1,
+    "positions": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    "retained": [
+      "nest:0",
+      "nest:1",
+      "nest:2",
+      "nest:3",
+      "nest:5",
+      "nest:7",
+      "nest:11",
+      "nest:14",
+      "nest:17",
+      "nest:20"
+    ]
   }
 }

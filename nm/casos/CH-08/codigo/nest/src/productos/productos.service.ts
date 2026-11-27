@@ -21,7 +21,7 @@ export class ProductosService {
   }
 
   listarProductos() {
-    return this.productos.find({ order: { id: 'ASC' } });
+    return this.productos.find({ relations: { panaderia: true }, order: { id: 'ASC' } });
   }
 
   async eliminarProducto(productoId: number) {

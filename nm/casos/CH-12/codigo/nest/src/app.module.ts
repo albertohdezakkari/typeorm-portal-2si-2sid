@@ -1,31 +1,34 @@
-import { Controller, Get, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { TallerModule } from './taller.module';
-
-@Controller('salud')
-class SaludController {
-  constructor(private readonly db: DataSource) {}
-
-  @Get()
-  salud() {
-    return { estado: this.db.isInitialized ? 'ok' : 'sin conexión', base: process.env.DB_NAME };
-  }
-}
+import { resolve } from 'node:path';
+import { SaludController } from './salud.controller';
+import { LotesModule } from './lotes/lotes.module';
+import { InspectoresModule } from './inspectores/inspectores.module';
+import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      autoLoadEntities: true,
-      synchronize: true // Solo en esta base de práctica.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]
     }),
-    TallerModule
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.getOrThrow<string>('DB_HOST'),
+        port: Number(config.getOrThrow<string>('DB_PORT')),
+        username: config.getOrThrow<string>('DB_USER'),
+        password: config.getOrThrow<string>('DB_PASSWORD'),
+        database: config.getOrThrow<string>('DB_NAME'),
+        autoLoadEntities: true,
+        synchronize: true
+      })
+    }),
+    LotesModule,
+    InspectoresModule,
+    AsignacionesModule
   ],
   controllers: [SaludController]
 })
