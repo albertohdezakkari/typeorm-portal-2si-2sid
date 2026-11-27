@@ -326,41 +326,17 @@
         "chapter": 1,
         "title": "Registra las cuatro Entities",
         "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController],\n  providers: [ObrasService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Conserva ObrasController y ObrasService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.",
         "expect": "El módulo conserva todos los casos 1:N. Solo añade las nuevas Entities; aún no importa casos N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
-          },
-          {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1565,
-            "end": 1575,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1627,
-            "end": 1638,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 1778,
-            "end": 1787,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])",
+            "start": 504,
+            "end": 575,
+            "note": "Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -436,105 +412,97 @@
         "create": null
       },
       {
-        "id": "crear-listar-repository",
-        "chapter": 3,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Profesional } from '../entities/profesional.entity';\n\n@Injectable()\nexport class ProfesionalesRepository {\n  constructor(\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  crearProfesionalRepository(nombre: string, apellidos: string, email: string) {\n    const profesional = this.profesionales.create({ nombre, apellidos, email });\n    return this.profesionales.save(profesional);\n  }\n\n  listarProfesionalesRepository() {\n    return this.profesionales.find({ order: { id: 'ASC' } });\n  }\n}\n",
-        "path": "src/profesionales/crear-listar/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "find",
-            "start": 647,
-            "end": 651,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/profesionales/crear-listar\nls -d src/profesionales/crear-listar\ntouch src/profesionales/crear-listar/repository.ts\ncode src/profesionales/crear-listar/repository.ts"
-      },
-      {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ProfesionalesRepository } from './repository';\n\n@Injectable()\nexport class ProfesionalesService {\n  constructor(private readonly repository: ProfesionalesRepository) {}\n\n  crearProfesionalService(nombre: string, apellidos: string, email: string) {\n    return this.repository.crearProfesionalRepository(nombre, apellidos, email);\n  }\n\n  listarProfesionalesService() {\n    return this.repository.listarProfesionalesRepository();\n  }\n}\n",
-        "path": "src/profesionales/crear-listar/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Profesional } from './entities/profesional.entity';\n\n@Injectable()\nexport class ProfesionalesService {\n  constructor(\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  crearProfesional(nombre: string, apellidos: string, email: string) {\n    const profesional = this.profesionales.create({ nombre, apellidos, email });\n    return this.profesionales.save(profesional);\n  }\n\n  listarProfesionales() {\n    return this.profesionales.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/profesionales/profesionales.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
         "focus": "service",
         "cues": [
           {
-            "token": "return",
-            "start": 306,
-            "end": 312,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.profesionales.create({ nombre, apellidos, email })",
+            "start": 456,
+            "end": 511,
+            "note": "Prepara el perfil sin guardarlo todavía."
+          },
+          {
+            "token": "this.profesionales.save(profesional)",
+            "start": 524,
+            "end": 560,
+            "note": "Guarda la Entity y devuelve su ID generado."
+          },
+          {
+            "token": "this.profesionales.find({ order: { id: 'ASC' } })",
+            "start": 604,
+            "end": 653,
+            "note": "Lista el catálogo usando la misma Entity."
           }
         ],
-        "create": "mkdir -p src/profesionales/crear-listar\nls -d src/profesionales/crear-listar\ntouch src/profesionales/crear-listar/service.ts\ncode src/profesionales/crear-listar/service.ts"
+        "create": "mkdir -p src/profesionales\ntouch src/profesionales/profesionales.service.ts\ncode src/profesionales/profesionales.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ProfesionalesService } from './service';\n\n@Controller('profesionales')\nexport class ProfesionalesController {\n  constructor(private readonly service: ProfesionalesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearProfesionalService(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarProfesionalesService();\n  }\n}\n",
-        "path": "src/profesionales/crear-listar/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ProfesionalesService } from './profesionales.service';\n\n@Controller('profesionales')\nexport class ProfesionalesController {\n  constructor(private readonly service: ProfesionalesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearProfesional(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarProfesionales();\n  }\n}",
+        "path": "src/profesionales/profesionales.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los profesionales iniciales y a Lucía; no crea asignaciones.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Body",
-            "start": 265,
+            "token": "@Controller('profesionales')",
+            "start": 127,
+            "end": 155,
+            "note": "Agrupa las rutas del catálogo de profesionales."
+          },
+          {
+            "token": "@Post()",
+            "start": 263,
             "end": 270,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
+            "note": "POST crea un perfil con nombre, apellidos y correo."
+          },
+          {
+            "token": "this.service.crearProfesional(datos.nombre, datos.apellidos, datos.email)",
+            "start": 361,
+            "end": 434,
+            "note": "Entrega los tres valores al Service."
+          },
+          {
+            "token": "@Get()",
+            "start": 443,
+            "end": 449,
+            "note": "GET utiliza listarProfesionales en ese mismo Service."
           }
         ],
-        "create": "mkdir -p src/profesionales/crear-listar\nls -d src/profesionales/crear-listar\ntouch src/profesionales/crear-listar/controller.ts\ncode src/profesionales/crear-listar/controller.ts"
+        "create": "mkdir -p src/profesionales\ntouch src/profesionales/profesionales.controller.ts\ncode src/profesionales/profesionales.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesService } from './profesionales/profesionales.service';\nimport { ProfesionalesController } from './profesionales/profesionales.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController, ProfesionalesController],\n  providers: [ObrasService, ProfesionalesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
+            "token": "controllers: [",
+            "start": 742,
+            "end": 756,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 1808,
-            "end": 1818,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 1870,
-            "end": 1881,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2046,
-            "end": 2055,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 801,
+            "end": 813,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -579,171 +547,91 @@
         "create": null
       },
       {
-        "id": "asignar-profesional-repository",
-        "chapter": 4,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\nimport { Obra } from '../../obras/entities/obra.entity';\nimport { Profesional } from '../../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignarProfesionalRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  buscarObraRepository(obraId: number) {\n    return this.obras.findOneBy({ id: obraId });\n  }\n\n  buscarProfesionalRepository(profesionalId: number) {\n    return this.profesionales.findOneBy({ id: profesionalId });\n  }\n\n  async asignarProfesionalRepository(obraId: number, profesionalId: number, rol: string) {\n    const asignacion = { obraId, profesionalId, rol };\n    await this.asignaciones.insert(asignacion);\n    return asignacion;\n  }\n}\n",
-        "path": "src/asignaciones/asignar-profesional/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "obraId",
-            "start": 686,
-            "end": 692,
-            "note": "Identifica la obra de la asociación."
-          },
-          {
-            "token": "profesionalId",
-            "start": 788,
-            "end": 801,
-            "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 958,
-            "end": 961,
-            "note": "Es un dato del vínculo; puede cambiar según la obra."
-          },
-          {
-            "token": "insert",
-            "start": 1056,
-            "end": 1062,
-            "note": "INSERT rechaza una pareja cuya PK compuesta ya existe."
-          },
-          {
-            "token": "find",
-            "start": 726,
-            "end": 730,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/asignar-profesional\nls -d src/asignaciones/asignar-profesional\ntouch src/asignaciones/asignar-profesional/repository.ts\ncode src/asignaciones/asignar-profesional/repository.ts"
-      },
-      {
         "id": "asignar-profesional-service",
         "chapter": 4,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { QueryFailedError } from 'typeorm';\nimport { AsignarProfesionalRepository } from './repository';\n\n@Injectable()\nexport class AsignarProfesionalService {\n  constructor(private readonly repository: AsignarProfesionalRepository) {}\n\n  async asignarProfesionalService(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.repository.buscarObraRepository(obraId);\n    const profesional = await this.repository.buscarProfesionalRepository(profesionalId);\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n\n    try {\n      return await this.repository.asignarProfesionalRepository(obraId, profesionalId, rol);\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n}\n",
-        "path": "src/asignaciones/asignar-profesional/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  async asignarProfesional(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.obras.findOneBy({ id: obraId });\n    const profesional = await this.profesionales.findOneBy({ id: profesionalId });\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n    const asignacion = { obraId, profesionalId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "service",
         "cues": [
           {
-            "token": "obraId",
-            "start": 355,
-            "end": 361,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async asignarProfesional(obraId: number, profesionalId: number, rol: string)",
+            "start": 705,
+            "end": 781,
+            "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
-            "token": "profesionalId",
-            "start": 371,
-            "end": 384,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.obras.findOneBy({ id: obraId })",
+            "start": 807,
+            "end": 843,
+            "note": "Lee la obra con el repositorio de TypeORM."
           },
           {
-            "token": "await",
-            "start": 426,
-            "end": 431,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.profesionales.findOneBy({ id: profesionalId })",
+            "start": 875,
+            "end": 926,
+            "note": "Lee el profesional antes de asociarlo."
           },
           {
-            "token": "return",
-            "start": 697,
-            "end": 703,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 394,
-            "end": 397,
-            "note": "El mismo profesional puede tener otro rol en otra obra."
+            "token": "this.asignaciones.insert(asignacion)",
+            "start": 1117,
+            "end": 1153,
+            "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-profesional\nls -d src/asignaciones/asignar-profesional\ntouch src/asignaciones/asignar-profesional/service.ts\ncode src/asignaciones/asignar-profesional/service.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-profesional-entry",
         "chapter": 4,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignarProfesionalService } from './service';\n\n@Controller('obras/:obraId/asignaciones')\nexport class AsignarProfesionalController {\n  constructor(private readonly service: AsignarProfesionalService) {}\n\n  @Post()\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesionalService(Number(obraId), datos.profesionalId, datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/asignar-profesional/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
+        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('obras/:obraId/asignaciones')\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 297,
-            "end": 303,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Post('obras/:obraId/asignaciones')",
+            "start": 246,
+            "end": 281,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 330,
-            "end": 335,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "obraId",
-            "start": 140,
-            "end": 146,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "profesionalId",
-            "start": 347,
-            "end": 360,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol)",
+            "start": 393,
+            "end": 472,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/asignar-profesional\nls -d src/asignaciones/asignar-profesional\ntouch src/asignaciones/asignar-profesional/controller.ts\ncode src/asignaciones/asignar-profesional/controller.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-profesional-registro",
         "chapter": 4,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { AsignarProfesionalRepository } from './asignaciones/asignar-profesional/repository';\nimport { AsignarProfesionalService } from './asignaciones/asignar-profesional/service';\nimport { AsignarProfesionalController } from './asignaciones/asignar-profesional/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, AsignarProfesionalController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, AsignarProfesionalRepository, AsignarProfesionalService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesService } from './profesionales/profesionales.service';\nimport { ProfesionalesController } from './profesionales/profesionales.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController, ProfesionalesController, AsignacionesController],\n  providers: [ObrasService, ProfesionalesService, AsignacionesService]\n})\nexport class TallerModule {}",
         "path": "src/taller.module.ts",
-        "note": "",
+        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
         "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
         "focus": "route",
         "cues": [
           {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
+            "token": "controllers: [",
+            "start": 898,
+            "end": 912,
+            "note": "Nest conecta las rutas de los Controllers."
           },
           {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2084,
-            "end": 2094,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2146,
-            "end": 2157,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2352,
-            "end": 2361,
-            "note": "Services y repositories que Nest debe poder inyectar."
+            "token": "providers: [",
+            "start": 981,
+            "end": 993,
+            "note": "Nest puede entregar estos Services por sus constructores."
           }
         ],
         "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
@@ -788,132 +676,56 @@
         "create": null
       },
       {
-        "id": "listar-por-obra-repository",
-        "chapter": 5,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorObraRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorObraRepository(obraId: number) {\n    return this.asignaciones.find({\n      where: { obraId },\n      order: { profesionalId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-obra/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "obraId",
-            "start": 398,
-            "end": 404,
-            "note": "Identifica la obra de la asociación."
-          },
-          {
-            "token": "profesionalId",
-            "start": 492,
-            "end": 505,
-            "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "find",
-            "start": 445,
-            "end": 449,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-obra\nls -d src/asignaciones/listar-por-obra\ntouch src/asignaciones/listar-por-obra/repository.ts\ncode src/asignaciones/listar-por-obra/repository.ts"
-      },
-      {
         "id": "listar-por-obra-service",
         "chapter": 5,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorObraRepository } from './repository';\n\n@Injectable()\nexport class ListarPorObraService {\n  constructor(private readonly repository: ListarPorObraRepository) {}\n\n  listarAsignacionesPorObraService(obraId: number) {\n    return this.repository.listarAsignacionesPorObraRepository(obraId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-obra/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  async asignarProfesional(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.obras.findOneBy({ id: obraId });\n    const profesional = await this.profesionales.findOneBy({ id: profesionalId });\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n    const asignacion = { obraId, profesionalId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n\n  listarPorObra(obraId: number) {\n    return this.asignaciones.find({ where: { obraId }, order: { profesionalId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
         "focus": "service",
         "cues": [
           {
-            "token": "obraId",
-            "start": 259,
-            "end": 265,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "listarPorObra(obraId: number)",
+            "start": 1410,
+            "end": 1439,
+            "note": "Recibe un ID de obra."
           },
           {
-            "token": "return",
-            "start": 281,
-            "end": 287,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { obraId }, order: { profesionalId: 'ASC' } })",
+            "start": 1453,
+            "end": 1531,
+            "note": "Filtra las asignaciones por obra y ordena por profesional."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-obra\nls -d src/asignaciones/listar-por-obra\ntouch src/asignaciones/listar-por-obra/service.ts\ncode src/asignaciones/listar-por-obra/service.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-obra-entry",
         "chapter": 5,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorObraService } from './service';\n\n@Controller('obras/:obraId/asignaciones')\nexport class ListarPorObraController {\n  constructor(private readonly service: ListarPorObraService) {}\n\n  @Get()\n  listar(@Param('obraId') obraId: string) {\n    return this.service.listarAsignacionesPorObraService(Number(obraId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-obra/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('obras/:obraId/asignaciones')\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol);\n  }\n\n  @Get('obras/:obraId/asignaciones')\n  listarPorObra(@Param('obraId') obraId: string) {\n    return this.service.listarPorObra(Number(obraId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "La obra 7 devuelve (7,1,Electricista) y (7,2,Arquitecta): dos profesionales para una obra.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 273,
-            "end": 279,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('obras/:obraId/asignaciones')",
+            "start": 486,
+            "end": 520,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "obraId",
-            "start": 128,
-            "end": 134,
-            "note": "Primera parte de la clave compuesta."
+            "token": "this.service.listarPorObra(Number(obraId))",
+            "start": 583,
+            "end": 625,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-obra\nls -d src/asignaciones/listar-por-obra\ntouch src/asignaciones/listar-por-obra/controller.ts\ncode src/asignaciones/listar-por-obra/controller.ts"
-      },
-      {
-        "id": "listar-por-obra-registro",
-        "chapter": 5,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { AsignarProfesionalRepository } from './asignaciones/asignar-profesional/repository';\nimport { AsignarProfesionalService } from './asignaciones/asignar-profesional/service';\nimport { AsignarProfesionalController } from './asignaciones/asignar-profesional/controller';\nimport { ListarPorObraRepository } from './asignaciones/listar-por-obra/repository';\nimport { ListarPorObraService } from './asignaciones/listar-por-obra/service';\nimport { ListarPorObraController } from './asignaciones/listar-por-obra/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, AsignarProfesionalController, ListarPorObraController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, AsignarProfesionalRepository, AsignarProfesionalService, ListarPorObraRepository, ListarPorObraService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
-          },
-          {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2333,
-            "end": 2343,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2395,
-            "end": 2406,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2626,
-            "end": 2635,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-obra-ejecutar",
@@ -949,138 +761,56 @@
         "create": null
       },
       {
-        "id": "listar-por-profesional-repository",
-        "chapter": 6,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ListarPorProfesionalRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  listarAsignacionesPorProfesionalRepository(profesionalId: number) {\n    return this.asignaciones.find({\n      where: { profesionalId },\n      order: { obraId: 'ASC' }\n    });\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-profesional/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": "obraId",
-            "start": 520,
-            "end": 526,
-            "note": "Identifica la obra de la asociación."
-          },
-          {
-            "token": "profesionalId",
-            "start": 412,
-            "end": 425,
-            "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "PorProfesional",
-            "start": 229,
-            "end": 243,
-            "note": "Usa la segunda organización de los mismos vínculos."
-          },
-          {
-            "token": "find",
-            "start": 466,
-            "end": 470,
-            "note": "Lee las asignaciones con el filtro de este caso."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/listar-por-profesional\nls -d src/asignaciones/listar-por-profesional\ntouch src/asignaciones/listar-por-profesional/repository.ts\ncode src/asignaciones/listar-por-profesional/repository.ts"
-      },
-      {
         "id": "listar-por-profesional-service",
         "chapter": 6,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { ListarPorProfesionalRepository } from './repository';\n\n@Injectable()\nexport class ListarPorProfesionalService {\n  constructor(private readonly repository: ListarPorProfesionalRepository) {}\n\n  listarAsignacionesPorProfesionalService(profesionalId: number) {\n    return this.repository.listarAsignacionesPorProfesionalRepository(profesionalId);\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-profesional/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  async asignarProfesional(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.obras.findOneBy({ id: obraId });\n    const profesional = await this.profesionales.findOneBy({ id: profesionalId });\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n    const asignacion = { obraId, profesionalId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n\n  listarPorObra(obraId: number) {\n    return this.asignaciones.find({ where: { obraId }, order: { profesionalId: 'ASC' } });\n  }\n\n  listarPorProfesional(profesionalId: number) {\n    return this.asignaciones.find({ where: { profesionalId }, order: { obraId: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "service",
         "cues": [
           {
-            "token": "profesionalId",
-            "start": 287,
-            "end": 300,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "listarPorProfesional(profesionalId: number)",
+            "start": 1540,
+            "end": 1583,
+            "note": "Recibe un ID de profesional."
           },
           {
-            "token": "return",
-            "start": 316,
-            "end": 322,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
+            "token": "this.asignaciones.find({ where: { profesionalId }, order: { obraId: 'ASC' } })",
+            "start": 1597,
+            "end": 1675,
+            "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-profesional\nls -d src/asignaciones/listar-por-profesional\ntouch src/asignaciones/listar-por-profesional/service.ts\ncode src/asignaciones/listar-por-profesional/service.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "listar-por-profesional-entry",
         "chapter": 6,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Controller, Get, Param } from '@nestjs/common';\nimport { ListarPorProfesionalService } from './service';\n\n@Controller('profesionales/:profesionalId/asignaciones')\nexport class ListarPorProfesionalController {\n  constructor(private readonly service: ListarPorProfesionalService) {}\n\n  @Get()\n  listar(@Param('profesionalId') profesionalId: string) {\n    return this.service.listarAsignacionesPorProfesionalService(Number(profesionalId));\n  }\n}\n",
-        "path": "src/asignaciones/listar-por-profesional/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('obras/:obraId/asignaciones')\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol);\n  }\n\n  @Get('obras/:obraId/asignaciones')\n  listarPorObra(@Param('obraId') obraId: string) {\n    return this.service.listarPorObra(Number(obraId));\n  }\n\n  @Get('profesionales/:profesionalId/asignaciones')\n  listarPorProfesional(@Param('profesionalId') profesionalId: string) {\n    return this.service.listarPorProfesional(Number(profesionalId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "El profesional 1 devuelve las obras 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 309,
-            "end": 315,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Get('profesionales/:profesionalId/asignaciones')",
+            "start": 634,
+            "end": 683,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "profesionalId",
-            "start": 143,
-            "end": 156,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.listarPorProfesional(Number(profesionalId))",
+            "start": 767,
+            "end": 823,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/listar-por-profesional\nls -d src/asignaciones/listar-por-profesional\ntouch src/asignaciones/listar-por-profesional/controller.ts\ncode src/asignaciones/listar-por-profesional/controller.ts"
-      },
-      {
-        "id": "listar-por-profesional-registro",
-        "chapter": 6,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { AsignarProfesionalRepository } from './asignaciones/asignar-profesional/repository';\nimport { AsignarProfesionalService } from './asignaciones/asignar-profesional/service';\nimport { AsignarProfesionalController } from './asignaciones/asignar-profesional/controller';\nimport { ListarPorObraRepository } from './asignaciones/listar-por-obra/repository';\nimport { ListarPorObraService } from './asignaciones/listar-por-obra/service';\nimport { ListarPorObraController } from './asignaciones/listar-por-obra/controller';\nimport { ListarPorProfesionalRepository } from './asignaciones/listar-por-profesional/repository';\nimport { ListarPorProfesionalService } from './asignaciones/listar-por-profesional/service';\nimport { ListarPorProfesionalController } from './asignaciones/listar-por-profesional/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, AsignarProfesionalController, ListarPorObraController, ListarPorProfesionalController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, AsignarProfesionalRepository, AsignarProfesionalService, ListarPorObraRepository, ListarPorObraService, ListarPorProfesionalRepository, ListarPorProfesionalService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
-          },
-          {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2624,
-            "end": 2634,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2686,
-            "end": 2697,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 2949,
-            "end": 2958,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "listar-por-profesional-ejecutar",
@@ -1116,168 +846,62 @@
         "create": null
       },
       {
-        "id": "modificar-rol-repository",
-        "chapter": 7,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class ModificarRolRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  async modificarRolRepository(obraId: number, profesionalId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ obraId, profesionalId }, { rol });\n    return resultado.affected;\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".update(",
-            "start": 489,
-            "end": 497,
-            "note": "Modifica datos sin cambiar las claves: UpdateItemCommand."
-          },
-          {
-            "token": "obraId",
-            "start": 390,
-            "end": 396,
-            "note": "Identifica la obra de la asociación."
-          },
-          {
-            "token": "profesionalId",
-            "start": 406,
-            "end": 419,
-            "note": "Identifica al profesional. El par completo identifica la asignación."
-          },
-          {
-            "token": "rol",
-            "start": 429,
-            "end": 432,
-            "note": "Es un dato del vínculo; puede cambiar según la obra."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/repository.ts\ncode src/asignaciones/modificar-rol/repository.ts"
-      },
-      {
         "id": "modificar-rol-service",
         "chapter": 7,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { Injectable, NotFoundException } from '@nestjs/common';\nimport { ModificarRolRepository } from './repository';\n\n@Injectable()\nexport class ModificarRolService {\n  constructor(private readonly repository: ModificarRolRepository) {}\n\n  async modificarRolService(obraId: number, profesionalId: number, rol: string) {\n    const modificadas = await this.repository.modificarRolRepository(obraId, profesionalId, rol);\n    if (!modificadas) throw new NotFoundException('No existe la asignación');\n    return { obraId, profesionalId, rol };\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  async asignarProfesional(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.obras.findOneBy({ id: obraId });\n    const profesional = await this.profesionales.findOneBy({ id: profesionalId });\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n    const asignacion = { obraId, profesionalId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n\n  listarPorObra(obraId: number) {\n    return this.asignaciones.find({ where: { obraId }, order: { profesionalId: 'ASC' } });\n  }\n\n  listarPorProfesional(profesionalId: number) {\n    return this.asignaciones.find({ where: { profesionalId }, order: { obraId: 'ASC' } });\n  }\n\n  async modificarRol(obraId: number, profesionalId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ obraId, profesionalId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { obraId, profesionalId, rol };\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "service",
         "cues": [
           {
-            "token": "obraId",
-            "start": 268,
-            "end": 274,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async modificarRol(obraId: number, profesionalId: number, rol: string)",
+            "start": 1684,
+            "end": 1754,
+            "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
-            "token": "profesionalId",
-            "start": 284,
-            "end": 297,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
+            "token": "this.asignaciones.update({ obraId, profesionalId }, { rol })",
+            "start": 1785,
+            "end": 1845,
+            "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
-            "token": "await",
-            "start": 346,
-            "end": 351,
-            "note": "Espera el resultado antes de seguir o devolverlo."
-          },
-          {
-            "token": "return",
-            "start": 502,
-            "end": 508,
-            "note": "La respuesta vuelve a la capa que llamó al Service."
-          },
-          {
-            "token": "rol",
-            "start": 307,
-            "end": 310,
-            "note": "El mismo profesional puede tener otro rol en otra obra."
+            "token": "if (!resultado.affected)",
+            "start": 1851,
+            "end": 1875,
+            "note": "Si no había esa pareja, devuelve 404."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/service.ts\ncode src/asignaciones/modificar-rol/service.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "modificar-rol-entry",
         "chapter": 7,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Patch } from '@nestjs/common';\nimport { ModificarRolService } from './service';\n\n@Controller('obras/:obraId/asignaciones/:profesionalId')\nexport class ModificarRolController {\n  constructor(private readonly service: ModificarRolService) {}\n\n  @Patch()\n  modificar(@Param('obraId') obraId: string, @Param('profesionalId') profesionalId: string, @Body() datos: { rol: string }) {\n    return this.service.modificarRolService(Number(obraId), Number(profesionalId), datos.rol);\n  }\n}\n",
-        "path": "src/asignaciones/modificar-rol/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('obras/:obraId/asignaciones')\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol);\n  }\n\n  @Get('obras/:obraId/asignaciones')\n  listarPorObra(@Param('obraId') obraId: string) {\n    return this.service.listarPorObra(Number(obraId));\n  }\n\n  @Get('profesionales/:profesionalId/asignaciones')\n  listarPorProfesional(@Param('profesionalId') profesionalId: string) {\n    return this.service.listarPorProfesional(Number(profesionalId));\n  }\n\n  @Patch('obras/:obraId/asignaciones/:profesionalId')\n  modificarRol(@Param('obraId') obraId: string, @Param('profesionalId') profesionalId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(obraId), Number(profesionalId), datos.rol);\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 298,
-            "end": 304,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Patch('obras/:obraId/asignaciones/:profesionalId')",
+            "start": 839,
+            "end": 890,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "@Body",
-            "start": 378,
-            "end": 383,
-            "note": "Nest obtiene las propiedades del cuerpo JSON."
-          },
-          {
-            "token": "obraId",
-            "start": 135,
-            "end": 141,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "profesionalId",
-            "start": 156,
-            "end": 169,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.modificarRol(Number(obraId), Number(profesionalId), datos.rol)",
+            "start": 1035,
+            "end": 1110,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/modificar-rol\nls -d src/asignaciones/modificar-rol\ntouch src/asignaciones/modificar-rol/controller.ts\ncode src/asignaciones/modificar-rol/controller.ts"
-      },
-      {
-        "id": "modificar-rol-registro",
-        "chapter": 7,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { AsignarProfesionalRepository } from './asignaciones/asignar-profesional/repository';\nimport { AsignarProfesionalService } from './asignaciones/asignar-profesional/service';\nimport { AsignarProfesionalController } from './asignaciones/asignar-profesional/controller';\nimport { ListarPorObraRepository } from './asignaciones/listar-por-obra/repository';\nimport { ListarPorObraService } from './asignaciones/listar-por-obra/service';\nimport { ListarPorObraController } from './asignaciones/listar-por-obra/controller';\nimport { ListarPorProfesionalRepository } from './asignaciones/listar-por-profesional/repository';\nimport { ListarPorProfesionalService } from './asignaciones/listar-por-profesional/service';\nimport { ListarPorProfesionalController } from './asignaciones/listar-por-profesional/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, AsignarProfesionalController, ListarPorObraController, ListarPorProfesionalController, ModificarRolController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, AsignarProfesionalRepository, AsignarProfesionalService, ListarPorObraRepository, ListarPorObraService, ListarPorProfesionalRepository, ListarPorProfesionalService, ModificarRolRepository, ModificarRolService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
-          },
-          {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 2864,
-            "end": 2874,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 2926,
-            "end": 2937,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3213,
-            "end": 3222,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -1319,144 +943,56 @@
         "create": null
       },
       {
-        "id": "eliminar-asignacion-repository",
-        "chapter": 8,
-        "title": "Prepara el Repository",
-        "kind": "repository",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Asignacion } from '../entities/asignacion.entity';\n\n@Injectable()\nexport class EliminarAsignacionRepository {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  eliminarAsignacionRepository(obraId: number, profesionalId: number) {\n    return this.asignaciones.delete({ obraId, profesionalId });\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/repository.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
-        "focus": "repository",
-        "cues": [
-          {
-            "token": ".delete(",
-            "start": 465,
-            "end": 473,
-            "note": "Elimina únicamente el ítem de esa clave: DeleteItemCommand."
-          },
-          {
-            "token": "obraId",
-            "start": 396,
-            "end": 402,
-            "note": "Identifica la obra de la asociación."
-          },
-          {
-            "token": "profesionalId",
-            "start": 412,
-            "end": 425,
-            "note": "Identifica al profesional. El par completo identifica la asignación."
-          }
-        ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/repository.ts\ncode src/asignaciones/eliminar-asignacion/repository.ts"
-      },
-      {
         "id": "eliminar-asignacion-service",
         "chapter": 8,
-        "title": "Conecta el Service",
+        "title": "Completa el mismo Service",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { EliminarAsignacionRepository } from './repository';\n\n@Injectable()\nexport class EliminarAsignacionService {\n  constructor(private readonly repository: EliminarAsignacionRepository) {}\n\n  async eliminarAsignacionService(obraId: number, profesionalId: number) {\n    await this.repository.eliminarAsignacionRepository(obraId, profesionalId);\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/service.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Profesional) private readonly profesionales: Repository<Profesional>\n  ) {}\n\n  async asignarProfesional(obraId: number, profesionalId: number, rol: string) {\n    const obra = await this.obras.findOneBy({ id: obraId });\n    const profesional = await this.profesionales.findOneBy({ id: profesionalId });\n    if (!obra || !profesional) {\n      throw new NotFoundException('No existe la obra o el profesional');\n    }\n    const asignacion = { obraId, profesionalId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El profesional ya está asignado a esa obra');\n      }\n      throw error;\n    }\n  }\n\n  listarPorObra(obraId: number) {\n    return this.asignaciones.find({ where: { obraId }, order: { profesionalId: 'ASC' } });\n  }\n\n  listarPorProfesional(profesionalId: number) {\n    return this.asignaciones.find({ where: { profesionalId }, order: { obraId: 'ASC' } });\n  }\n\n  async modificarRol(obraId: number, profesionalId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ obraId, profesionalId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { obraId, profesionalId, rol };\n  }\n\n  async eliminarAsignacion(obraId: number, profesionalId: number) {\n    await this.asignaciones.delete({ obraId, profesionalId });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
         "focus": "service",
         "cues": [
           {
-            "token": "obraId",
-            "start": 273,
-            "end": 279,
-            "note": "Este valor llega desde la ruta de la petición."
+            "token": "async eliminarAsignacion(obraId: number, profesionalId: number)",
+            "start": 1982,
+            "end": 2045,
+            "note": "Ambos IDs identifican el vínculo."
           },
           {
-            "token": "profesionalId",
-            "start": 289,
-            "end": 302,
-            "note": "Este valor viaja hasta el Repository sin perder la otra clave."
-          },
-          {
-            "token": "await",
-            "start": 318,
-            "end": 323,
-            "note": "Espera el resultado antes de seguir o devolverlo."
+            "token": "this.asignaciones.delete({ obraId, profesionalId })",
+            "start": 2058,
+            "end": 2109,
+            "note": "Borra el vínculo; conserva Obra y Profesional."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/service.ts\ncode src/asignaciones/eliminar-asignacion/service.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "eliminar-asignacion-entry",
         "chapter": 8,
-        "title": "Recibe la petición en Controller",
+        "title": "Conecta la ruta en el mismo Controller",
         "kind": "entry",
-        "code": "import { Controller, Delete, HttpCode, Param } from '@nestjs/common';\nimport { EliminarAsignacionService } from './service';\n\n@Controller('obras/:obraId/asignaciones/:profesionalId')\nexport class EliminarAsignacionController {\n  constructor(private readonly service: EliminarAsignacionService) {}\n\n  @Delete()\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string, @Param('profesionalId') profesionalId: string) {\n    return this.service.eliminarAsignacionService(Number(obraId), Number(profesionalId));\n  }\n}\n",
-        "path": "src/asignaciones/eliminar-asignacion/controller.ts",
-        "note": "El archivo está completo: imports, métodos y cierres. Los dos IDs identifican una sola asignación.",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('obras/:obraId/asignaciones')\n  asignar(@Param('obraId') obraId: string, @Body() datos: { profesionalId: number; rol: string }) {\n    return this.service.asignarProfesional(Number(obraId), datos.profesionalId, datos.rol);\n  }\n\n  @Get('obras/:obraId/asignaciones')\n  listarPorObra(@Param('obraId') obraId: string) {\n    return this.service.listarPorObra(Number(obraId));\n  }\n\n  @Get('profesionales/:profesionalId/asignaciones')\n  listarPorProfesional(@Param('profesionalId') profesionalId: string) {\n    return this.service.listarPorProfesional(Number(profesionalId));\n  }\n\n  @Patch('obras/:obraId/asignaciones/:profesionalId')\n  modificarRol(@Param('obraId') obraId: string, @Param('profesionalId') profesionalId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(obraId), Number(profesionalId), datos.rol);\n  }\n\n  @Delete('obras/:obraId/asignaciones/:profesionalId')\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string, @Param('profesionalId') profesionalId: string) {\n    return this.service.eliminarAsignacion(Number(obraId), Number(profesionalId));\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.",
         "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las obras y los profesionales.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Param",
-            "start": 338,
-            "end": 344,
-            "note": "Nest extrae este valor de la ruta."
+            "token": "@Delete('obras/:obraId/asignaciones/:profesionalId')",
+            "start": 1137,
+            "end": 1189,
+            "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
-            "token": "obraId",
-            "start": 146,
-            "end": 152,
-            "note": "Primera parte de la clave compuesta."
-          },
-          {
-            "token": "profesionalId",
-            "start": 167,
-            "end": 180,
-            "note": "Segunda parte de la clave compuesta."
+            "token": "this.service.eliminarAsignacion(Number(obraId), Number(profesionalId))",
+            "start": 1311,
+            "end": 1381,
+            "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "create": "mkdir -p src/asignaciones/eliminar-asignacion\nls -d src/asignaciones/eliminar-asignacion\ntouch src/asignaciones/eliminar-asignacion/controller.ts\ncode src/asignaciones/eliminar-asignacion/controller.ts"
-      },
-      {
-        "id": "eliminar-asignacion-registro",
-        "chapter": 8,
-        "title": "Registra el caso y conserva los anteriores",
-        "kind": "module",
-        "code": "import { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesRepository } from './profesionales/crear-listar/repository';\nimport { ProfesionalesService } from './profesionales/crear-listar/service';\nimport { ProfesionalesController } from './profesionales/crear-listar/controller';\nimport { AsignarProfesionalRepository } from './asignaciones/asignar-profesional/repository';\nimport { AsignarProfesionalService } from './asignaciones/asignar-profesional/service';\nimport { AsignarProfesionalController } from './asignaciones/asignar-profesional/controller';\nimport { ListarPorObraRepository } from './asignaciones/listar-por-obra/repository';\nimport { ListarPorObraService } from './asignaciones/listar-por-obra/service';\nimport { ListarPorObraController } from './asignaciones/listar-por-obra/controller';\nimport { ListarPorProfesionalRepository } from './asignaciones/listar-por-profesional/repository';\nimport { ListarPorProfesionalService } from './asignaciones/listar-por-profesional/service';\nimport { ListarPorProfesionalController } from './asignaciones/listar-por-profesional/controller';\nimport { ModificarRolRepository } from './asignaciones/modificar-rol/repository';\nimport { ModificarRolService } from './asignaciones/modificar-rol/service';\nimport { ModificarRolController } from './asignaciones/modificar-rol/controller';\nimport { EliminarAsignacionRepository } from './asignaciones/eliminar-asignacion/repository';\nimport { EliminarAsignacionService } from './asignaciones/eliminar-asignacion/service';\nimport { EliminarAsignacionController } from './asignaciones/eliminar-asignacion/controller';\nimport { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { CrearListarController } from './obras/crear-listar/controller';\nimport { CrearListarService } from './obras/crear-listar/service';\nimport { CrearListarRepository } from './obras/crear-listar/repository';\nimport { EliminarController } from './obras/eliminar/controller';\nimport { EliminarService } from './obras/eliminar/service';\nimport { EliminarRepository } from './obras/eliminar/repository';\nimport { ModificarPresupuestoEurosController } from './obras/modificar-presupuesto-euros/controller';\nimport { ModificarPresupuestoEurosService } from './obras/modificar-presupuesto-euros/service';\nimport { ModificarPresupuestoEurosRepository } from './obras/modificar-presupuesto-euros/repository';\nimport { TrasladarController } from './obras/trasladar/controller';\nimport { TrasladarService } from './obras/trasladar/service';\nimport { TrasladarRepository } from './obras/trasladar/repository';\nimport { ConsultarAyuntamientoController } from './ayuntamientos/consultar/controller';\nimport { ConsultarAyuntamientoService } from './ayuntamientos/consultar/service';\nimport { ConsultarAyuntamientoRepository } from './ayuntamientos/consultar/repository';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ProfesionalesController, AsignarProfesionalController, ListarPorObraController, ListarPorProfesionalController, ModificarRolController, EliminarAsignacionController, CrearListarController, EliminarController, ModificarPresupuestoEurosController, TrasladarController, ConsultarAyuntamientoController],\n  providers: [ProfesionalesRepository, ProfesionalesService, AsignarProfesionalRepository, AsignarProfesionalService, ListarPorObraRepository, ListarPorObraService, ListarPorProfesionalRepository, ListarPorProfesionalService, ModificarRolRepository, ModificarRolService, EliminarAsignacionRepository, EliminarAsignacionService, CrearListarService, EliminarService, ModificarPresupuestoEurosService, TrasladarService, ConsultarAyuntamientoService, CrearListarRepository, EliminarRepository, ModificarPresupuestoEurosRepository, TrasladarRepository, ConsultarAyuntamientoRepository]\n})\nexport class TallerModule {}\n",
-        "path": "src/taller.module.ts",
-        "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "Profesional",
-            "start": 9,
-            "end": 20,
-            "note": "Entidad del perfil del profesional."
-          },
-          {
-            "token": "Asignacion",
-            "start": 84,
-            "end": 94,
-            "note": "Entidad intermedia con PK compuesta."
-          },
-          {
-            "token": "forFeature",
-            "start": 3140,
-            "end": 3150,
-            "note": "Registra las Entities que se inyectan en los repositories."
-          },
-          {
-            "token": "controllers",
-            "start": 3202,
-            "end": 3213,
-            "note": "Puntos de entrada HTTP de los casos ya preparados."
-          },
-          {
-            "token": "providers",
-            "start": 3519,
-            "end": 3528,
-            "note": "Services y repositories que Nest debe poder inyectar."
-          }
-        ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3424,5 +2960,100 @@
       "presupuestoEuros": 15000,
       "ayuntamientoId": 2
     }
-  }
+  },
+  "legacyNestIds": [
+    "situacion",
+    "logico",
+    "nosql",
+    "retomar",
+    "profesional",
+    "asignacion",
+    "obra-inversa",
+    "prof-inversa",
+    "asig-inversas",
+    "registrar",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-repository",
+    "crear-listar-service",
+    "crear-listar-entry",
+    "crear-listar-registro",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-profesional-repository",
+    "asignar-profesional-service",
+    "asignar-profesional-entry",
+    "asignar-profesional-registro",
+    "asignar-profesional-ejecutar",
+    "asignar-profesional-curl",
+    "listar-por-obra-repository",
+    "listar-por-obra-service",
+    "listar-por-obra-entry",
+    "listar-por-obra-registro",
+    "listar-por-obra-ejecutar",
+    "listar-por-obra-curl",
+    "listar-por-profesional-repository",
+    "listar-por-profesional-service",
+    "listar-por-profesional-entry",
+    "listar-por-profesional-registro",
+    "listar-por-profesional-ejecutar",
+    "listar-por-profesional-curl",
+    "modificar-rol-repository",
+    "modificar-rol-service",
+    "modificar-rol-entry",
+    "modificar-rol-registro",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-repository",
+    "eliminar-asignacion-service",
+    "eliminar-asignacion-entry",
+    "eliminar-asignacion-registro",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "nestSimpleRevision": 1,
+  "nestRetainedIds": [
+    "situacion",
+    "logico",
+    "nosql",
+    "retomar",
+    "profesional",
+    "asignacion",
+    "obra-inversa",
+    "prof-inversa",
+    "asig-inversas",
+    "arrancar",
+    "datos",
+    "cargar",
+    "crear-listar-ejecutar",
+    "crear-listar-curl",
+    "asignar-profesional-ejecutar",
+    "asignar-profesional-curl",
+    "listar-por-obra-ejecutar",
+    "listar-por-obra-curl",
+    "listar-por-profesional-ejecutar",
+    "listar-por-profesional-curl",
+    "modificar-rol-ejecutar",
+    "modificar-rol-curl",
+    "eliminar-asignacion-ejecutar",
+    "eliminar-asignacion-curl",
+    "persistencia",
+    "repaso"
+  ],
+  "retiredNestDirectories": [
+    "src/obras/crear-listar/",
+    "src/obras/eliminar/",
+    "src/obras/modificar-presupuesto-euros/",
+    "src/obras/trasladar/",
+    "src/ayuntamientos/consultar/",
+    "src/profesionales/crear-listar/",
+    "src/asignaciones/asignar-profesional/",
+    "src/asignaciones/listar-por-obra/",
+    "src/asignaciones/listar-por-profesional/",
+    "src/asignaciones/modificar-rol/",
+    "src/asignaciones/eliminar-asignacion/"
+  ]
 }

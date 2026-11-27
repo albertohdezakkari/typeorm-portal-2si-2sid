@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=entity-1';
+      frame.src = 'entrenar/?v=arturo-simple-1';
       // Mantener el acceso habitual. El enlace directo al taller abre la pestaña al elegir correo.
       if (location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {

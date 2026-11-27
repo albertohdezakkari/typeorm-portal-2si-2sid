@@ -40,7 +40,11 @@ def block(x,y,title,source,width=CW,font=8.2):
  for i,line in enumerate(lines):c.drawString(x+10,y-32-i*leading,line)
  return y-h-13
 
-def file(tech,path):return (N/'codigo'/tech/path).read_text()
+def file(tech,path):
+ source=N/'codigo'/tech/path
+ if source.exists():return source.read_text()
+ # Las fichas ya impresas conservan su traza original durante el piloto web.
+ return json.loads((R/'scripts/plantillas/nm-ch22-impreso.json').read_text())[tech+'/'+path]
 def end():c.showPage()
 
 Y=start('El modelo lógico que vas a construir','Conserva Ayuntamiento-Obra (1:N) y añade Obra-Profesional mediante ASIGNACION.')

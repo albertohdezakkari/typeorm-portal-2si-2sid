@@ -21,7 +21,7 @@
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
     intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=entity-1`);
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=${caseId==='CH-22'?'arturo-simple-1':'entity-1'}`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;
@@ -38,7 +38,7 @@
         block: 0, page: 0, full: false, focus: 0,
         profile: ['default','academy'].includes(saved.profile) ? saved.profile : 'default',
         team: /^[a-z][a-z0-9-]{0,19}$/.test(saved.team || '') ? saved.team : 'equipo01',
-        done: Array.isArray(saved.done) ? saved.done.filter(x => typeof x === 'string') : []
+        done: Array.isArray(saved.done) ? saved.done.filter(x => typeof x === 'string' && !(data.nestSimpleRevision&&saved.nestSimpleRevision!==data.nestSimpleRevision&&/^nest:(caso-|guardar)/.test(x))) : []
       };
       for (const tech of ['nest','cloud']) {
         if (!Number.isInteger(state.positions[tech]) || !data.tracks[tech][state.positions[tech]]) state.positions[tech] = 0;
@@ -56,7 +56,7 @@
       const phase = () => step().id === 'guardar' ? 3 : step().id.startsWith('caso-') ? 2 : ['modelos','datos'].includes(step().id) ? 1 : 0;
       const text = value => String(value || '').replaceAll('{{PROFILE}}', state.profile).replaceAll('{{TEAM}}', state.team);
       const save = () => {
-        try { localStorage.setItem(key, JSON.stringify({version: 1, caseId, track: state.track, positions: state.positions, profile: state.profile, team: state.team, done: state.done})); }
+        try { localStorage.setItem(key, JSON.stringify({version: 1, caseId, ...(data.nestSimpleRevision?{nestSimpleRevision:data.nestSimpleRevision}:{}), track: state.track, positions: state.positions, profile: state.profile, team: state.team, done: state.done})); }
         catch { announcement = 'Puedes continuar; este navegador no permite guardar el avance.'; }
       };
       function nodeMeaning() {
@@ -69,7 +69,7 @@
           model: cloud ? ['El YAML crea las tablas y Ref entrega sus nombres a Lambda.', 'db es el cliente que enviará las operaciones a DynamoDB.', 'Table describe el nombre real, las claves y el índice que ya creó el YAML.', 'Entity declara los campos y traduce sus etiquetas con savedAs.']
             : ['forRoot conecta PostgreSQL; AppModule también importa TallerModule.', 'forFeature registra las dos Entities en TallerModule.', `${parent.entity} tiene su PK y una colección inversa de ${child.route}.`, `${child.entity} guarda su PK, sus datos y la FK hacia ${parent.entity}.`],
           records: [`El ID 1 identifica ${parent.examples[0]}.`, `Los registros 7 y 9 de ${child.entity} guardan la referencia al ID 1.`, `El ID 2 identifica ${parent.examples[1]}.`, `El registro 8 de ${child.entity} guarda la referencia al ID 2.`],
-          trace: ['La llamada transporta los datos de la operación.', cloud ? 'El handler recibe body, pathParameters o queryStringParameters.' : 'El controller recibe body, parámetros de ruta o filtros de consulta.', 'El service organiza el caso y llama al repository.', cloud ? 'El repository usa el modelo y envía el comando de Toolbox.' : 'El repository usa la Entity y ejecuta la lectura o escritura SQL.']
+          trace: ['La llamada transporta los datos de la operación.', cloud ? 'El handler recibe body, pathParameters o queryStringParameters.' : 'El controller recibe body, parámetros de ruta o filtros de consulta.', !cloud&&data.nestSimpleRevision?'El Service usa directamente Repository<Obra> y Repository<Ayuntamiento>, proporcionados por TypeORM.':'El service organiza el caso y llama al repository.', cloud ? 'El repository usa el modelo y envía el comando de Toolbox.' : data.nestSimpleRevision?'Las Entities indican las columnas y la relación que TypeORM utiliza al leer o guardar.':'El repository usa la Entity y ejecuta la lectura o escritura SQL.']
         };
         return (meanings[step().scene] || [step().lead, block().explain, step().lead, step().expect])[state.focus];
       }
@@ -284,6 +284,11 @@
           const main=step().blocks.find(b=>/\/(handler|controller)\./.test(b.path||''));
           const prefix=main?.path.slice(0,main.path.lastIndexOf('/')+1);
           const kind=['','handler|controller','service','repository'][index];
+          if(state.track==='nest'&&data.nestSimpleRevision){
+            found=index===0?step().blocks.findIndex(b=>b.code.includes('curl ')):step().blocks.findIndex(b=>index===1?b.path?.endsWith('.controller.ts'):index===2?b.path?.endsWith('.service.ts'):false);
+            if(found>=0){state.block=found;state.page=0;state.full=false;}
+            render();return;
+          }
           found=index===0 ? step().blocks.findIndex(b=>b.code.includes('curl '))
             : step().blocks.findIndex(b=>b.path?.startsWith(prefix) && new RegExp('/('+kind+')\\.').test(b.path));
         }

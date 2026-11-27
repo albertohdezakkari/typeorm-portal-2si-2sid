@@ -1,6 +1,6 @@
 # Recorridos N:M de todo el alumnado
 
-En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con 51 pasos Nest y 60 Serverless, los seis casos y sus fichas.
+En el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), cada alumno elige su correo y después **Relación N:M**. Conserva su recorrido 1:N y su avance. Cada ampliación continúa el proyecto propio ya configurado, con los seis casos y sus fichas. El piloto de Arturo tiene 41 pasos Nest sencillos; los demás mantienen 51. Serverless conserva sus 60 pasos.
 
 | Caso | Proyecto 1:N existente | Ampliación N:M | Material |
 | --- | --- | --- | --- |

@@ -734,12 +734,17 @@ cat respuesta-nm.json''',note='AWS CLI usa AWS_PROFILE y AWS_REGION de tu termin
  add(t,9,'repaso','Repasa las claves y compara las dos tecnologías','review',expect='Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.')
 
 # Persistir las referencias completas. Las fases del cuaderno se generan desde los mismos textos.
+D=dict(version=1,unit='nm',caseId='CH-22',title='Obras y profesionales · relación N:M',chapters=chapters,tracks=tracks,cases=cases,profesionales=profesionales,asignaciones=asignaciones,baseline={'obras':[7,8,9],'obra7':{'presupuestoEuros':15000,'ayuntamientoId':2}})
+from arturo_nest_sencillo import apply_nm
+apply_nm(D,NEST)
 for tech,files in [('nest',NEST),('cloud',CLOUD)]:
  dest=OUT/'codigo'/tech
+ if tech=='nest':
+  for prefix in D.get('retiredNestDirectories',[]):
+   for stale in (dest/prefix).glob('*.ts'):stale.unlink()
  for path,text in files.items():write(dest/path,text)
 logical=ROOT.parent/'output/preview/nm-ayuntamiento/esquema-logico.svg'
 OUT.mkdir(exist_ok=True)
 shutil.copyfile(logical,OUT/'esquema-logico.svg')
-D=dict(version=1,unit='nm',caseId='CH-22',title='Obras y profesionales · relación N:M',chapters=chapters,tracks=tracks,cases=cases,profesionales=profesionales,asignaciones=asignaciones,baseline={'obras':[7,8,9],'obra7':{'presupuestoEuros':15000,'ayuntamientoId':2}})
 write(OUT/'CH-22.json',json.dumps(D,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps({'steps':{t:len(v) for t,v in tracks.items()},'files':{'nest':len(NEST),'cloud':len(CLOUD)}}))

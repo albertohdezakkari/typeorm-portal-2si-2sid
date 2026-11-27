@@ -2,11 +2,13 @@
 
 Abre el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#nm), selecciona tu correo y elige **Relación N:M**. Los 30 alumnos tienen su ampliación contextualizada: modelos, código por capas, seis casos, animaciones, puzles y fichas imprimibles. **Relación 1:N** conserva el proyecto anterior y su avance.
 
-Consulta el [índice de los 30 recorridos, sus PDF y su código](RECORRIDOS.md). La ampliación continúa la carpeta real del backend ya preparado; no repite su instalación ni su configuración. Cada recorrido tiene 51 pasos en Nest y 60 en Serverless. Sus datos de avance se guardan por correo, contexto y unidad, separados del 1:N.
+Consulta el [índice de los 30 recorridos, sus PDF y su código](RECORRIDOS.md). La ampliación continúa la carpeta real del backend ya preparado; no repite su instalación ni su configuración. Los recorridos conservan 60 pasos Serverless. Nest mantiene 51 pasos en el resto del alumnado; Arturo prueba ahora una versión sencilla de 41 pasos, con Service y Controller compartidos por recurso. Sus datos de avance se guardan por correo, contexto y unidad, separados del 1:N.
 
 `scripts/generar-nm-alumnado.py` especializa las plantillas validadas de `scripts/generar-nm.py` y `nm/taller.js` usando `scripts/nm-contextos.json`. Lee la base 1:N propia de cada contexto desde `preparar/CH-xx.json`; no transforma la base de Arturo en otra distinta. `--pdf` genera también las fichas a partir de los mismos archivos y de las imágenes de los esquemas incluidas. Los resultados están en `nm/casos/CH-xx/`. Arturo conserva los archivos, las URL y las claves de avance originales.
 
 ## Ejemplo validado · Obras y profesionales · CH-22
+
+Arturo prueba una versión Nest sencilla: sus operaciones usan directamente el repositorio de TypeORM dentro del Service y se agrupan en un Controller por recurso. No hay clases Repository propias. La ampliación conserva los cinco casos 1:N y añade los seis casos N:M. Las fichas impresas anteriores siguen disponibles como referencia; su traza se conserva en la plantilla de impresión.
 
 El contenido siguiente documenta la referencia original de Arturo. Los demás recorridos emplean sus propias entidades, atributos, rutas y roles, descritos en su README.
 

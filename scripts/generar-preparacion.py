@@ -80,6 +80,9 @@ def generate(source):
         return header+'\n  environment:'+environment+'\n\nfunctions:\n'+health_yaml+functions+'\nresources:'+resources+'\n'
 
     def modules(chapter):
+        if d.get('nestSimpleRevision'):
+            from arturo_nest_sencillo import module_code
+            return module_code(chapter)
         imports = ["import { Module } from '@nestjs/common';", "import { TypeOrmModule } from '@nestjs/typeorm';"]
         for e in (parent,child):
             imports.append(f"import {{ {e['entity']} }} from './{e['file'][4:-3]}';")
@@ -182,7 +185,7 @@ curl -i "{route}"''','Si cambias de terminal, recupera el ID de registro-creado.
 
     for tech,target in tracks.items():
         for chapter in range(1,6):
-            stages = [s for s in d['steps'][tech] if s['chapter']==chapter and s['path'].startswith('src/')]
+            stages = [s for s in d['steps'][tech] if s['chapter']==chapter and s['path'].startswith('src/') and not (tech=='nest' and d.get('nestSimpleRevision') and s['path']=='src/taller.module.ts')]
             blocks = []
             if tech=='cloud' and chapter==4:
                 dependency = next(s for s in d['steps']['cloud'] if s['chapter']==5 and s['name']=='Repository')
@@ -218,6 +221,8 @@ curl -i "{route}"''','Si cambias de terminal, recupera el ID de registro-creado.
     else:
         tracks = replace_strings(tracks, 'registro-creado.json', 'respuesta-registro.json')
     result = dict(version=1,caseId=c['id'],title=c['title'],context=c,fieldGuide=d['fieldGuide'],profile='default',team='equipo01',tracks=tracks)
+    from arturo_nest_sencillo import apply_preparation
+    apply_preparation(result,d)
     (ROOT/'preparar'/source.name).write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     return c['id'],len(nest),len(cloud)
 

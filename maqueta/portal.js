@@ -5,6 +5,8 @@
   const originalButtons = [...mainNav.children];
   const pageBrand = document.querySelector('body > header strong');
   const originalBrand = pageBrand.textContent;
+  const trainingHeading=document.querySelector('#panel-training h2');
+  const originalTrainingHeading=trainingHeading.textContent;
   const labels = new Map(originalButtons.map(b => [b, b.textContent]));
   const legacyNames = ['animation', 'case', 'er', 'crud', 'sheets', 'queries', 'functional', 'delivery'];
   const panelSlots = new Map();
@@ -36,7 +38,7 @@
     panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', `Elige la base que vas a preparar. Después vuelve al taller de ${data.context.title} para construir tus entidades y tus cinco casos.`) +
       `<div class="mq-repositories">
         <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/typeorm-base" target="_blank" rel="noopener">albertohdezakkari / typeorm-base ↗</a>
-        ${flow([['backend/','Tu proyecto Nest'],['Entities',data.context.parent.entity+' · '+data.context.child.entity],['Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
+        ${flow([['backend/','Tu proyecto Nest'],['Entities',data.context.parent.entity+' · '+data.context.child.entity],[data.nestSimpleRevision?'Service':'Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
         <ul class="mq-facts"><li><b>Carpeta de trabajo</b><code>backend/</code></li><li><b>Configuración que carga esta base</b><code>backend/.env.example</code></li><li><b>Comprobación de conexión</b><code>GET /salud</code></li></ul>
         <a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a></div></article>
         <article class="mq-repo mq-cloud"><div class="mq-repo-label"><span>02 / NoSQL</span><b>Ejemplo funcional</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">λ</i><h3>Serverless + Toolbox</h3><p>AWS · Lambda · DynamoDB</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/festival-checkin-01" target="_blank" rel="noopener">albertohdezakkari / festival-checkin-01 ↗</a>
@@ -54,14 +56,15 @@
     const models = data.steps[track].filter(s => s.chapter === 0 && /Entity|Table/.test(s.name));
     const shown = models.find(s => s.name.includes(track === 'nest' ? data.context.child.entity : 'Entity')) || models[0];
     panel('fichas-duales').innerHTML = head('Fichas · lectura y papel', 'El modelo, las capas y los cinco casos', 'Compara las dos tecnologías con el mismo contexto. Conservas también las cuatro fichas TypeORM anteriores, con su impresión original.') + techTabs() +
-      `<div class="mq-split"><div><div class="mq-paper-stack" aria-label="Organización propuesta del material impreso">${['01 · Relación y tablas','02 · Configuración y modelos','03 · Traza entre capas','04 · Cinco casos de uso'].map((x,i)=>`<div class="mq-paper"><b>${esc(x)}</b><span>${i===0?esc(data.context.parent.sql+' 1 → N '+data.context.child.sql):i===1?(track==='nest'?'Entities · relaciones · módulo':'YAML · Table · Entity'):i===2?(track==='nest'?'Controller → Service → Repository':'Handler → Service → Repository'):'Crear · listar · modificar · trasladar · consultar'}</span></div>`).join('')}</div><p class="mq-note">Vista previa de la organización. Este esquema no genera ni sustituye un PDF.</p>${action('sheets','Abrir fichas TypeORM originales')} ${action('training','Estudiar las dos tecnologías')}</div><div>${shown ? sourceCode(shown.path, shown.code, 'Código completo del modelo que ya estudias en Entrenar. Se muestra desde la misma fuente, sin reescribirlo.') : ''}</div></div>`;
+      `<div class="mq-split"><div><div class="mq-paper-stack" aria-label="Organización propuesta del material impreso">${['01 · Relación y tablas','02 · Configuración y modelos','03 · Traza entre capas','04 · Cinco casos de uso'].map((x,i)=>`<div class="mq-paper"><b>${esc(x)}</b><span>${i===0?esc(data.context.parent.sql+' 1 → N '+data.context.child.sql):i===1?(track==='nest'?'Entities · relaciones · módulo':'YAML · Table · Entity'):i===2?(track==='nest'?data.nestSimpleRevision?'Controller → Service → Entity':'Controller → Service → Repository':'Handler → Service → Repository'):'Crear · listar · modificar · trasladar · consultar'}</span></div>`).join('')}</div><p class="mq-note">Vista previa de la organización. Este esquema no genera ni sustituye un PDF.</p>${action('sheets','Abrir fichas TypeORM originales')} ${action('training','Estudiar las dos tecnologías')}</div><div>${shown ? sourceCode(shown.path, shown.code, 'Código completo del modelo que ya estudias en Entrenar. Se muestra desde la misma fuente, sin reescribirlo.') : ''}</div></div>`;
   }
 
   function renderQueries() {
-    const step = data.steps[track].find(s => s.chapter === operation && s.name === 'Repository');
+    const simple=track==='nest'&&data.nestSimpleRevision;
+    const step = data.steps[track].find(s => s.chapter === operation && s.name === (simple?'Service':'Repository'));
     const op = data.operations.find(x => x.ch === operation);
-    panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', 'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
-      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow([['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div><div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`;
+    panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', simple?'Selecciona una operación. Todas se añaden al mismo ObrasService, que utiliza las Entities de TypeORM.':'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
+      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller','ObrasController'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div><div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`;
   }
 
   function renderChecks() {
@@ -91,6 +94,8 @@
     newNames.forEach(name => panel(name)?.remove());
     workspace.querySelector('.mq-pilot-banner')?.remove();
     pageBrand.textContent = originalBrand;
+    trainingHeading.textContent=originalTrainingHeading;
+    delete workspace.dataset.simpleNest;
     delete workspace.dataset.cuaderno;
     mountedContext = null;
     mounted = false;
@@ -161,11 +166,12 @@
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=entity-1`, `preparar/${encodeURIComponent(context.id)}.json?v=entity-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=${context.id==='CH-22'?'arturo-simple-1':'entity-1'}`, `preparar/${encodeURIComponent(context.id)}.json?v=${context.id==='CH-22'?'arturo-simple-1':'entity-1'}`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;
       [data,preparation] = results;
+      if(data.nestSimpleRevision){workspace.dataset.simpleNest='true';trainingHeading.textContent='Entrenar con mis fichas';}
       renderBases();
       renderReferences();
     } catch {

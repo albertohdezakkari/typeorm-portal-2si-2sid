@@ -105,8 +105,8 @@ def run(command, cwd):
 
 def verify(path):
     data = json.loads(path.read_text()); ctx=data['context']; p,n,m=ctx['parent'],ctx['child'],ctx['metric']
-    for steps in data['steps'].values():
-        assert len(steps)==26
+    for tech,steps in data['steps'].items():
+        assert len(steps)==(22 if tech=='nest' and data.get('nestSimpleRevision') else 26)
         for step in steps:
             assert all(cue['text'] in step['code'] for cue in step['cues'])
     with tempfile.TemporaryDirectory(prefix='taller-'+ctx['id']+'-') as temporary:
@@ -117,7 +117,10 @@ def verify(path):
             files={}
             for step in data['steps'][tech]:
                 if step['path'].startswith('src/'):
-                    assert files.setdefault(step['path'],step['code'])==step['code'],(ctx['id'],step['path'],'duplicado distinto')
+                    if tech=='nest' and data.get('nestSimpleRevision'):
+                        files[step['path']]=step['code']
+                    else:
+                        assert files.setdefault(step['path'],step['code'])==step['code'],(ctx['id'],step['path'],'duplicado distinto')
             for relative, code in files.items():
                 file=target/relative;file.parent.mkdir(parents=True,exist_ok=True);file.write_text(code+'\n')
             if tech=='nest':
