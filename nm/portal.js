@@ -66,7 +66,8 @@
   if(request!==sequence||workspace.dataset.currentCase!==context.id||!workspace.classList.contains('active'))return;
   const metadata=(await catalogue)[context.id];
   if(!metadata||request!==sequence)return;
-  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(student.email.trim().toLowerCase()+'|'+context.id+'|nm'));
+  const identity=student.teacherDemo?'ejemplo-docente':student.email.trim().toLowerCase();
+  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(identity+'|'+context.id+'|nm'));
   if(request!==sequence)return;
   const key='sv:nm:v1:'+Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
   let saved=null;try{saved=JSON.parse(localStorage.getItem(key)||'null');}catch{}
