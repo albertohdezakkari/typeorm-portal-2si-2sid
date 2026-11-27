@@ -6,6 +6,7 @@ Los otros contextos y todo el recorrido Serverless conservan su versión.
 """
 from copy import deepcopy
 import json
+import hashlib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 SERVICE_PATH='src/obras/obras.service.ts'
@@ -332,12 +333,46 @@ def assignment_controller(through):
 
 def apply_nm(data,files):
     if data['caseId']!='CH-22':return
-    old=deepcopy(data['tracks']['nest']);data.setdefault('legacyNestIds',[s['id']for s in old]);data['nestSimpleRevision']=1
+    old=deepcopy(data['tracks']['nest']);data.setdefault('legacyNestIds',[s['id']for s in old]);data['nestSimpleRevision']=2
     # Mantener el modelo, los datos, el arranque y las pruebas; sustituir las capas.
     result=[]
+    full_models={s['id']:s for s in old if s['kind']=='model'}
     for item in old:
-        if item['chapter']>=3:continue
-        s=deepcopy(item)
+        if item['chapter']>=3 or item['id']in ['nosql','asignacion','prof-inversa']:continue
+        s=deepcopy(full_models['prof-inversa'] if item['id']=='profesional' else item)
+        if item['id']=='profesional':s['id']='profesional'
+        if s['kind']=='model':
+            titles={'profesional':'Crear Profesional Entity completa','obra-inversa':'Ampliar Obra Entity existente','asig-inversas':'Crear Asignacion Entity completa'}
+            s['title']=titles[s['id']]
+            s['note']='Prepara estos tres archivos completos antes de compilar: Profesional, Obra y Asignacion. Las propiedades enlazan las Entities entre sí; no necesitas crear otra versión del archivo. Ayuntamiento ya está preparado en el 1:N.'
+            s['expect']='Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.'
+            specs={
+              'profesional':[
+                ("@Entity({ name: 'PROFESIONAL' })",'Esta clase representa la tabla PROFESIONAL.'),
+                ("@PrimaryGeneratedColumn({ name: 'ID' })",'ID es la clave primaria. PostgreSQL genera su valor al guardar un profesional.'),
+                ("@Column({ name: 'NOMBRE', type: 'varchar', length: 120 })",'nombre se guarda en NOMBRE como texto de hasta 120 caracteres.'),
+                ("@Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })",'apellidos se guarda en otra columna de texto.'),
+                ("@Column({ name: 'EMAIL', type: 'varchar', length: 180 })",'email se guarda como texto en EMAIL.'),
+                ('@OneToMany(() => Asignacion, asignacion => asignacion.profesional)','Un profesional tiene varias asignaciones. Cada asignación apunta a su profesional.')],
+              'obra-inversa':[
+                ("@Entity({ name: 'OBRA' })",'Conserva la tabla OBRA y todos sus campos del proyecto 1:N.'),
+                ('@ManyToOne(() => Ayuntamiento, ayuntamiento => ayuntamiento.obras, {','La relación anterior se conserva: cada obra pertenece a un ayuntamiento.'),
+                ("@JoinColumn({ name: 'ID_AYUNTAMIENTO' })",'ID_AYUNTAMIENTO sigue siendo la clave foránea hacia AYUNTAMIENTO.'),
+                ('@OneToMany(() => Asignacion, asignacion => asignacion.obra)','Añade la colección de asignaciones de esta obra. La pareja de IDs se guarda en ASIGNACION.'),
+                ('asignaciones!: Asignacion[];','Los corchetes indican una colección. TypeORM puede relacionar la obra con varias asignaciones.')],
+              'asig-inversas':[
+                ("@Entity({ name: 'ASIGNACION' })",'La tabla intermedia guarda qué profesional participa en qué obra y con qué rol.'),
+                ("@PrimaryColumn({ name: 'ID_OBRA', type: 'integer' })",'Primer componente de la clave primaria: el ID de la obra. Este valor llega de la petición; no se genera automáticamente.'),
+                ("@PrimaryColumn({ name: 'ID_PROFESIONAL', type: 'integer' })",'Segundo componente. Los dos IDs juntos identifican una única asignación; cada ID por separado puede repetirse.'),
+                ("@Column({ name: 'ROL', type: 'varchar', length: 120 })",'ROL pertenece al vínculo: una persona puede tener roles distintos en obras distintas.'),
+                ("@ManyToOne(() => Obra, obra => obra.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_OBRA' })",'Cada asignación apunta a una obra mediante ID_OBRA. RESTRICT impide borrar esa obra mientras tenga asignaciones.'),
+                ("@ManyToOne(() => Profesional, profesional => profesional.asignaciones, { onDelete: 'RESTRICT' })\n  @JoinColumn({ name: 'ID_PROFESIONAL' })",'La misma fila apunta también al profesional mediante ID_PROFESIONAL. Así se unen ambos extremos.')]
+            }
+            s['cues']=[]
+            for token,note in specs[s['id']]:
+                start=s['code'].index(token);s['cues'].append(dict(token=token,start=start,end=start+len(token),note=note))
+            if s['id']=='obra-inversa':s['updateExisting']=True;s['create']='code '+s['path']
+
         if s['id']=='registrar':
             s['code']=module_code(1,True);s['note']='Conserva ObrasController y ObrasService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.'
             s['cues']=[dict(token='TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])',start=s['code'].index('TypeOrmModule.forFeature'),end=s['code'].index('TypeOrmModule.forFeature')+len('TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])'),note='Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM.')]
@@ -354,7 +389,12 @@ def apply_nm(data,files):
         c=[]
         for token,note in spec:
             start=code.index(token);c.append(dict(token=token,start=start,end=start+len(token),note=note))
-        return dict(id=case['slug']+('-service'if kind=='service'else'-entry'),chapter=case['chapter'],title='Completa el mismo Service'if kind=='service'else'Conecta la ruta en el mismo Controller',kind=kind,code=code,path=path,note='Copia el archivo completo; conserva los métodos de los casos anteriores. El Service usa directamente el repositorio de TypeORM, sin otra clase intermedia.',expect=case['expect'],focus='service'if kind=='service'else'entry',cues=c,create=f'mkdir -p {Path(path).parent}\ntouch {path}\ncode {path}')
+        resource='Profesionales'if case['chapter']==3 else'Asignaciones'
+        method={5:'listarPorObra',6:'listarPorProfesional',7:'modificarRol',8:'eliminarAsignacion'}.get(case['chapter'])
+        layer='Service'if kind=='service'else'Controller'
+        title=f'Crear {resource}{layer}'if not method else f'Añadir {method} al {layer}'
+        note=('Crea este archivo una sola vez. '+('El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.'if kind=='service'else'El Controller recibe la petición y llama al Service.'))if not method else 'Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.'
+        return dict(id=case['slug']+('-service'if kind=='service'else'-entry'),chapter=case['chapter'],title=title,kind=kind,code=code,path=path,note=note,expect=case['expect'],focus='service'if kind=='service'else'entry',cues=c,updateExisting=bool(method),create='code '+path if method else f'mkdir -p {Path(path).parent}\ntouch {path}\ncode {path}')
     for i,case in enumerate(data['cases']):
         item={**case,'chapter':i+3}
         if i==0:
@@ -368,7 +408,7 @@ def apply_nm(data,files):
         result += [stage(item,'service',svc_path,svc,svc_specs[i]),stage(item,'entry',ctrl_path,ctrl,ctrl_specs)]
         files[svc_path]=svc+'\n';files[ctrl_path]=ctrl+'\n'
         if i<2:
-            prior=next(s for s in old if s['id']==case['slug']+'-registro');mod=deepcopy(prior);mod['code']=module_code(1,True,i+1);mod['note']='Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.'
+            prior=next(s for s in old if s['id']==case['slug']+'-registro');mod=deepcopy(prior);mod['code']=module_code(1,True,i+1);mod['title']='Registrar '+('Profesionales'if i==0 else'Asignaciones')+' una sola vez';mod['note']='Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.'
             mod['cues']=[]
             for token,note in [('controllers: [','Nest conecta las rutas de los Controllers.'),('providers: [','Nest puede entregar estos Services por sus constructores.')]:
                 start=mod['code'].index(token);mod['cues'].append(dict(token=token,start=start,end=start+len(token),note=note))
@@ -377,6 +417,11 @@ def apply_nm(data,files):
     result += [deepcopy(s)for s in old if s['chapter']==9]
     prior={s['id']:s for s in old}
     data['nestRetainedIds']=[s['id']for s in result if s['id']in prior and s['code']==prior[s['id']]['code'] and s['cues']==prior[s['id']]['cues']]
+    snapshot=json.loads((ROOT/'scripts/plantillas/nm-ch22-nest-layout-v1.json').read_text())
+    signature=lambda s:hashlib.sha256(json.dumps({'code':s['code'],'cues':s['cues']},ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+    data['nestPreviousIds']={'0':data['legacyNestIds'],'1':snapshot['ids']}
+    data['nestRetainedByRevision']={'0':data['nestRetainedIds'],'1':[s['id']for s in result if snapshot['hashes'].get(s['id'])==signature(s)]}
+    data['nestStepAliases']={'nosql':'logico','asignacion':'asig-inversas','prof-inversa':'profesional'}
     data['tracks']['nest']=result
     # Referencia completa compatible con el 1:N sencillo, sin archivos huérfanos.
     obsolete=['src/obras/crear-listar/','src/obras/eliminar/','src/obras/modificar-presupuesto-euros/','src/obras/trasladar/','src/ayuntamientos/consultar/','src/profesionales/crear-listar/']
