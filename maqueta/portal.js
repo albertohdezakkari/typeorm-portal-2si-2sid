@@ -83,7 +83,7 @@
   }
 
   function renderReferences() {
-    if (!mounted || !data || !preparation) return;
+    if (!mounted || !data || !preparation || data.projectBase) return;
     renderSheets(); renderQueries(); renderChecks();
   }
 
@@ -110,6 +110,7 @@
 
   function show(name) {
     if (!mounted) return;
+    if(data?.projectBase&&['fichas-duales','consultas-duales','pruebas-duales','anteriores','simulacion'].includes(name))name='training';
     const legacy = legacyNames.includes(name);
     activeZone = legacy ? 'anteriores' : name === 'preparation' ? 'bases' : name;
     const destination = legacy ? 'anteriores' : name;
@@ -159,7 +160,8 @@
       }
       const training = originalButtons.find(b => b.dataset.tab === 'training');
       // El taller y su iframe se mantienen intactos; solo cambia su posición en el índice exterior.
-      const visibleButtons = titles.map(([name,label]) => {
+      const visibleTitles=context.id==='CH-22'?titles.filter(([name])=>['bases','training'].includes(name)):titles;
+      const visibleButtons = visibleTitles.map(([name,label]) => {
         if (name === 'training') { training.textContent = label; return training; }
         const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role','tab'); b.setAttribute('aria-selected','false'); b.dataset.tab = name; b.textContent = label;
         b.addEventListener('click', () => show(name)); return b;
@@ -168,22 +170,17 @@
       preparationButton.hidden = true; // Puente existente desde Entrenar a la preparación guiada.
       mainNav.replaceChildren(...visibleButtons, preparationButton);
       panel('bases').innerHTML = '<p role="status">Preparando las bases de tu contexto…</p>';
-      renderSimulation();
+      if(context.id!=='CH-22')renderSimulation();
       for (const name of ['fichas-duales','consultas-duales','pruebas-duales']) panel(name).innerHTML = '<p role="status">Cargando las referencias del taller…</p>';
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=base-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=base-arturo-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=dos-pestanas-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=dos-pestanas-arturo-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;
       [data,preparation] = results;
       if(data.nestSimpleRevision){workspace.dataset.simpleNest='true';trainingHeading.textContent='Entrenar con mis fichas';}
-      if(data.projectBase){
-        mainNav.querySelector('[data-tab="anteriores"]').hidden=true;
-        mainNav.querySelector('[data-tab="fichas-duales"]').textContent='3 · Repasar el código';
-        for(const b of mainNav.querySelectorAll('[role="tab"]'))if(b.dataset.tab==='simulacion')b.textContent='6 · Simulación y entregas';
-      }
       renderBases();
       renderReferences();
     } catch {

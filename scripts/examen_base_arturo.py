@@ -99,6 +99,8 @@ def replace(value, before, after):
 
 def training(d):
     if d['context']['id'] != 'CH-22': return d
+    for stage in d['steps']['nest']:
+        if stage['scene']=='result':stage['code']=stage['code'].replace('Para ejecutar sobre tu base, abre Preparar y ejecutar y utiliza los IDs reales de ids-aula.env.', 'Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.')
     if d.get('projectBase') == BASE: return d
     d['projectBase'] = deepcopy(BASE)
     d['legacyNestChapters'] = [s['chapter'] for s in d['steps']['nest']]

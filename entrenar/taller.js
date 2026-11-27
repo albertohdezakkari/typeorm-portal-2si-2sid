@@ -223,7 +223,46 @@ function syncExplanationProgress(){
  }
 }
 function controls(){const s=stage();$('[data-play]').textContent=playing?'Pausar animación':mode==='build'?'Volver a observar':'Ver animación';$('[data-frame]').hidden=mode==='build';$('[data-build]').hidden=mode==='build';$('[data-check]').hidden=mode!=='build';$('[data-mode]').textContent=mode==='build'?'Monta el archivo. El dibujo te acompaña.':playing?'Sigue la pieza que entra en el archivo.':'Observa o avanza a tu ritmo.';$('[data-next]').disabled=!solved.has(key())||index===D.steps[track].length-1;$('[data-back]').disabled=index===0;$('[data-progress]').textContent=`${D.steps[track].filter((_,i)=>solved.has(track+':'+i)).length} / ${D.steps[track].length} pasos`;$('[data-title]').textContent=s.name;$('[data-meta]').textContent=`${D.source.label}${D.source.kind==='pdf'?' · página '+s.page:''} · ${s.entityAccess?'acceso uniforme con EntityRepository':s.exact?(s.annotated?'modelo de la ficha · comentado':'modelo de la ficha'):'aplicación guiada'} · ${mode==='observe'?'1 · Observar':'2 · Construir'}`;$('[data-path]').textContent=s.path;syncExplanationProgress();}
-function render(){renderNav();renderCode();renderScene();controls();}
+function renderPractice(){
+ if(!D.practice)return;
+ let host=$('[data-practice]');
+ if(!host){host=document.createElement('section');host.className='p-practice';host.setAttribute('data-practice','');$('.p-bottom').before(host);}
+ const s=stage(),lastModel=D.steps[track].filter(x=>x.chapter===0).at(-1),models=s===lastModel;
+ host.hidden=!models&&s.scene!=='result';
+ if(host.hidden)return;
+ if(host.dataset.stage===key())return;
+ host.dataset.stage=key();
+ const phases=D.practice[track],phase=phases.find(x=>x.id===(models?'modelos':'caso-'+s.chapter));
+ if(!phase){host.hidden=true;return;}
+ let blocks;
+ if(models){
+  const studied=new Set(D.steps[track].filter(x=>x.chapter===0).map(x=>x.path));
+  const connection=phases.find(x=>x.id==='conexion');
+  const additions=track==='nest'?(connection?.blocks.filter(b=>b.path==='src/salud.controller.ts'||b.kind==='instruction')||[]):[];
+  const url=track==='cloud'?phases.find(x=>x.id==='desplegar')?.blocks.filter(b=>b.title==='Obtén la URL del stack')||[]:[];
+  blocks=[...additions,...phase.blocks.filter(b=>b.kind!=='file'||!studied.has(b.path)),...url,...phases.find(x=>x.id==='datos').blocks];
+ }else{
+  // Los archivos de las capas se estudian arriba. El YAML acumulativo permite desplegar cada caso.
+  blocks=phase.blocks.filter(b=>b.kind!=='file'||b.path==='serverless.yml');
+ }
+ const copies=[];
+ const codeBox=(code,label)=>{const id=copies.push(code)-1;return `<div class="p-practice-code"><div><span>${esc(label)}</span><button type="button" class="p-btn" data-practice-copy="${id}">Copiar</button></div><pre tabindex="0"><code>${esc(code)}</code></pre></div>`;};
+ const content=blocks.map(b=>{
+  const instructions=b.instructions?.length?`<ol>${b.instructions.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'';
+  const create=b.kind==='file'&&b.create?codeBox(b.create,'Crea o abre el archivo'):'';
+  const code=b.code?codeBox(b.code,b.kind==='file'?'Contenido completo · guarda el archivo':'Ejecuta en tu terminal'):'';
+  const explanation=(b.explain||'').replace(' PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.',track==='nest'?' PostgreSQL genera el ID mediante @PrimaryGeneratedColumn.':' El Service genera el ID con Date.now. Scan no garantiza el orden del listado.');
+  const inner=instructions+create+code+(explanation?`<p>${esc(explanation)}</p>`:'');
+  return b.kind==='file'?`<details class="p-practice-block"><summary>${esc(b.path)}</summary>${inner}</details>`:`<section class="p-practice-block"><h3>${esc(b.title)}</h3>${inner}</section>`;
+ }).join('');
+ host.innerHTML=`<header><span class="p-label">EN TU PROYECTO · ${track==='nest'?'NEST + TYPEORM':'SERVERLESS + TOOLBOX'}</span><h2>${models?'Aplica el modelo y prepara los datos':'Prueba este caso desde tu terminal'}</h2><p>${models?'Continúa en el backend que ya preparaste siguiendo su README. Los archivos de las Entities y las capas están arriba; aquí tienes su conexión con la aplicación y los datos de ejemplo.':track==='nest'?'Guarda los archivos del caso y mantén Nest abierto en Terminal 1. Ejecuta las pruebas en Terminal 2, dentro de backend. Sigue los casos en orden; conserva el ID devuelto al crear.':'Guarda los archivos del caso. Usa la sesión AWS y API_URL de tu proyecto; estos comandos se ejecutan en su terminal. Sigue los casos en orden y conserva el ID devuelto al crear.'}</p></header>${content}<div class="p-practice-expect"><strong>Qué debes comprobar</strong><p>${esc(models?phases.find(x=>x.id==='datos').expect:phase.expect)}</p><small>El cuaderno explica y copia los comandos. Las peticiones se ejecutan en tu terminal y las respuestas las devuelve tu backend.</small></div>`;
+ host.querySelectorAll('[data-practice-copy]').forEach(button=>button.onclick=async()=>{
+  try{await navigator.clipboard.writeText(copies[Number(button.dataset.practiceCopy)]);button.textContent='Copiado';}
+  catch{button.textContent='Selecciona el código';}
+ });
+}
+
+function render(){renderNav();renderCode();renderScene();controls();renderPractice();}
 function go(i){stop();index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();}
 function fly(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=$('[data-cue] code'),b=isRelation()?$(`[data-er-focus="${frame}"]`):$('[data-code] .p-line[data-active=true]');if(!a||!b)return;const r=root.getBoundingClientRect(),ar=a.getBoundingClientRect(),br=b.getBoundingClientRect(),el=document.createElement('span');el.className='p-fly';el.textContent=stage().cues[frame].text;el.style.left=(ar.left-r.left)+'px';el.style.top=(ar.top-r.top)+'px';root.appendChild(el);const animation=el.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${br.left-ar.left+(isRelation()?0:32)}px,${br.top-ar.top}px)`,opacity:.25}],{duration:850,easing:'cubic-bezier(.4,0,.2,1)'});animation.onfinish=()=>el.remove();}
 function playTick(){render();fly();timer=setTimeout(()=>{if(!playing)return;if(frame<stage().cues.length-1){frame++;playTick();}else{observed.add(key());stop();controls();feedback('Ya has visto el archivo. Pulsa «Ahora lo monto yo».','good');persist();}},2400);}

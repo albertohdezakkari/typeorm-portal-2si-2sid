@@ -54,7 +54,7 @@ function defaults(saved){
 function shell(){
  root.toggleAttribute('data-project-base',Boolean(D.projectBase));
  root.innerHTML=`<div class="nm-app"><div class="nm-menu"><div class="nm-menu-content"><header class="nm-top"><div><span class="nm-eyebrow">CH-22 · AMPLIACIÓN N:M</span><h1>Obras y profesionales</h1><p>Entiende la relación. Construye las dos versiones. Comprueba tus datos.</p></div><div class="nm-tech" aria-label="Tecnología">${[['nest','Nest + TypeORM'],['cloud','Serverless + Toolbox']].map(([t,label])=>`<button type="button" data-action="track" data-track="${t}">${label}</button>`).join('')}</div></header><div class="nm-toolbar"><button type="button" data-action="baseline">Abrir preparación 1:N</button><a href="fichas-nm-ch22.pdf" target="_blank" rel="noopener">Fichas N:M para imprimir ↗</a><a data-reference target="_blank" rel="noopener">Código completo ↗</a></div><nav class="nm-chapters" aria-label="Orden de la ampliación"></nav><nav class="nm-files" aria-label="Pasos y archivos de este apartado"></nav></div><button type="button" class="nm-summary" data-action="expand" aria-expanded="false" hidden></button></div><div class="nm-work"></div><p class="nm-announcement" role="status" aria-live="polite"></p></div>`;
- if(D.projectBase)root.querySelector('.nm-toolbar a').hidden=true;
+ if(D.projectBase){root.querySelector('.nm-toolbar a').hidden=true;root.querySelector('[data-action=baseline]').textContent='Volver al entrenamiento 1:N';}
  else if(D.nestSimpleRevision){
   root.querySelector('.nm-toolbar a').textContent='Fichas anteriores (con Repository) ↗';
  }

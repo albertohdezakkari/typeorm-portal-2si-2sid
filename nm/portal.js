@@ -83,8 +83,8 @@
   categories.addEventListener('click',event=>{const button=event.target.closest('[data-relation]');if(button)choose(button.dataset.relation);});
   // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
-  const simulation=mainNav.querySelector('[data-tab="simulacion"]');simulation.before(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=base-arturo-1';}});
+  const simulation=mainNav.querySelector('[data-tab="simulacion"]');if(simulation)simulation.before(button);else mainNav.append(button);
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=dos-pestanas-arturo-1';}});
   const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
   if(location.hash==='#nm')choose('nm');
@@ -98,7 +98,10 @@
   if(data.type==='nm:progress'&&data.state?.version===1&&data.state.caseId===current.caseId&&data.state.unit==='nm'){
    try{const json=JSON.stringify(data.state);if(json.length<180000){localStorage.setItem(current.key,json);current.state=data.state;document.getElementById('nm-status').textContent='Avance N:M guardado en este navegador. Tu progreso 1:N se conserva por separado.';}}catch{}
   }
-  if(data.type==='nm:baseline')window.abrirPreparacionGuiada?.(data.track);
+  if(data.type==='nm:baseline'){
+   if(current.caseId==='CH-22'){choose('one');current.mainNav.querySelector('[data-tab="training"]').click();}
+   else window.abrirPreparacionGuiada?.(data.track);
+  }
   if(data.type==='nm:error')document.getElementById('nm-status').textContent='No se ha podido abrir la ampliación. Recarga la página y elige tu correo.';
  });
  document.getElementById('back').addEventListener('click',()=>{++sequence;clean();});
