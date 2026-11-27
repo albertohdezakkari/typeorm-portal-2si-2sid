@@ -1,51 +1,34 @@
-# Arturo · backend Nest + TypeORM
+# Arturo · ampliación N:M en Nest + TypeORM
 
-Esta referencia continúa el backend de [examen-typeorm-27-11-26-01](https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01), revisión `87d1475`. El recorrido guiado está en el [cuaderno de Arturo](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/#1n): elige su correo y pulsa **Preparar proyecto base → Preparar mi backend paso a paso**.
+Continúa en el mismo backend de Ayuntamiento y Obra que ya preparaste en 1:N. Conserva su conexión y sus datos.
 
-El proyecto del alumno se clona una vez. Se trabaja dentro de `backend`. Primero se prepara Ayuntamiento → Obra (1:N); después se añaden Profesional y Asignacion (N:M) en esa misma carpeta.
+## Orden de trabajo
 
-## Archivos
+1. Crea `Profesional` y `Asignacion` en sus carpetas `entities`.
+2. Relaciona ambas y amplía la Entity `Obra` existente.
+3. Configura los módulos e impórtalos en `AppModule`.
+4. Crea `ProfesionalesService` y `ProfesionalesController`.
+5. Crea `AsignacionesService` y `AsignacionesController`; añade sus métodos en el orden del cuaderno.
+6. Prueba cada método con curl. Los datos se crean mediante los Controllers.
 
-- `src/app.module.ts`: conserva la conexión y carga los tres módulos.
-- `src/salud.controller.ts`: comprueba la conexión en `/salud`.
-- Cada recurso tiene un módulo, un Service y un Controller.
-- Las Entities definen columnas y relaciones. `synchronize: true` crea las tablas.
-- `Repository<Entity>` se inyecta directamente en el Service. No hay clases Repository propias.
-- `src/datos/cargar-datos.ts` carga los ejemplos 1:N; `cargar-datos-nm.ts` añade los de N:M. Ambos usan las Entities.
+El Repository nativo de TypeORM se inyecta directamente en el Service. `synchronize: true` crea las tablas desde las Entities.
 
-## Ejecutar esta referencia completa
-
-Necesitas Node 20.19.4 o superior y PostgreSQL encendido. Abre una terminal en la carpeta que contiene este `package.json`.
+En Terminal 1, dentro del backend que ya funcionaba:
 
 ```bash
-npm ci --legacy-peer-deps
-code .env
-```
-
-Guarda en `.env` tu contraseña real:
-
-```dotenv
-DB_PASSWORD=ESCRIBE_TU_CONTRASEÑA
-```
-
-Los demás valores se leen de `.env.example`. Si tu conexión es diferente, añade sus valores a `.env`. Este archivo no se sube a GitHub.
-
-En Terminal 1:
-
-```bash
-npm run build
-node dist/datos/cargar-datos.js
-node dist/datos/cargar-datos-nm.js
 npm run start:dev
 ```
 
-Deja Terminal 1 abierta. En Terminal 2, dentro de la misma carpeta:
+En Terminal 2, crea un profesional a través de su Controller:
 
 ```bash
-. ./ids-aula.env
-curl -i http://localhost:3000/salud
+curl -i -X POST "http://localhost:3000/profesionales" \
+  -H 'Content-Type: application/json' \
+  -d '{"nombre":"Diego","apellidos":"Ruiz López","email":"diego.ruiz@example.test"}'
+curl -i http://localhost:3000/profesionales
 curl -i http://localhost:3000/obras
-curl -i "http://localhost:3000/obras/$OBRA_1_ID/asignaciones"
 ```
 
-`ids-aula.env` contiene los IDs reales de tu base. Los IDs de los dibujos son ejemplos. El cuaderno muestra, en orden, los archivos y las pruebas de cada caso.
+Anota el ID devuelto por POST y el de una obra existente. Utilízalos en los casos de asignar, consultar, cambiar rol y quitar vínculo. El cuaderno usa la obra 7 y el profesional 1 como ejemplo: sustitúyelos por tus IDs reales.
+
+La N:M no requiere un script de carga ni un fichero de IDs. El esquema lógico y sus dibujos ilustran la relación; las altas se hacen con los Controllers que acabas de programar.

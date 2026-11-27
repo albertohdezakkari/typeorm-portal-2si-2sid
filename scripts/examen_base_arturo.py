@@ -179,7 +179,10 @@ def set_cues(s,specs):
 
 def nm(d, files):
     if d['caseId'] != 'CH-22': return
-    if d.get('projectBase')==BASE:return
+    if d.get('projectBase')==BASE:
+        from nm_sin_carga_arturo import apply
+        apply(d,files)
+        return
     old=[s['id'] for s in d['tracks']['nest']]
     d.setdefault('nestPreviousIds',{})['2']=old
     d.setdefault('nestRetainedByRevision',{})['2']=[s['id']for s in d['tracks']['nest']if s['kind']not in ['module'] and s['id']not in ['retomar','arrancar','cargar']]
@@ -222,6 +225,8 @@ def nm(d, files):
     files['src/app.module.ts']=app_code(models=True,nm=True)+'\n'
     files['src/salud.controller.ts']=HEALTH+'\n'
     for resource in ['Profesionales','Asignaciones']:files[f'src/{resource.lower()}/{resource.lower()}.module.ts']=module_code(resource,active=True)+'\n'
+    from nm_sin_carga_arturo import apply
+    apply(d,files)
 
 
 def main():
@@ -230,8 +235,9 @@ def main():
     nm_path=ROOT/'nm/CH-22.json';data=json.loads(nm_path.read_text());dest=ROOT/'nm/codigo/nest';files={str(p.relative_to(dest)):p.read_text()for p in dest.rglob('*')if p.is_file()};nm(data,files)
     # La referencia N:M usa el mismo Service final de 1:N.
     files['src/obras/obras.service.ts']=next(s['code']for s in train['steps']['nest']if s['chapter']==5 and s['name']=='Service')+'\n'
-    stale=dest/'src/taller.module.ts'
-    if stale.exists():stale.unlink()
+    for name in ['src/taller.module.ts','src/datos/cargar-datos-nm.ts']:
+        stale=dest/name
+        if name not in files and stale.exists():stale.unlink()
     for path,code in files.items():
         out=dest/path;out.parent.mkdir(parents=True,exist_ok=True);out.write_text(code)
     nm_path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')

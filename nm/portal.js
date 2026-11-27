@@ -91,7 +91,7 @@
   // Se conserva el punto de entrada interno para los enlaces existentes, fuera del menú visible.
   const button=document.createElement('button');button.type='button';button.dataset.tab='nm';button.hidden=true;button.setAttribute('role','tab');button.setAttribute('aria-selected','false');button.textContent='Ampliación N:M';
   const simulation=mainNav.querySelector('[data-tab="simulacion"]');if(simulation)simulation.before(button);else mainNav.append(button);
-  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=nm-continuar-proyecto-1';}});
+  button.addEventListener('click',()=>{if(!current)return;window.activateTab(button);if(!current?.started){current.started=true;current.frame.src=metadata.url+'?v=nm-sin-carga-1';}});
   const frame=section.querySelector('iframe');current={key,binding,caseId:context.id,frame,state:saved,started:false,relation:'one',lastOneTab:mainNav.querySelector('[aria-selected="true"]')?.dataset.tab||'bases',mainNav,banner,categories,nmButton:button};
   category('one');
   if(context.id!=='CH-22'&&location.hash==='#nm')choose('nm');
