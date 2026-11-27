@@ -1,5 +1,7 @@
 # Taller de las APIs de cada alumno
 
+Los módulos, Services y Controllers nuevos se generan con `npx --offline nest g module nombre-del-caso`, `npx --offline nest g service nombre-del-caso --no-spec` y `npx --offline nest g controller nombre-del-caso --no-spec`. Nest crea las carpetas y registra las clases. Después completa el código y `TypeOrmModule.forFeature`; en los siguientes casos abre y amplía los mismos archivos, sin repetir generate.
+
 En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo, lee el README de la base en **Preparar proyecto base** y continúa en **Entrenar con mis fichas**.
 
 La relación 1:N tiene 27 pasos Nest y 31 Serverless. Se programan los dos extremos: Entities, Service y Controller del principal, su módulo y las altas y listados; después, los casos del relacionado con su FK. En Serverless, las rutas se conectan a sus Handlers, Services y Repositories basados en Entity.

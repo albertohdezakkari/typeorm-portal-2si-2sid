@@ -245,10 +245,10 @@
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Plaza, Tecnico])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Este módulo agrupa Plaza, Tecnico y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo urbanizacion. No se crea un módulo por Entity.",
+        "note": "Genera AsignacionesModule con Nest CLI. El comando crea la carpeta y registra el módulo en AppModule. Después completa este archivo con las tres Entities del caso y TypeOrmModule.forFeature. Cuando generes el Service y el Controller, Nest los añadirá a este mismo módulo.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
-        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
+        "create": "npx --offline nest g module asignaciones\ncode src/asignaciones/asignaciones.module.ts",
         "cues": [
           {
             "token": "imports: [TypeOrmModule.forFeature([Asignacion, Plaza, Tecnico])]",
@@ -256,16 +256,18 @@
             "end": 347,
             "note": "forFeature prepara los repositorios de estas Entities para este módulo."
           }
-        ]
+        ],
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta el módulo N:M una sola vez",
+        "title": "Comprueba el módulo en AppModule",
         "kind": "module",
         "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlazasModule } from './plazas/plazas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { UrbanizacionesModule } from './urbanizaciones/urbanizaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    UrbanizacionesModule,\n    PlazasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Conserva UrbanizacionesModule, PlazasModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira TecnicosModule de AppModule y sus urbanizaciones module, service y controller; conserva tecnico.entity.ts.",
+        "note": "Nest CLI ya ha añadido AsignacionesModule. Comprueba que aparece una sola vez y conserva UrbanizacionesModule, PlazasModule y la conexión 1:N. Si seguiste la versión anterior, retira TecnicosModule y sus archivos de módulo, Service y Controller; conserva su Entity. No añadas otra importación de AsignacionesModule.",
         "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
@@ -276,7 +278,9 @@
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
-        "create": "code src/app.module.ts"
+        "create": "code src/app.module.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "arrancar",
@@ -311,7 +315,7 @@
         "kind": "service",
         "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Un solo Service recibe los tres repositorios: Plaza, Tecnico y Asignacion. Empieza con crearTecnico y listarTecnicos; los siguientes casos amplían este mismo urbanizacion.",
+        "note": "Un solo Service recibe los tres repositorios: Plaza, Tecnico y Asignacion. Empieza con crearTecnico y listarTecnicos; los siguientes casos amplían este mismo archivo.",
         "expect": "POST devuelve el tecnico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
@@ -353,7 +357,9 @@
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
+        "create": "npx --offline nest g service asignaciones --no-spec\ncode src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "crear-listar-entry",
@@ -362,7 +368,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /tecnicos y GET /tecnicos. Las siguientes operaciones se añaden a este mismo urbanizacion.",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /tecnicos y GET /tecnicos. Las siguientes operaciones se añaden a este mismo archivo.",
         "expect": "POST devuelve el tecnico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
@@ -392,16 +398,18 @@
           }
         ],
         "updateExisting": false,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "npx --offline nest g controller asignaciones --no-spec\ncode src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Conecta el Service y el Controller N:M",
+        "title": "Comprueba el registro automático",
         "kind": "module",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Plaza, Tecnico])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
         "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
+        "note": "Los comandos nest g service y nest g controller ya han registrado AsignacionesService en providers y AsignacionesController en controllers. Comprueba este mismo archivo: conserva las tres Entities en forFeature y cada clase registrada una sola vez.",
         "expect": "POST devuelve el tecnico creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
@@ -418,7 +426,9 @@
             "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "crear-listar-ejecutar",
@@ -466,7 +476,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarTecnico(plazaId: number, tecnicoId: number, rol: string) {\n    const plaza = await this.plazas.findOneBy({ id: plazaId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!plaza || !tecnico) {\n      throw new NotFoundException('No existe la plaza o el tecnico');\n    }\n    const asignacion = { plazaId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa plaza');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El urbanizacion completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una plaza existente con el tecnico que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
@@ -496,7 +506,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "asignar-tecnico-entry",
@@ -505,7 +517,7 @@
         "kind": "entry",
         "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n\n  @Post('plazas/:plazaId/asignaciones')\n  asignar(@Param('plazaId') plazaId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(plazaId), datos.tecnicoId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El urbanizacion completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una plaza existente con el tecnico que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
@@ -523,7 +535,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "asignar-tecnico-ejecutar",
@@ -571,7 +585,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarTecnico(plazaId: number, tecnicoId: number, rol: string) {\n    const plaza = await this.plazas.findOneBy({ id: plazaId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!plaza || !tecnico) {\n      throw new NotFoundException('No existe la plaza o el tecnico');\n    }\n    const asignacion = { plazaId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa plaza');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlaza(plazaId: number) {\n    return this.asignaciones.find({ where: { plazaId }, order: { tecnicoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El urbanizacion completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa plaza. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
@@ -589,7 +603,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-plaza-entry",
@@ -598,7 +614,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n\n  @Post('plazas/:plazaId/asignaciones')\n  asignar(@Param('plazaId') plazaId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(plazaId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('plazas/:plazaId/asignaciones')\n  listarPorPlaza(@Param('plazaId') plazaId: string) {\n    return this.service.listarPorPlaza(Number(plazaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El urbanizacion completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa plaza. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
@@ -616,7 +632,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-plaza-ejecutar",
@@ -664,7 +682,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarTecnico(plazaId: number, tecnicoId: number, rol: string) {\n    const plaza = await this.plazas.findOneBy({ id: plazaId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!plaza || !tecnico) {\n      throw new NotFoundException('No existe la plaza o el tecnico');\n    }\n    const asignacion = { plazaId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa plaza');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlaza(plazaId: number) {\n    return this.asignaciones.find({ where: { plazaId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { plazaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El urbanizacion completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las plazas en los que participa ese tecnico. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
@@ -682,7 +700,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-tecnico-entry",
@@ -691,7 +711,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n\n  @Post('plazas/:plazaId/asignaciones')\n  asignar(@Param('plazaId') plazaId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(plazaId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('plazas/:plazaId/asignaciones')\n  listarPorPlaza(@Param('plazaId') plazaId: string) {\n    return this.service.listarPorPlaza(Number(plazaId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El urbanizacion completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las plazas en los que participa ese tecnico. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
@@ -709,7 +729,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-tecnico-ejecutar",
@@ -757,7 +779,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarTecnico(plazaId: number, tecnicoId: number, rol: string) {\n    const plaza = await this.plazas.findOneBy({ id: plazaId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!plaza || !tecnico) {\n      throw new NotFoundException('No existe la plaza o el tecnico');\n    }\n    const asignacion = { plazaId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa plaza');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlaza(plazaId: number) {\n    return this.asignaciones.find({ where: { plazaId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { plazaId: 'ASC' } });\n  }\n\n  async modificarRol(plazaId: number, tecnicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ plazaId, tecnicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { plazaId, tecnicoId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El urbanizacion completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la plaza y el tecnico.",
         "focus": "service",
         "cues": [
@@ -781,7 +803,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "modificar-rol-entry",
@@ -790,7 +814,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n\n  @Post('plazas/:plazaId/asignaciones')\n  asignar(@Param('plazaId') plazaId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(plazaId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('plazas/:plazaId/asignaciones')\n  listarPorPlaza(@Param('plazaId') plazaId: string) {\n    return this.service.listarPorPlaza(Number(plazaId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n\n  @Patch('plazas/:plazaId/asignaciones/:tecnicoId')\n  modificarRol(@Param('plazaId') plazaId: string, @Param('tecnicoId') tecnicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(plazaId), Number(tecnicoId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El urbanizacion completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la plaza y el tecnico.",
         "focus": "entry",
         "cues": [
@@ -808,7 +832,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -856,7 +882,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Plaza } from '../plazas/entities/plaza.entity';\nimport { Tecnico } from '../tecnicos/entities/tecnico.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Plaza) private readonly plazas: Repository<Plaza>,\n    @InjectRepository(Tecnico) private readonly tecnicos: Repository<Tecnico>\n  ) {}\n\n  crearTecnico(nombre: string, apellidos: string, email: string) {\n    const tecnico = this.tecnicos.create({ nombre, apellidos, email });\n    return this.tecnicos.save(tecnico);\n  }\n\n  listarTecnicos() {\n    return this.tecnicos.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarTecnico(plazaId: number, tecnicoId: number, rol: string) {\n    const plaza = await this.plazas.findOneBy({ id: plazaId });\n    const tecnico = await this.tecnicos.findOneBy({ id: tecnicoId });\n    if (!plaza || !tecnico) {\n      throw new NotFoundException('No existe la plaza o el tecnico');\n    }\n    const asignacion = { plazaId, tecnicoId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El tecnico ya está asignado a esa plaza');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlaza(plazaId: number) {\n    return this.asignaciones.find({ where: { plazaId }, order: { tecnicoId: 'ASC' } });\n  }\n\n  listarPorTecnico(tecnicoId: number) {\n    return this.asignaciones.find({ where: { tecnicoId }, order: { plazaId: 'ASC' } });\n  }\n\n  async modificarRol(plazaId: number, tecnicoId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ plazaId, tecnicoId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { plazaId, tecnicoId, rol };\n  }\n\n  async eliminarAsignacion(plazaId: number, tecnicoId: number) {\n    await this.asignaciones.delete({ plazaId, tecnicoId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El urbanizacion completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearTecnico, listarTecnicos y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la plaza y el tecnico siguen existiendo.",
         "focus": "service",
         "cues": [
@@ -874,7 +900,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "eliminar-asignacion-entry",
@@ -883,7 +911,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('tecnicos')\n  crearTecnico(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearTecnico(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('tecnicos')\n  listarTecnicos() {\n    return this.service.listarTecnicos();\n  }\n\n  @Post('plazas/:plazaId/asignaciones')\n  asignar(@Param('plazaId') plazaId: string, @Body() datos: { tecnicoId: number; rol: string }) {\n    return this.service.asignarTecnico(Number(plazaId), datos.tecnicoId, datos.rol);\n  }\n\n  @Get('plazas/:plazaId/asignaciones')\n  listarPorPlaza(@Param('plazaId') plazaId: string) {\n    return this.service.listarPorPlaza(Number(plazaId));\n  }\n\n  @Get('tecnicos/:tecnicoId/asignaciones')\n  listarPorTecnico(@Param('tecnicoId') tecnicoId: string) {\n    return this.service.listarPorTecnico(Number(tecnicoId));\n  }\n\n  @Patch('plazas/:plazaId/asignaciones/:tecnicoId')\n  modificarRol(@Param('plazaId') plazaId: string, @Param('tecnicoId') tecnicoId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(plazaId), Number(tecnicoId), datos.rol);\n  }\n\n  @Delete('plazas/:plazaId/asignaciones/:tecnicoId')\n  @HttpCode(204)\n  eliminar(@Param('plazaId') plazaId: string, @Param('tecnicoId') tecnicoId: string) {\n    return this.service.eliminarAsignacion(Number(plazaId), Number(tecnicoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El urbanizacion completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Tecnicos y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la plaza y el tecnico siguen existiendo.",
         "focus": "entry",
         "cues": [
@@ -901,7 +929,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3364,5 +3394,6 @@
       "repaso"
     ]
   },
-  "nmModuleRevision": 1
+  "nmModuleRevision": 1,
+  "nestCliRevision": 1
 }

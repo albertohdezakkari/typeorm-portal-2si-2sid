@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; SesionesModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/sesiones/sesiones.module.ts",
             "path": "src/sesiones/sesiones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\nimport { Sesion } from './entities/sesion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Gimnasio, Sesion])],\n  providers: [],\n  controllers: []\n})\nexport class SesionesModule {}",
-            "create": "mkdir -p src/sesiones\ncode src/sesiones/sesiones.module.ts",
+            "create": "npx --offline nest g module sesiones\ncode src/sesiones/sesiones.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\n\nimport { GimnasiosModule } from './gimnasios/gimnasios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GimnasiosModule,\n    SesionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade SesionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/gimnasios/gimnasios.service.ts",
             "path": "src/gimnasios/gimnasios.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Gimnasio } from './entities/gimnasio.entity';\n\n@Injectable()\nexport class GimnasiosService {\n  constructor(\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearGimnasio(nombre: string) {\n    const gimnasio = this.gimnasios.create({ nombre });\n    return this.gimnasios.save(gimnasio);\n  }\n\n  listarGimnasios() {\n    return this.gimnasios.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.service.ts",
+            "create": "npx --offline nest g module gimnasios\nnpx --offline nest g service gimnasios --no-spec\nnpx --offline nest g controller gimnasios --no-spec\ncode src/gimnasios/gimnasios.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/gimnasios/gimnasios.controller.ts",
             "path": "src/gimnasios/gimnasios.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Norte\"}'\ncurl -i \"http://localhost:3000/gimnasios\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { GimnasiosService } from './gimnasios.service';\n\n@Controller('gimnasios')\nexport class GimnasiosController {\n  constructor(private readonly service: GimnasiosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearGimnasio(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarGimnasios();\n  }\n}",
-            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.controller.ts",
+            "create": "code src/gimnasios/gimnasios.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/gimnasios/gimnasios.module.ts",
             "path": "src/gimnasios/gimnasios.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Gimnasio } from './entities/gimnasio.entity';\nimport { GimnasiosService } from './gimnasios.service';\nimport { GimnasiosController } from './gimnasios.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Gimnasio])],\n  providers: [GimnasiosService],\n  controllers: [GimnasiosController]\n})\nexport class GimnasiosModule {}",
-            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.module.ts",
+            "create": "code src/gimnasios/gimnasios.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\n\nimport { GimnasiosModule } from './gimnasios/gimnasios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GimnasiosModule,\n    SesionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade SesionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar gimnasios antes de crear sesiones.",
@@ -526,27 +540,33 @@
             "title": "src/sesiones/sesiones.service.ts",
             "path": "src/sesiones/sesiones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from './entities/sesion.entity';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\n\n@Injectable()\nexport class SesionesService {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearSesion(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre,\n      plazas,\n      gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesiones() {\n    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.service.ts\ncode src/sesiones/sesiones.service.ts",
+            "create": "npx --offline nest g service sesiones --no-spec\ncode src/sesiones/sesiones.service.ts",
             "explain": "Mismo archivo SesionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.controller.ts",
             "path": "src/sesiones/sesiones.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { SesionesService } from './sesiones.service';\n\n@Controller()\nexport class SesionesController {\n  constructor(private readonly service: SesionesService) {}\n\n  @Post('sesiones')\n  crear(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesion(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesiones();\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.controller.ts\ncode src/sesiones/sesiones.controller.ts",
+            "create": "npx --offline nest g controller sesiones --no-spec\ncode src/sesiones/sesiones.controller.ts",
             "explain": "Mismo SesionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.module.ts",
             "path": "src/sesiones/sesiones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\nimport { Sesion } from './entities/sesion.entity';\nimport { SesionesService } from './sesiones.service';\nimport { SesionesController } from './sesiones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Gimnasio, Sesion])],\n  providers: [SesionesService],\n  controllers: [SesionesController]\n})\nexport class SesionesModule {}",
-            "create": "mkdir -p src/sesiones\ncode src/sesiones/sesiones.module.ts",
+            "create": "code src/sesiones/sesiones.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Sesiones. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/sesiones/sesiones.service.ts",
             "path": "src/sesiones/sesiones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from './entities/sesion.entity';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\n\n@Injectable()\nexport class SesionesService {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearSesion(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre,\n      plazas,\n      gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesiones() {\n    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarSesion(sesionId: number) {\n    await this.sesiones.delete(sesionId);\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.service.ts\ncode src/sesiones/sesiones.service.ts",
+            "create": "code src/sesiones/sesiones.service.ts",
             "explain": "Mismo archivo SesionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.controller.ts",
             "path": "src/sesiones/sesiones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { SesionesService } from './sesiones.service';\n\n@Controller()\nexport class SesionesController {\n  constructor(private readonly service: SesionesService) {}\n\n  @Post('sesiones')\n  crear(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesion(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesiones();\n  }\n\n  @Delete('sesiones/:sesionId')\n  @HttpCode(204)\n  eliminar(@Param('sesionId') sesionId: string) {\n    return this.service.eliminarSesion(Number(sesionId));\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.controller.ts\ncode src/sesiones/sesiones.controller.ts",
+            "create": "code src/sesiones/sesiones.controller.ts",
             "explain": "Mismo SesionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/sesiones/sesiones.service.ts",
             "path": "src/sesiones/sesiones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from './entities/sesion.entity';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\n\n@Injectable()\nexport class SesionesService {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearSesion(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre,\n      plazas,\n      gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesiones() {\n    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarSesion(sesionId: number) {\n    await this.sesiones.delete(sesionId);\n  }\n\n  async modificarPlazas(sesionId: number, plazas: number) {\n    await this.sesiones.update(sesionId, { plazas });\n    return this.sesiones.findOneBy({ id: sesionId });\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.service.ts\ncode src/sesiones/sesiones.service.ts",
+            "create": "code src/sesiones/sesiones.service.ts",
             "explain": "Mismo archivo SesionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.controller.ts",
             "path": "src/sesiones/sesiones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { SesionesService } from './sesiones.service';\n\n@Controller()\nexport class SesionesController {\n  constructor(private readonly service: SesionesService) {}\n\n  @Post('sesiones')\n  crear(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesion(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesiones();\n  }\n\n  @Delete('sesiones/:sesionId')\n  @HttpCode(204)\n  eliminar(@Param('sesionId') sesionId: string) {\n    return this.service.eliminarSesion(Number(sesionId));\n  }\n\n  @Patch('sesiones/:sesionId')\n  modificar(@Param('sesionId') sesionId: string, @Body() datos: { plazas: number }) {\n    return this.service.modificarPlazas(Number(sesionId), datos.plazas);\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.controller.ts\ncode src/sesiones/sesiones.controller.ts",
+            "create": "code src/sesiones/sesiones.controller.ts",
             "explain": "Mismo SesionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/sesiones/sesiones.service.ts",
             "path": "src/sesiones/sesiones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Sesion } from './entities/sesion.entity';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\n\n@Injectable()\nexport class SesionesService {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearSesion(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre,\n      plazas,\n      gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesiones() {\n    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarSesion(sesionId: number) {\n    await this.sesiones.delete(sesionId);\n  }\n\n  async modificarPlazas(sesionId: number, plazas: number) {\n    await this.sesiones.update(sesionId, { plazas });\n    return this.sesiones.findOneBy({ id: sesionId });\n  }\n\n  async cambiarGimnasio(sesionId: number, gimnasioId: number) {\n    await this.sesiones.update(sesionId, { gimnasio: { id: gimnasioId } });\n    return this.sesiones.findOneBy({ id: sesionId });\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.service.ts\ncode src/sesiones/sesiones.service.ts",
+            "create": "code src/sesiones/sesiones.service.ts",
             "explain": "Mismo archivo SesionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.controller.ts",
             "path": "src/sesiones/sesiones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { SesionesService } from './sesiones.service';\n\n@Controller()\nexport class SesionesController {\n  constructor(private readonly service: SesionesService) {}\n\n  @Post('sesiones')\n  crear(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesion(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesiones();\n  }\n\n  @Delete('sesiones/:sesionId')\n  @HttpCode(204)\n  eliminar(@Param('sesionId') sesionId: string) {\n    return this.service.eliminarSesion(Number(sesionId));\n  }\n\n  @Patch('sesiones/:sesionId')\n  modificar(@Param('sesionId') sesionId: string, @Body() datos: { plazas: number }) {\n    return this.service.modificarPlazas(Number(sesionId), datos.plazas);\n  }\n\n  @Patch('sesiones/:sesionId/gimnasio')\n  cambiarGimnasio(@Param('sesionId') sesionId: string, @Body() datos: { gimnasioId: number }) {\n    return this.service.cambiarGimnasio(Number(sesionId), datos.gimnasioId);\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.controller.ts\ncode src/sesiones/sesiones.controller.ts",
+            "create": "code src/sesiones/sesiones.controller.ts",
             "explain": "Mismo SesionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/sesiones/sesiones.service.ts",
             "path": "src/sesiones/sesiones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Sesion } from './entities/sesion.entity';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\n\n@Injectable()\nexport class SesionesService {\n  constructor(\n    @InjectRepository(Sesion) private readonly sesiones: Repository<Sesion>,\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearSesion(nombre: string, plazas: number, gimnasioId: number) {\n    const sesion = this.sesiones.create({\n      nombre,\n      plazas,\n      gimnasio: { id: gimnasioId }\n    });\n    return this.sesiones.save(sesion);\n  }\n\n  listarSesiones() {\n    return this.sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarSesion(sesionId: number) {\n    await this.sesiones.delete(sesionId);\n  }\n\n  async modificarPlazas(sesionId: number, plazas: number) {\n    await this.sesiones.update(sesionId, { plazas });\n    return this.sesiones.findOneBy({ id: sesionId });\n  }\n\n  async cambiarGimnasio(sesionId: number, gimnasioId: number) {\n    await this.sesiones.update(sesionId, { gimnasio: { id: gimnasioId } });\n    return this.sesiones.findOneBy({ id: sesionId });\n  }\n\n  async consultarGimnasio(gimnasioId: number, minimo: number) {\n    const gimnasio = await this.gimnasios.findOneBy({ id: gimnasioId });\n    const sesiones = await this.sesiones.find({\n      where: {\n        gimnasio: { id: gimnasioId },\n        plazas: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { gimnasio, sesiones };\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.service.ts\ncode src/sesiones/sesiones.service.ts",
+            "create": "code src/sesiones/sesiones.service.ts",
             "explain": "Mismo archivo SesionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.controller.ts",
             "path": "src/sesiones/sesiones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { SesionesService } from './sesiones.service';\n\n@Controller()\nexport class SesionesController {\n  constructor(private readonly service: SesionesService) {}\n\n  @Post('sesiones')\n  crear(@Body() datos: { nombre: string; plazas: number; gimnasioId: number }) {\n    return this.service.crearSesion(datos.nombre, datos.plazas, datos.gimnasioId);\n  }\n\n  @Get('sesiones')\n  listar() {\n    return this.service.listarSesiones();\n  }\n\n  @Delete('sesiones/:sesionId')\n  @HttpCode(204)\n  eliminar(@Param('sesionId') sesionId: string) {\n    return this.service.eliminarSesion(Number(sesionId));\n  }\n\n  @Patch('sesiones/:sesionId')\n  modificar(@Param('sesionId') sesionId: string, @Body() datos: { plazas: number }) {\n    return this.service.modificarPlazas(Number(sesionId), datos.plazas);\n  }\n\n  @Patch('sesiones/:sesionId/gimnasio')\n  cambiarGimnasio(@Param('sesionId') sesionId: string, @Body() datos: { gimnasioId: number }) {\n    return this.service.cambiarGimnasio(Number(sesionId), datos.gimnasioId);\n  }\n\n  @Get('gimnasios/:gimnasioId/sesiones')\n  consultar(@Param('gimnasioId') gimnasioId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarGimnasio(Number(gimnasioId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/sesiones\nls -d src/sesiones\ntouch src/sesiones/sesiones.controller.ts\ncode src/sesiones/sesiones.controller.ts",
+            "create": "code src/sesiones/sesiones.controller.ts",
             "explain": "Mismo SesionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

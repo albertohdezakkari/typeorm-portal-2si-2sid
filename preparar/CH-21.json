@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; MuestrasModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/muestras/muestras.module.ts",
             "path": "src/muestras/muestras.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\nimport { Muestra } from './entities/muestra.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Laboratorio, Muestra])],\n  providers: [],\n  controllers: []\n})\nexport class MuestrasModule {}",
-            "create": "mkdir -p src/muestras\ncode src/muestras/muestras.module.ts",
+            "create": "npx --offline nest g module muestras\ncode src/muestras/muestras.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { MuestrasModule } from './muestras/muestras.module';\n\nimport { LaboratoriosModule } from './laboratorios/laboratorios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    LaboratoriosModule,\n    MuestrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade MuestrasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/laboratorios/laboratorios.service.ts",
             "path": "src/laboratorios/laboratorios.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Laboratorio } from './entities/laboratorio.entity';\n\n@Injectable()\nexport class LaboratoriosService {\n  constructor(\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearLaboratorio(nombre: string) {\n    const laboratorio = this.laboratorios.create({ nombre });\n    return this.laboratorios.save(laboratorio);\n  }\n\n  listarLaboratorios() {\n    return this.laboratorios.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.service.ts",
+            "create": "npx --offline nest g module laboratorios\nnpx --offline nest g service laboratorios --no-spec\nnpx --offline nest g controller laboratorios --no-spec\ncode src/laboratorios/laboratorios.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/laboratorios/laboratorios.controller.ts",
             "path": "src/laboratorios/laboratorios.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Azul\"}'\ncurl -i \"http://localhost:3000/laboratorios\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { LaboratoriosService } from './laboratorios.service';\n\n@Controller('laboratorios')\nexport class LaboratoriosController {\n  constructor(private readonly service: LaboratoriosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearLaboratorio(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarLaboratorios();\n  }\n}",
-            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.controller.ts",
+            "create": "code src/laboratorios/laboratorios.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/laboratorios/laboratorios.module.ts",
             "path": "src/laboratorios/laboratorios.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Laboratorio } from './entities/laboratorio.entity';\nimport { LaboratoriosService } from './laboratorios.service';\nimport { LaboratoriosController } from './laboratorios.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Laboratorio])],\n  providers: [LaboratoriosService],\n  controllers: [LaboratoriosController]\n})\nexport class LaboratoriosModule {}",
-            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.module.ts",
+            "create": "code src/laboratorios/laboratorios.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { MuestrasModule } from './muestras/muestras.module';\n\nimport { LaboratoriosModule } from './laboratorios/laboratorios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    LaboratoriosModule,\n    MuestrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade MuestrasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar laboratorios antes de crear muestras.",
@@ -526,27 +540,33 @@
             "title": "src/muestras/muestras.service.ts",
             "path": "src/muestras/muestras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Muestra } from './entities/muestra.entity';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\n\n@Injectable()\nexport class MuestrasService {\n  constructor(\n    @InjectRepository(Muestra) private readonly muestras: Repository<Muestra>,\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearMuestra(nombre: string, cantidadMl: number, laboratorioId: number) {\n    const muestra = this.muestras.create({\n      nombre,\n      cantidadMl,\n      laboratorio: { id: laboratorioId }\n    });\n    return this.muestras.save(muestra);\n  }\n\n  listarMuestras() {\n    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.service.ts\ncode src/muestras/muestras.service.ts",
+            "create": "npx --offline nest g service muestras --no-spec\ncode src/muestras/muestras.service.ts",
             "explain": "Mismo archivo MuestrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.controller.ts",
             "path": "src/muestras/muestras.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MuestrasService } from './muestras.service';\n\n@Controller()\nexport class MuestrasController {\n  constructor(private readonly service: MuestrasService) {}\n\n  @Post('muestras')\n  crear(@Body() datos: { nombre: string; cantidadMl: number; laboratorioId: number }) {\n    return this.service.crearMuestra(datos.nombre, datos.cantidadMl, datos.laboratorioId);\n  }\n\n  @Get('muestras')\n  listar() {\n    return this.service.listarMuestras();\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.controller.ts\ncode src/muestras/muestras.controller.ts",
+            "create": "npx --offline nest g controller muestras --no-spec\ncode src/muestras/muestras.controller.ts",
             "explain": "Mismo MuestrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.module.ts",
             "path": "src/muestras/muestras.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\nimport { Muestra } from './entities/muestra.entity';\nimport { MuestrasService } from './muestras.service';\nimport { MuestrasController } from './muestras.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Laboratorio, Muestra])],\n  providers: [MuestrasService],\n  controllers: [MuestrasController]\n})\nexport class MuestrasModule {}",
-            "create": "mkdir -p src/muestras\ncode src/muestras/muestras.module.ts",
+            "create": "code src/muestras/muestras.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Muestras. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/muestras/muestras.service.ts",
             "path": "src/muestras/muestras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Muestra } from './entities/muestra.entity';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\n\n@Injectable()\nexport class MuestrasService {\n  constructor(\n    @InjectRepository(Muestra) private readonly muestras: Repository<Muestra>,\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearMuestra(nombre: string, cantidadMl: number, laboratorioId: number) {\n    const muestra = this.muestras.create({\n      nombre,\n      cantidadMl,\n      laboratorio: { id: laboratorioId }\n    });\n    return this.muestras.save(muestra);\n  }\n\n  listarMuestras() {\n    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarMuestra(muestraId: number) {\n    await this.muestras.delete(muestraId);\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.service.ts\ncode src/muestras/muestras.service.ts",
+            "create": "code src/muestras/muestras.service.ts",
             "explain": "Mismo archivo MuestrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.controller.ts",
             "path": "src/muestras/muestras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { MuestrasService } from './muestras.service';\n\n@Controller()\nexport class MuestrasController {\n  constructor(private readonly service: MuestrasService) {}\n\n  @Post('muestras')\n  crear(@Body() datos: { nombre: string; cantidadMl: number; laboratorioId: number }) {\n    return this.service.crearMuestra(datos.nombre, datos.cantidadMl, datos.laboratorioId);\n  }\n\n  @Get('muestras')\n  listar() {\n    return this.service.listarMuestras();\n  }\n\n  @Delete('muestras/:muestraId')\n  @HttpCode(204)\n  eliminar(@Param('muestraId') muestraId: string) {\n    return this.service.eliminarMuestra(Number(muestraId));\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.controller.ts\ncode src/muestras/muestras.controller.ts",
+            "create": "code src/muestras/muestras.controller.ts",
             "explain": "Mismo MuestrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/muestras/muestras.service.ts",
             "path": "src/muestras/muestras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Muestra } from './entities/muestra.entity';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\n\n@Injectable()\nexport class MuestrasService {\n  constructor(\n    @InjectRepository(Muestra) private readonly muestras: Repository<Muestra>,\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearMuestra(nombre: string, cantidadMl: number, laboratorioId: number) {\n    const muestra = this.muestras.create({\n      nombre,\n      cantidadMl,\n      laboratorio: { id: laboratorioId }\n    });\n    return this.muestras.save(muestra);\n  }\n\n  listarMuestras() {\n    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarMuestra(muestraId: number) {\n    await this.muestras.delete(muestraId);\n  }\n\n  async modificarCantidadMl(muestraId: number, cantidadMl: number) {\n    await this.muestras.update(muestraId, { cantidadMl });\n    return this.muestras.findOneBy({ id: muestraId });\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.service.ts\ncode src/muestras/muestras.service.ts",
+            "create": "code src/muestras/muestras.service.ts",
             "explain": "Mismo archivo MuestrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.controller.ts",
             "path": "src/muestras/muestras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { MuestrasService } from './muestras.service';\n\n@Controller()\nexport class MuestrasController {\n  constructor(private readonly service: MuestrasService) {}\n\n  @Post('muestras')\n  crear(@Body() datos: { nombre: string; cantidadMl: number; laboratorioId: number }) {\n    return this.service.crearMuestra(datos.nombre, datos.cantidadMl, datos.laboratorioId);\n  }\n\n  @Get('muestras')\n  listar() {\n    return this.service.listarMuestras();\n  }\n\n  @Delete('muestras/:muestraId')\n  @HttpCode(204)\n  eliminar(@Param('muestraId') muestraId: string) {\n    return this.service.eliminarMuestra(Number(muestraId));\n  }\n\n  @Patch('muestras/:muestraId')\n  modificar(@Param('muestraId') muestraId: string, @Body() datos: { cantidadMl: number }) {\n    return this.service.modificarCantidadMl(Number(muestraId), datos.cantidadMl);\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.controller.ts\ncode src/muestras/muestras.controller.ts",
+            "create": "code src/muestras/muestras.controller.ts",
             "explain": "Mismo MuestrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/muestras/muestras.service.ts",
             "path": "src/muestras/muestras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Muestra } from './entities/muestra.entity';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\n\n@Injectable()\nexport class MuestrasService {\n  constructor(\n    @InjectRepository(Muestra) private readonly muestras: Repository<Muestra>,\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearMuestra(nombre: string, cantidadMl: number, laboratorioId: number) {\n    const muestra = this.muestras.create({\n      nombre,\n      cantidadMl,\n      laboratorio: { id: laboratorioId }\n    });\n    return this.muestras.save(muestra);\n  }\n\n  listarMuestras() {\n    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarMuestra(muestraId: number) {\n    await this.muestras.delete(muestraId);\n  }\n\n  async modificarCantidadMl(muestraId: number, cantidadMl: number) {\n    await this.muestras.update(muestraId, { cantidadMl });\n    return this.muestras.findOneBy({ id: muestraId });\n  }\n\n  async cambiarLaboratorio(muestraId: number, laboratorioId: number) {\n    await this.muestras.update(muestraId, { laboratorio: { id: laboratorioId } });\n    return this.muestras.findOneBy({ id: muestraId });\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.service.ts\ncode src/muestras/muestras.service.ts",
+            "create": "code src/muestras/muestras.service.ts",
             "explain": "Mismo archivo MuestrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.controller.ts",
             "path": "src/muestras/muestras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { MuestrasService } from './muestras.service';\n\n@Controller()\nexport class MuestrasController {\n  constructor(private readonly service: MuestrasService) {}\n\n  @Post('muestras')\n  crear(@Body() datos: { nombre: string; cantidadMl: number; laboratorioId: number }) {\n    return this.service.crearMuestra(datos.nombre, datos.cantidadMl, datos.laboratorioId);\n  }\n\n  @Get('muestras')\n  listar() {\n    return this.service.listarMuestras();\n  }\n\n  @Delete('muestras/:muestraId')\n  @HttpCode(204)\n  eliminar(@Param('muestraId') muestraId: string) {\n    return this.service.eliminarMuestra(Number(muestraId));\n  }\n\n  @Patch('muestras/:muestraId')\n  modificar(@Param('muestraId') muestraId: string, @Body() datos: { cantidadMl: number }) {\n    return this.service.modificarCantidadMl(Number(muestraId), datos.cantidadMl);\n  }\n\n  @Patch('muestras/:muestraId/laboratorio')\n  cambiarLaboratorio(@Param('muestraId') muestraId: string, @Body() datos: { laboratorioId: number }) {\n    return this.service.cambiarLaboratorio(Number(muestraId), datos.laboratorioId);\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.controller.ts\ncode src/muestras/muestras.controller.ts",
+            "create": "code src/muestras/muestras.controller.ts",
             "explain": "Mismo MuestrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/muestras/muestras.service.ts",
             "path": "src/muestras/muestras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Muestra } from './entities/muestra.entity';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\n\n@Injectable()\nexport class MuestrasService {\n  constructor(\n    @InjectRepository(Muestra) private readonly muestras: Repository<Muestra>,\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearMuestra(nombre: string, cantidadMl: number, laboratorioId: number) {\n    const muestra = this.muestras.create({\n      nombre,\n      cantidadMl,\n      laboratorio: { id: laboratorioId }\n    });\n    return this.muestras.save(muestra);\n  }\n\n  listarMuestras() {\n    return this.muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarMuestra(muestraId: number) {\n    await this.muestras.delete(muestraId);\n  }\n\n  async modificarCantidadMl(muestraId: number, cantidadMl: number) {\n    await this.muestras.update(muestraId, { cantidadMl });\n    return this.muestras.findOneBy({ id: muestraId });\n  }\n\n  async cambiarLaboratorio(muestraId: number, laboratorioId: number) {\n    await this.muestras.update(muestraId, { laboratorio: { id: laboratorioId } });\n    return this.muestras.findOneBy({ id: muestraId });\n  }\n\n  async consultarLaboratorio(laboratorioId: number, minimo: number) {\n    const laboratorio = await this.laboratorios.findOneBy({ id: laboratorioId });\n    const muestras = await this.muestras.find({\n      where: {\n        laboratorio: { id: laboratorioId },\n        cantidadMl: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { laboratorio, muestras };\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.service.ts\ncode src/muestras/muestras.service.ts",
+            "create": "code src/muestras/muestras.service.ts",
             "explain": "Mismo archivo MuestrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/muestras/muestras.controller.ts",
             "path": "src/muestras/muestras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { MuestrasService } from './muestras.service';\n\n@Controller()\nexport class MuestrasController {\n  constructor(private readonly service: MuestrasService) {}\n\n  @Post('muestras')\n  crear(@Body() datos: { nombre: string; cantidadMl: number; laboratorioId: number }) {\n    return this.service.crearMuestra(datos.nombre, datos.cantidadMl, datos.laboratorioId);\n  }\n\n  @Get('muestras')\n  listar() {\n    return this.service.listarMuestras();\n  }\n\n  @Delete('muestras/:muestraId')\n  @HttpCode(204)\n  eliminar(@Param('muestraId') muestraId: string) {\n    return this.service.eliminarMuestra(Number(muestraId));\n  }\n\n  @Patch('muestras/:muestraId')\n  modificar(@Param('muestraId') muestraId: string, @Body() datos: { cantidadMl: number }) {\n    return this.service.modificarCantidadMl(Number(muestraId), datos.cantidadMl);\n  }\n\n  @Patch('muestras/:muestraId/laboratorio')\n  cambiarLaboratorio(@Param('muestraId') muestraId: string, @Body() datos: { laboratorioId: number }) {\n    return this.service.cambiarLaboratorio(Number(muestraId), datos.laboratorioId);\n  }\n\n  @Get('laboratorios/:laboratorioId/muestras')\n  consultar(@Param('laboratorioId') laboratorioId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarLaboratorio(Number(laboratorioId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/muestras\nls -d src/muestras\ntouch src/muestras/muestras.controller.ts\ncode src/muestras/muestras.controller.ts",
+            "create": "code src/muestras/muestras.controller.ts",
             "explain": "Mismo MuestrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

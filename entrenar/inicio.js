@@ -1,4 +1,4 @@
-import { montarTaller } from './taller.js?v=altas-api-1';
+import { montarTaller } from './taller.js?v=nest-cli-1';
 
 const status = document.getElementById('estado');
 const container = document.getElementById('taller');
@@ -25,7 +25,7 @@ window.addEventListener('message', async event => {
   status.textContent = 'Preparando tu taller…';
   try {
     const caseUrl = new URL(`casos/${init.caseId}.json`, location.href);
-    caseUrl.searchParams.set('v', 'altas-api-1');
+    caseUrl.searchParams.set('v', 'nest-cli-1');
     const [dataResponse, templateResponse] = await Promise.all([
       fetch(caseUrl),
       fetch(new URL('plantilla.html?v=preparacion-1', location.href)),
@@ -35,7 +35,7 @@ window.addEventListener('message', async event => {
     if (data.context?.id !== init.caseId || data.version !== 5) throw new Error('El contexto no coincide');
     // Cada contexto reúne también sus pruebas reales en el mismo taller.
     if(data.projectBase){
-      const response=await fetch(new URL(`../preparar/${init.caseId}.json?v=altas-api-1`,location.href));
+      const response=await fetch(new URL(`../preparar/${init.caseId}.json?v=nest-cli-1`,location.href));
       if(!response.ok)throw new Error('No se pudieron cargar las pruebas del proyecto');
       const preparation=await response.json();
       if(preparation.caseId!==init.caseId)throw new Error('Las pruebas no corresponden al contexto');

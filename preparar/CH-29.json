@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; CosechasModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/cosechas/cosechas.module.ts",
             "path": "src/cosechas/cosechas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from '../granjas/entities/granja.entity';\nimport { Cosecha } from './entities/cosecha.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  providers: [],\n  controllers: []\n})\nexport class CosechasModule {}",
-            "create": "mkdir -p src/cosechas\ncode src/cosechas/cosechas.module.ts",
+            "create": "npx --offline nest g module cosechas\ncode src/cosechas/cosechas.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\nimport { GranjasModule } from './granjas/granjas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GranjasModule,\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade CosechasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/granjas/granjas.service.ts",
             "path": "src/granjas/granjas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Granja } from './entities/granja.entity';\n\n@Injectable()\nexport class GranjasService {\n  constructor(\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearGranja(nombre: string) {\n    const granja = this.granjas.create({ nombre });\n    return this.granjas.save(granja);\n  }\n\n  listarGranjas() {\n    return this.granjas.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.service.ts",
+            "create": "npx --offline nest g module granjas\nnpx --offline nest g service granjas --no-spec\nnpx --offline nest g controller granjas --no-spec\ncode src/granjas/granjas.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/granjas/granjas.controller.ts",
             "path": "src/granjas/granjas.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\ncurl -i \"http://localhost:3000/granjas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { GranjasService } from './granjas.service';\n\n@Controller('granjas')\nexport class GranjasController {\n  constructor(private readonly service: GranjasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearGranja(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarGranjas();\n  }\n}",
-            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.controller.ts",
+            "create": "code src/granjas/granjas.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/granjas/granjas.module.ts",
             "path": "src/granjas/granjas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './entities/granja.entity';\nimport { GranjasService } from './granjas.service';\nimport { GranjasController } from './granjas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja])],\n  providers: [GranjasService],\n  controllers: [GranjasController]\n})\nexport class GranjasModule {}",
-            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.module.ts",
+            "create": "code src/granjas/granjas.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\nimport { GranjasModule } from './granjas/granjas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GranjasModule,\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade CosechasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar granjas antes de crear cosechas.",
@@ -526,27 +540,33 @@
             "title": "src/cosechas/cosechas.service.ts",
             "path": "src/cosechas/cosechas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.service.ts\ncode src/cosechas/cosechas.service.ts",
+            "create": "npx --offline nest g service cosechas --no-spec\ncode src/cosechas/cosechas.service.ts",
             "explain": "Mismo archivo CosechasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.controller.ts",
             "path": "src/cosechas/cosechas.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.controller.ts\ncode src/cosechas/cosechas.controller.ts",
+            "create": "npx --offline nest g controller cosechas --no-spec\ncode src/cosechas/cosechas.controller.ts",
             "explain": "Mismo CosechasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.module.ts",
             "path": "src/cosechas/cosechas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from '../granjas/entities/granja.entity';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { CosechasService } from './cosechas.service';\nimport { CosechasController } from './cosechas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja, Cosecha])],\n  providers: [CosechasService],\n  controllers: [CosechasController]\n})\nexport class CosechasModule {}",
-            "create": "mkdir -p src/cosechas\ncode src/cosechas/cosechas.module.ts",
+            "create": "code src/cosechas/cosechas.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Cosechas. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/cosechas/cosechas.service.ts",
             "path": "src/cosechas/cosechas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.service.ts\ncode src/cosechas/cosechas.service.ts",
+            "create": "code src/cosechas/cosechas.service.ts",
             "explain": "Mismo archivo CosechasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.controller.ts",
             "path": "src/cosechas/cosechas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.controller.ts\ncode src/cosechas/cosechas.controller.ts",
+            "create": "code src/cosechas/cosechas.controller.ts",
             "explain": "Mismo CosechasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/cosechas/cosechas.service.ts",
             "path": "src/cosechas/cosechas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.service.ts\ncode src/cosechas/cosechas.service.ts",
+            "create": "code src/cosechas/cosechas.service.ts",
             "explain": "Mismo archivo CosechasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.controller.ts",
             "path": "src/cosechas/cosechas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.controller.ts\ncode src/cosechas/cosechas.controller.ts",
+            "create": "code src/cosechas/cosechas.controller.ts",
             "explain": "Mismo CosechasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/cosechas/cosechas.service.ts",
             "path": "src/cosechas/cosechas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async cambiarGranja(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.service.ts\ncode src/cosechas/cosechas.service.ts",
+            "create": "code src/cosechas/cosechas.service.ts",
             "explain": "Mismo archivo CosechasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.controller.ts",
             "path": "src/cosechas/cosechas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n\n  @Patch('cosechas/:cosechaId/granja')\n  cambiarGranja(@Param('cosechaId') cosechaId: string, @Body() datos: { granjaId: number }) {\n    return this.service.cambiarGranja(Number(cosechaId), datos.granjaId);\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.controller.ts\ncode src/cosechas/cosechas.controller.ts",
+            "create": "code src/cosechas/cosechas.controller.ts",
             "explain": "Mismo CosechasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/cosechas/cosechas.service.ts",
             "path": "src/cosechas/cosechas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Cosecha } from './entities/cosecha.entity';\nimport { Granja } from '../granjas/entities/granja.entity';\n\n@Injectable()\nexport class CosechasService {\n  constructor(\n    @InjectRepository(Cosecha) private readonly cosechas: Repository<Cosecha>,\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearCosecha(nombre: string, kilos: number, granjaId: number) {\n    const cosecha = this.cosechas.create({\n      nombre,\n      kilos,\n      granja: { id: granjaId }\n    });\n    return this.cosechas.save(cosecha);\n  }\n\n  listarCosechas() {\n    return this.cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarCosecha(cosechaId: number) {\n    await this.cosechas.delete(cosechaId);\n  }\n\n  async modificarKilos(cosechaId: number, kilos: number) {\n    await this.cosechas.update(cosechaId, { kilos });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async cambiarGranja(cosechaId: number, granjaId: number) {\n    await this.cosechas.update(cosechaId, { granja: { id: granjaId } });\n    return this.cosechas.findOneBy({ id: cosechaId });\n  }\n\n  async consultarGranja(granjaId: number, minimo: number) {\n    const granja = await this.granjas.findOneBy({ id: granjaId });\n    const cosechas = await this.cosechas.find({\n      where: {\n        granja: { id: granjaId },\n        kilos: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { granja, cosechas };\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.service.ts\ncode src/cosechas/cosechas.service.ts",
+            "create": "code src/cosechas/cosechas.service.ts",
             "explain": "Mismo archivo CosechasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.controller.ts",
             "path": "src/cosechas/cosechas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { CosechasService } from './cosechas.service';\n\n@Controller()\nexport class CosechasController {\n  constructor(private readonly service: CosechasService) {}\n\n  @Post('cosechas')\n  crear(@Body() datos: { nombre: string; kilos: number; granjaId: number }) {\n    return this.service.crearCosecha(datos.nombre, datos.kilos, datos.granjaId);\n  }\n\n  @Get('cosechas')\n  listar() {\n    return this.service.listarCosechas();\n  }\n\n  @Delete('cosechas/:cosechaId')\n  @HttpCode(204)\n  eliminar(@Param('cosechaId') cosechaId: string) {\n    return this.service.eliminarCosecha(Number(cosechaId));\n  }\n\n  @Patch('cosechas/:cosechaId')\n  modificar(@Param('cosechaId') cosechaId: string, @Body() datos: { kilos: number }) {\n    return this.service.modificarKilos(Number(cosechaId), datos.kilos);\n  }\n\n  @Patch('cosechas/:cosechaId/granja')\n  cambiarGranja(@Param('cosechaId') cosechaId: string, @Body() datos: { granjaId: number }) {\n    return this.service.cambiarGranja(Number(cosechaId), datos.granjaId);\n  }\n\n  @Get('granjas/:granjaId/cosechas')\n  consultar(@Param('granjaId') granjaId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarGranja(Number(granjaId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/cosechas\nls -d src/cosechas\ntouch src/cosechas/cosechas.controller.ts\ncode src/cosechas/cosechas.controller.ts",
+            "create": "code src/cosechas/cosechas.controller.ts",
             "explain": "Mismo CosechasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

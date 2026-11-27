@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; ProyeccionesModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/proyecciones/proyecciones.module.ts",
             "path": "src/proyecciones/proyecciones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from '../cines/entities/cine.entity';\nimport { Proyeccion } from './entities/proyeccion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  providers: [],\n  controllers: []\n})\nexport class ProyeccionesModule {}",
-            "create": "mkdir -p src/proyecciones\ncode src/proyecciones/proyecciones.module.ts",
+            "create": "npx --offline nest g module proyecciones\ncode src/proyecciones/proyecciones.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyeccionesModule } from './proyecciones/proyecciones.module';\n\nimport { CinesModule } from './cines/cines.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CinesModule,\n    ProyeccionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade ProyeccionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/cines/cines.service.ts",
             "path": "src/cines/cines.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cine } from './entities/cine.entity';\n\n@Injectable()\nexport class CinesService {\n  constructor(\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearCine(nombre: string) {\n    const cine = this.cines.create({ nombre });\n    return this.cines.save(cine);\n  }\n\n  listarCines() {\n    return this.cines.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/cines\ncode src/cines/cines.service.ts",
+            "create": "npx --offline nest g module cines\nnpx --offline nest g service cines --no-spec\nnpx --offline nest g controller cines --no-spec\ncode src/cines/cines.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/cines/cines.controller.ts",
             "path": "src/cines/cines.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine Alameda\"}'\ncurl -i \"http://localhost:3000/cines\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { CinesService } from './cines.service';\n\n@Controller('cines')\nexport class CinesController {\n  constructor(private readonly service: CinesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearCine(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarCines();\n  }\n}",
-            "create": "mkdir -p src/cines\ncode src/cines/cines.controller.ts",
+            "create": "code src/cines/cines.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/cines/cines.module.ts",
             "path": "src/cines/cines.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './entities/cine.entity';\nimport { CinesService } from './cines.service';\nimport { CinesController } from './cines.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine])],\n  providers: [CinesService],\n  controllers: [CinesController]\n})\nexport class CinesModule {}",
-            "create": "mkdir -p src/cines\ncode src/cines/cines.module.ts",
+            "create": "code src/cines/cines.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyeccionesModule } from './proyecciones/proyecciones.module';\n\nimport { CinesModule } from './cines/cines.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CinesModule,\n    ProyeccionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade ProyeccionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar cines antes de crear proyecciones.",
@@ -526,27 +540,33 @@
             "title": "src/proyecciones/proyecciones.service.ts",
             "path": "src/proyecciones/proyecciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.service.ts\ncode src/proyecciones/proyecciones.service.ts",
+            "create": "npx --offline nest g service proyecciones --no-spec\ncode src/proyecciones/proyecciones.service.ts",
             "explain": "Mismo archivo ProyeccionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.controller.ts",
             "path": "src/proyecciones/proyecciones.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.controller.ts\ncode src/proyecciones/proyecciones.controller.ts",
+            "create": "npx --offline nest g controller proyecciones --no-spec\ncode src/proyecciones/proyecciones.controller.ts",
             "explain": "Mismo ProyeccionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.module.ts",
             "path": "src/proyecciones/proyecciones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from '../cines/entities/cine.entity';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { ProyeccionesService } from './proyecciones.service';\nimport { ProyeccionesController } from './proyecciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine, Proyeccion])],\n  providers: [ProyeccionesService],\n  controllers: [ProyeccionesController]\n})\nexport class ProyeccionesModule {}",
-            "create": "mkdir -p src/proyecciones\ncode src/proyecciones/proyecciones.module.ts",
+            "create": "code src/proyecciones/proyecciones.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Proyecciones. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/proyecciones/proyecciones.service.ts",
             "path": "src/proyecciones/proyecciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.service.ts\ncode src/proyecciones/proyecciones.service.ts",
+            "create": "code src/proyecciones/proyecciones.service.ts",
             "explain": "Mismo archivo ProyeccionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.controller.ts",
             "path": "src/proyecciones/proyecciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.controller.ts\ncode src/proyecciones/proyecciones.controller.ts",
+            "create": "code src/proyecciones/proyecciones.controller.ts",
             "explain": "Mismo ProyeccionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/proyecciones/proyecciones.service.ts",
             "path": "src/proyecciones/proyecciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.service.ts\ncode src/proyecciones/proyecciones.service.ts",
+            "create": "code src/proyecciones/proyecciones.service.ts",
             "explain": "Mismo archivo ProyeccionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.controller.ts",
             "path": "src/proyecciones/proyecciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.controller.ts\ncode src/proyecciones/proyecciones.controller.ts",
+            "create": "code src/proyecciones/proyecciones.controller.ts",
             "explain": "Mismo ProyeccionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/proyecciones/proyecciones.service.ts",
             "path": "src/proyecciones/proyecciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async cambiarCine(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.service.ts\ncode src/proyecciones/proyecciones.service.ts",
+            "create": "code src/proyecciones/proyecciones.service.ts",
             "explain": "Mismo archivo ProyeccionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.controller.ts",
             "path": "src/proyecciones/proyecciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  cambiarCine(@Param('proyeccionId') proyeccionId: string, @Body() datos: { cineId: number }) {\n    return this.service.cambiarCine(Number(proyeccionId), datos.cineId);\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.controller.ts\ncode src/proyecciones/proyecciones.controller.ts",
+            "create": "code src/proyecciones/proyecciones.controller.ts",
             "explain": "Mismo ProyeccionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/proyecciones/proyecciones.service.ts",
             "path": "src/proyecciones/proyecciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Proyeccion } from './entities/proyeccion.entity';\nimport { Cine } from '../cines/entities/cine.entity';\n\n@Injectable()\nexport class ProyeccionesService {\n  constructor(\n    @InjectRepository(Proyeccion) private readonly proyecciones: Repository<Proyeccion>,\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearProyeccion(pelicula: string, duracionMinutos: number, cineId: number) {\n    const proyeccion = this.proyecciones.create({\n      pelicula,\n      duracionMinutos,\n      cine: { id: cineId }\n    });\n    return this.proyecciones.save(proyeccion);\n  }\n\n  listarProyecciones() {\n    return this.proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarProyeccion(proyeccionId: number) {\n    await this.proyecciones.delete(proyeccionId);\n  }\n\n  async modificarDuracionMinutos(proyeccionId: number, duracionMinutos: number) {\n    await this.proyecciones.update(proyeccionId, { duracionMinutos });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async cambiarCine(proyeccionId: number, cineId: number) {\n    await this.proyecciones.update(proyeccionId, { cine: { id: cineId } });\n    return this.proyecciones.findOneBy({ id: proyeccionId });\n  }\n\n  async consultarCine(cineId: number, minimo: number) {\n    const cine = await this.cines.findOneBy({ id: cineId });\n    const proyecciones = await this.proyecciones.find({\n      where: {\n        cine: { id: cineId },\n        duracionMinutos: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { cine, proyecciones };\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.service.ts\ncode src/proyecciones/proyecciones.service.ts",
+            "create": "code src/proyecciones/proyecciones.service.ts",
             "explain": "Mismo archivo ProyeccionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.controller.ts",
             "path": "src/proyecciones/proyecciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { ProyeccionesService } from './proyecciones.service';\n\n@Controller()\nexport class ProyeccionesController {\n  constructor(private readonly service: ProyeccionesService) {}\n\n  @Post('proyecciones')\n  crear(@Body() datos: { pelicula: string; duracionMinutos: number; cineId: number }) {\n    return this.service.crearProyeccion(datos.pelicula, datos.duracionMinutos, datos.cineId);\n  }\n\n  @Get('proyecciones')\n  listar() {\n    return this.service.listarProyecciones();\n  }\n\n  @Delete('proyecciones/:proyeccionId')\n  @HttpCode(204)\n  eliminar(@Param('proyeccionId') proyeccionId: string) {\n    return this.service.eliminarProyeccion(Number(proyeccionId));\n  }\n\n  @Patch('proyecciones/:proyeccionId')\n  modificar(@Param('proyeccionId') proyeccionId: string, @Body() datos: { duracionMinutos: number }) {\n    return this.service.modificarDuracionMinutos(Number(proyeccionId), datos.duracionMinutos);\n  }\n\n  @Patch('proyecciones/:proyeccionId/cine')\n  cambiarCine(@Param('proyeccionId') proyeccionId: string, @Body() datos: { cineId: number }) {\n    return this.service.cambiarCine(Number(proyeccionId), datos.cineId);\n  }\n\n  @Get('cines/:cineId/proyecciones')\n  consultar(@Param('cineId') cineId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarCine(Number(cineId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/proyecciones\nls -d src/proyecciones\ntouch src/proyecciones/proyecciones.controller.ts\ncode src/proyecciones/proyecciones.controller.ts",
+            "create": "code src/proyecciones/proyecciones.controller.ts",
             "explain": "Mismo ProyeccionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

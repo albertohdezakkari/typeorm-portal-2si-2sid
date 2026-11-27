@@ -111,6 +111,15 @@ function renderER(){
  erRaf=requestAnimationFrame(drawErLines);
 }
 function renderCode(){
+ if(readingMode){
+  let creation=$('[data-cli-create]');
+  if(!creation){creation=document.createElement('section');creation.className='p-practice';creation.dataset.cliCreate='';$('.p-grid').before(creation);}
+  const s=stage();creation.hidden=track!=='nest'||!s.create;
+  if(!creation.hidden){
+   creation.innerHTML=`<section class="p-practice-block"><h3>${esc(s.createTitle||'Abre el archivo')}</h3><div class="p-practice-code"><div><span>Terminal · backend</span><button type="button" class="p-btn" data-cli-copy>Copiar comandos</button></div><pre tabindex="0"><code>${esc(s.create)}</code></pre></div><p>${esc(s.createNote||'Completa el archivo con el contenido siguiente y guarda.')}</p></section>`;
+   creation.querySelector('[data-cli-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(s.create);creation.querySelector('[data-cli-copy]').textContent='Copiado';}catch{feedback('Selecciona los comandos y cópialos.');}};
+  }
+ }
  erObserver?.disconnect();cancelAnimationFrame(erRaf);erObserver=null;
  if(readingMode){
   $('[data-er-work]').hidden=!isRelation();$('[data-code]').hidden=isRelation();$('[data-full]').hidden=true;

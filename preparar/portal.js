@@ -21,7 +21,7 @@
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
     intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=altas-api-1`);
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=nest-cli-1`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;
@@ -141,7 +141,7 @@
           <div class="pg-step-heading"><div><p class="pg-eyebrow">PASO ${state.positions[state.track]+1} DE ${steps().length}</p><h3>${esc(s.title)}</h3><p>${esc(s.lead)}</p></div><button type="button" class="pg-return" data-action="resume">Volver a mi taller</button></div>
           <div class="pg-location"><span aria-hidden="true">⌁</span><strong>Dónde trabajas</strong><span>${esc(s.where)}</span></div>
           <div class="pg-layout"><section class="pg-work" aria-label="Qué haces en tu proyecto"><nav class="pg-files" aria-label="Acciones y archivos del paso">${s.blocks.map((x,i) => `<button type="button" data-action="block" data-block="${i}" aria-pressed="${state.block === i}"><span>${i+1}</span>${esc(x.title)}</button>`).join('')}</nav>
-            ${b.kind === 'file' ? `<div class="pg-create"><div><b>Primero crea y abre el archivo</b><button type="button" data-action="copy" data-copy="create">Copiar creación</button></div><pre><code>${esc(b.create)}</code></pre><p>Si <code>code</code> no existe, abre el archivo desde el Explorer de VS Code. Después pega el contenido completo y guarda.</p></div>` : ''}
+            ${b.kind === 'file' ? `<div class="pg-create"><div><b>${esc(b.createTitle||'Primero crea y abre el archivo')}</b><button type="button" data-action="copy" data-copy="create">Copiar comandos</button></div><pre><code>${esc(b.create)}</code></pre><p>Si <code>code</code> no existe, abre el archivo desde el Explorer de VS Code. Después pega el contenido completo y guarda.</p>${b.createNote?`<p>${esc(b.createNote)}</p>`:''}</div>` : ''}
             ${codeView(b)}
             ${b.explain ? `<div class="pg-explanation"><b>Por qué lo haces</b><p>${esc(b.explain)}</p></div>` : ''}
             ${b.links?.length ? `<div class="pg-reference-links">${b.links.map(([label,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div>` : ''}

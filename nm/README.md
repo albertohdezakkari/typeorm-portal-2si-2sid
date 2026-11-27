@@ -1,5 +1,7 @@
 # Cuaderno 1:N y N:M · altas normales por API
 
+Los módulos, Services y Controllers nuevos se generan con `npx --offline nest g module nombre-del-caso`, `npx --offline nest g service nombre-del-caso --no-spec` y `npx --offline nest g controller nombre-del-caso --no-spec`. Nest crea las carpetas y registra las clases. Después completa el código y `TypeOrmModule.forFeature`; en los siguientes casos abre y amplía los mismos archivos, sin repetir generate.
+
 En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo y sigue tu contexto. Lee detenidamente el README del proyecto base y continúa en **Entrenar con mis fichas**.
 
 Todos los registros se crean mediante las APIs que programas. Primero prepara las Entities, el Service, Controller y módulo del lado principal; crea y lista sus registros con POST y GET. Después crea los registros relacionados usando el ID real devuelto. La FK se declara en la Entity y el Service recibe la referencia. Cada paso muestra el archivo completo.

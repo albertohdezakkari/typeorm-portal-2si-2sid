@@ -245,10 +245,10 @@
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Planta, Jardinero])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Este módulo agrupa Planta, Jardinero y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo vivero. No se crea un módulo por Entity.",
+        "note": "Genera AsignacionesModule con Nest CLI. El comando crea la carpeta y registra el módulo en AppModule. Después completa este archivo con las tres Entities del caso y TypeOrmModule.forFeature. Cuando generes el Service y el Controller, Nest los añadirá a este mismo módulo.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
-        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
+        "create": "npx --offline nest g module asignaciones\ncode src/asignaciones/asignaciones.module.ts",
         "cues": [
           {
             "token": "imports: [TypeOrmModule.forFeature([Asignacion, Planta, Jardinero])]",
@@ -256,16 +256,18 @@
             "end": 359,
             "note": "forFeature prepara los repositorios de estas Entities para este módulo."
           }
-        ]
+        ],
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta el módulo N:M una sola vez",
+        "title": "Comprueba el módulo en AppModule",
         "kind": "module",
         "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlantasModule } from './plantas/plantas.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ViverosModule } from './viveros/viveros.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ViverosModule,\n    PlantasModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Conserva ViverosModule, PlantasModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira JardinerosModule de AppModule y sus viveros module, service y controller; conserva jardinero.entity.ts.",
+        "note": "Nest CLI ya ha añadido AsignacionesModule. Comprueba que aparece una sola vez y conserva ViverosModule, PlantasModule y la conexión 1:N. Si seguiste la versión anterior, retira JardinerosModule y sus archivos de módulo, Service y Controller; conserva su Entity. No añadas otra importación de AsignacionesModule.",
         "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
@@ -276,7 +278,9 @@
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
-        "create": "code src/app.module.ts"
+        "create": "code src/app.module.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "arrancar",
@@ -311,7 +315,7 @@
         "kind": "service",
         "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Un solo Service recibe los tres repositorios: Planta, Jardinero y Asignacion. Empieza con crearJardinero y listarJardineros; los siguientes casos amplían este mismo vivero.",
+        "note": "Un solo Service recibe los tres repositorios: Planta, Jardinero y Asignacion. Empieza con crearJardinero y listarJardineros; los siguientes casos amplían este mismo archivo.",
         "expect": "POST devuelve el jardinero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
@@ -353,7 +357,9 @@
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
+        "create": "npx --offline nest g service asignaciones --no-spec\ncode src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "crear-listar-entry",
@@ -362,7 +368,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /jardineros y GET /jardineros. Las siguientes operaciones se añaden a este mismo vivero.",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /jardineros y GET /jardineros. Las siguientes operaciones se añaden a este mismo archivo.",
         "expect": "POST devuelve el jardinero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
@@ -392,16 +398,18 @@
           }
         ],
         "updateExisting": false,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "npx --offline nest g controller asignaciones --no-spec\ncode src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Genera con Nest CLI y abre el archivo",
+        "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Conecta el Service y el Controller N:M",
+        "title": "Comprueba el registro automático",
         "kind": "module",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Planta, Jardinero])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
         "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
+        "note": "Los comandos nest g service y nest g controller ya han registrado AsignacionesService en providers y AsignacionesController en controllers. Comprueba este mismo archivo: conserva las tres Entities en forFeature y cada clase registrada una sola vez.",
         "expect": "POST devuelve el jardinero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
@@ -418,7 +426,9 @@
             "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "crear-listar-ejecutar",
@@ -466,7 +476,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {\n    const planta = await this.plantas.findOneBy({ id: plantaId });\n    const jardinero = await this.jardineros.findOneBy({ id: jardineroId });\n    if (!planta || !jardinero) {\n      throw new NotFoundException('No existe la planta o el jardinero');\n    }\n    const asignacion = { plantaId, jardineroId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El jardinero ya está asignado a esa planta');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El vivero completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de una planta existente con el jardinero que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
@@ -496,7 +506,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "asignar-jardinero-entry",
@@ -505,7 +517,7 @@
         "kind": "entry",
         "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n\n  @Post('plantas/:plantaId/asignaciones')\n  asignar(@Param('plantaId') plantaId: string, @Body() datos: { jardineroId: number; rol: string }) {\n    return this.service.asignarJardinero(Number(plantaId), datos.jardineroId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El vivero completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de una planta existente con el jardinero que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
@@ -523,7 +535,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "asignar-jardinero-ejecutar",
@@ -571,7 +585,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {\n    const planta = await this.plantas.findOneBy({ id: plantaId });\n    const jardinero = await this.jardineros.findOneBy({ id: jardineroId });\n    if (!planta || !jardinero) {\n      throw new NotFoundException('No existe la planta o el jardinero');\n    }\n    const asignacion = { plantaId, jardineroId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El jardinero ya está asignado a esa planta');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlanta(plantaId: number) {\n    return this.asignaciones.find({ where: { plantaId }, order: { jardineroId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El vivero completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las asignaciones de esa planta. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
@@ -589,7 +603,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-planta-entry",
@@ -598,7 +614,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n\n  @Post('plantas/:plantaId/asignaciones')\n  asignar(@Param('plantaId') plantaId: string, @Body() datos: { jardineroId: number; rol: string }) {\n    return this.service.asignarJardinero(Number(plantaId), datos.jardineroId, datos.rol);\n  }\n\n  @Get('plantas/:plantaId/asignaciones')\n  listarPorPlanta(@Param('plantaId') plantaId: string) {\n    return this.service.listarPorPlanta(Number(plantaId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El vivero completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las asignaciones de esa planta. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
@@ -616,7 +632,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-planta-ejecutar",
@@ -664,7 +682,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {\n    const planta = await this.plantas.findOneBy({ id: plantaId });\n    const jardinero = await this.jardineros.findOneBy({ id: jardineroId });\n    if (!planta || !jardinero) {\n      throw new NotFoundException('No existe la planta o el jardinero');\n    }\n    const asignacion = { plantaId, jardineroId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El jardinero ya está asignado a esa planta');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlanta(plantaId: number) {\n    return this.asignaciones.find({ where: { plantaId }, order: { jardineroId: 'ASC' } });\n  }\n\n  listarPorJardinero(jardineroId: number) {\n    return this.asignaciones.find({ where: { jardineroId }, order: { plantaId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El vivero completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "GET devuelve las plantas en los que participa ese jardinero. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
@@ -682,7 +700,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-jardinero-entry",
@@ -691,7 +711,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n\n  @Post('plantas/:plantaId/asignaciones')\n  asignar(@Param('plantaId') plantaId: string, @Body() datos: { jardineroId: number; rol: string }) {\n    return this.service.asignarJardinero(Number(plantaId), datos.jardineroId, datos.rol);\n  }\n\n  @Get('plantas/:plantaId/asignaciones')\n  listarPorPlanta(@Param('plantaId') plantaId: string) {\n    return this.service.listarPorPlanta(Number(plantaId));\n  }\n\n  @Get('jardineros/:jardineroId/asignaciones')\n  listarPorJardinero(@Param('jardineroId') jardineroId: string) {\n    return this.service.listarPorJardinero(Number(jardineroId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El vivero completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "GET devuelve las plantas en los que participa ese jardinero. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
@@ -709,7 +729,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "listar-por-jardinero-ejecutar",
@@ -757,7 +779,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {\n    const planta = await this.plantas.findOneBy({ id: plantaId });\n    const jardinero = await this.jardineros.findOneBy({ id: jardineroId });\n    if (!planta || !jardinero) {\n      throw new NotFoundException('No existe la planta o el jardinero');\n    }\n    const asignacion = { plantaId, jardineroId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El jardinero ya está asignado a esa planta');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlanta(plantaId: number) {\n    return this.asignaciones.find({ where: { plantaId }, order: { jardineroId: 'ASC' } });\n  }\n\n  listarPorJardinero(jardineroId: number) {\n    return this.asignaciones.find({ where: { jardineroId }, order: { plantaId: 'ASC' } });\n  }\n\n  async modificarRol(plantaId: number, jardineroId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ plantaId, jardineroId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { plantaId, jardineroId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El vivero completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la planta y el jardinero.",
         "focus": "service",
         "cues": [
@@ -781,7 +803,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "modificar-rol-entry",
@@ -790,7 +814,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n\n  @Post('plantas/:plantaId/asignaciones')\n  asignar(@Param('plantaId') plantaId: string, @Body() datos: { jardineroId: number; rol: string }) {\n    return this.service.asignarJardinero(Number(plantaId), datos.jardineroId, datos.rol);\n  }\n\n  @Get('plantas/:plantaId/asignaciones')\n  listarPorPlanta(@Param('plantaId') plantaId: string) {\n    return this.service.listarPorPlanta(Number(plantaId));\n  }\n\n  @Get('jardineros/:jardineroId/asignaciones')\n  listarPorJardinero(@Param('jardineroId') jardineroId: string) {\n    return this.service.listarPorJardinero(Number(jardineroId));\n  }\n\n  @Patch('plantas/:plantaId/asignaciones/:jardineroId')\n  modificarRol(@Param('plantaId') plantaId: string, @Param('jardineroId') jardineroId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(plantaId), Number(jardineroId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El vivero completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la planta y el jardinero.",
         "focus": "entry",
         "cues": [
@@ -808,7 +832,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "modificar-rol-ejecutar",
@@ -856,7 +882,7 @@
         "kind": "service",
         "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Planta } from '../plantas/entities/planta.entity';\nimport { Jardinero } from '../jardineros/entities/jardinero.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Planta) private readonly plantas: Repository<Planta>,\n    @InjectRepository(Jardinero) private readonly jardineros: Repository<Jardinero>\n  ) {}\n\n  crearJardinero(nombre: string, apellidos: string, email: string) {\n    const jardinero = this.jardineros.create({ nombre, apellidos, email });\n    return this.jardineros.save(jardinero);\n  }\n\n  listarJardineros() {\n    return this.jardineros.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarJardinero(plantaId: number, jardineroId: number, rol: string) {\n    const planta = await this.plantas.findOneBy({ id: plantaId });\n    const jardinero = await this.jardineros.findOneBy({ id: jardineroId });\n    if (!planta || !jardinero) {\n      throw new NotFoundException('No existe la planta o el jardinero');\n    }\n    const asignacion = { plantaId, jardineroId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El jardinero ya está asignado a esa planta');\n      }\n      throw error;\n    }\n  }\n\n  listarPorPlanta(plantaId: number) {\n    return this.asignaciones.find({ where: { plantaId }, order: { jardineroId: 'ASC' } });\n  }\n\n  listarPorJardinero(jardineroId: number) {\n    return this.asignaciones.find({ where: { jardineroId }, order: { plantaId: 'ASC' } });\n  }\n\n  async modificarRol(plantaId: number, jardineroId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ plantaId, jardineroId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { plantaId, jardineroId, rol };\n  }\n\n  async eliminarAsignacion(plantaId: number, jardineroId: number) {\n    await this.asignaciones.delete({ plantaId, jardineroId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Amplía el mismo AsignacionesService. El vivero completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearJardinero, listarJardineros y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la planta y el jardinero siguen existiendo.",
         "focus": "service",
         "cues": [
@@ -874,7 +900,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.service.ts"
+        "create": "code src/asignaciones/asignaciones.service.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "eliminar-asignacion-entry",
@@ -883,7 +911,7 @@
         "kind": "entry",
         "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('jardineros')\n  crearJardinero(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearJardinero(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('jardineros')\n  listarJardineros() {\n    return this.service.listarJardineros();\n  }\n\n  @Post('plantas/:plantaId/asignaciones')\n  asignar(@Param('plantaId') plantaId: string, @Body() datos: { jardineroId: number; rol: string }) {\n    return this.service.asignarJardinero(Number(plantaId), datos.jardineroId, datos.rol);\n  }\n\n  @Get('plantas/:plantaId/asignaciones')\n  listarPorPlanta(@Param('plantaId') plantaId: string) {\n    return this.service.listarPorPlanta(Number(plantaId));\n  }\n\n  @Get('jardineros/:jardineroId/asignaciones')\n  listarPorJardinero(@Param('jardineroId') jardineroId: string) {\n    return this.service.listarPorJardinero(Number(jardineroId));\n  }\n\n  @Patch('plantas/:plantaId/asignaciones/:jardineroId')\n  modificarRol(@Param('plantaId') plantaId: string, @Param('jardineroId') jardineroId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(plantaId), Number(jardineroId), datos.rol);\n  }\n\n  @Delete('plantas/:plantaId/asignaciones/:jardineroId')\n  @HttpCode(204)\n  eliminar(@Param('plantaId') plantaId: string, @Param('jardineroId') jardineroId: string) {\n    return this.service.eliminarAsignacion(Number(plantaId), Number(jardineroId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Amplía el mismo AsignacionesController. El vivero completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Jardineros y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la planta y el jardinero siguen existiendo.",
         "focus": "entry",
         "cues": [
@@ -901,7 +929,9 @@
           }
         ],
         "updateExisting": true,
-        "create": "code src/asignaciones/asignaciones.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts",
+        "createTitle": "Abre el archivo existente",
+        "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
       },
       {
         "id": "eliminar-asignacion-ejecutar",
@@ -3364,5 +3394,6 @@
       "repaso"
     ]
   },
-  "nmModuleRevision": 1
+  "nmModuleRevision": 1,
+  "nestCliRevision": 1
 }

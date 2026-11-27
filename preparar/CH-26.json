@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; AulasModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/aulas/aulas.module.ts",
             "path": "src/aulas/aulas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\nimport { Aula } from './entities/aula.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Escuela, Aula])],\n  providers: [],\n  controllers: []\n})\nexport class AulasModule {}",
-            "create": "mkdir -p src/aulas\ncode src/aulas/aulas.module.ts",
+            "create": "npx --offline nest g module aulas\ncode src/aulas/aulas.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\n\nimport { EscuelasModule } from './escuelas/escuelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EscuelasModule,\n    AulasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade AulasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/escuelas/escuelas.service.ts",
             "path": "src/escuelas/escuelas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Escuela } from './entities/escuela.entity';\n\n@Injectable()\nexport class EscuelasService {\n  constructor(\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearEscuela(nombre: string) {\n    const escuela = this.escuelas.create({ nombre });\n    return this.escuelas.save(escuela);\n  }\n\n  listarEscuelas() {\n    return this.escuelas.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.service.ts",
+            "create": "npx --offline nest g module escuelas\nnpx --offline nest g service escuelas --no-spec\nnpx --offline nest g controller escuelas --no-spec\ncode src/escuelas/escuelas.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/escuelas/escuelas.controller.ts",
             "path": "src/escuelas/escuelas.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Puente\"}'\ncurl -i \"http://localhost:3000/escuelas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EscuelasService } from './escuelas.service';\n\n@Controller('escuelas')\nexport class EscuelasController {\n  constructor(private readonly service: EscuelasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearEscuela(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEscuelas();\n  }\n}",
-            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.controller.ts",
+            "create": "code src/escuelas/escuelas.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/escuelas/escuelas.module.ts",
             "path": "src/escuelas/escuelas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Escuela } from './entities/escuela.entity';\nimport { EscuelasService } from './escuelas.service';\nimport { EscuelasController } from './escuelas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Escuela])],\n  providers: [EscuelasService],\n  controllers: [EscuelasController]\n})\nexport class EscuelasModule {}",
-            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.module.ts",
+            "create": "code src/escuelas/escuelas.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\n\nimport { EscuelasModule } from './escuelas/escuelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EscuelasModule,\n    AulasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade AulasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar escuelas antes de crear aulas.",
@@ -526,27 +540,33 @@
             "title": "src/aulas/aulas.service.ts",
             "path": "src/aulas/aulas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Aula } from './entities/aula.entity';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\n\n@Injectable()\nexport class AulasService {\n  constructor(\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearAula(nombre: string, capacidad: number, escuelaId: number) {\n    const aula = this.aulas.create({\n      nombre,\n      capacidad,\n      escuela: { id: escuelaId }\n    });\n    return this.aulas.save(aula);\n  }\n\n  listarAulas() {\n    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.service.ts\ncode src/aulas/aulas.service.ts",
+            "create": "npx --offline nest g service aulas --no-spec\ncode src/aulas/aulas.service.ts",
             "explain": "Mismo archivo AulasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.controller.ts",
             "path": "src/aulas/aulas.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AulasService } from './aulas.service';\n\n@Controller()\nexport class AulasController {\n  constructor(private readonly service: AulasService) {}\n\n  @Post('aulas')\n  crear(@Body() datos: { nombre: string; capacidad: number; escuelaId: number }) {\n    return this.service.crearAula(datos.nombre, datos.capacidad, datos.escuelaId);\n  }\n\n  @Get('aulas')\n  listar() {\n    return this.service.listarAulas();\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.controller.ts\ncode src/aulas/aulas.controller.ts",
+            "create": "npx --offline nest g controller aulas --no-spec\ncode src/aulas/aulas.controller.ts",
             "explain": "Mismo AulasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.module.ts",
             "path": "src/aulas/aulas.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\nimport { Aula } from './entities/aula.entity';\nimport { AulasService } from './aulas.service';\nimport { AulasController } from './aulas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Escuela, Aula])],\n  providers: [AulasService],\n  controllers: [AulasController]\n})\nexport class AulasModule {}",
-            "create": "mkdir -p src/aulas\ncode src/aulas/aulas.module.ts",
+            "create": "code src/aulas/aulas.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Aulas. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/aulas/aulas.service.ts",
             "path": "src/aulas/aulas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Aula } from './entities/aula.entity';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\n\n@Injectable()\nexport class AulasService {\n  constructor(\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearAula(nombre: string, capacidad: number, escuelaId: number) {\n    const aula = this.aulas.create({\n      nombre,\n      capacidad,\n      escuela: { id: escuelaId }\n    });\n    return this.aulas.save(aula);\n  }\n\n  listarAulas() {\n    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarAula(aulaId: number) {\n    await this.aulas.delete(aulaId);\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.service.ts\ncode src/aulas/aulas.service.ts",
+            "create": "code src/aulas/aulas.service.ts",
             "explain": "Mismo archivo AulasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.controller.ts",
             "path": "src/aulas/aulas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { AulasService } from './aulas.service';\n\n@Controller()\nexport class AulasController {\n  constructor(private readonly service: AulasService) {}\n\n  @Post('aulas')\n  crear(@Body() datos: { nombre: string; capacidad: number; escuelaId: number }) {\n    return this.service.crearAula(datos.nombre, datos.capacidad, datos.escuelaId);\n  }\n\n  @Get('aulas')\n  listar() {\n    return this.service.listarAulas();\n  }\n\n  @Delete('aulas/:aulaId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string) {\n    return this.service.eliminarAula(Number(aulaId));\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.controller.ts\ncode src/aulas/aulas.controller.ts",
+            "create": "code src/aulas/aulas.controller.ts",
             "explain": "Mismo AulasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/aulas/aulas.service.ts",
             "path": "src/aulas/aulas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Aula } from './entities/aula.entity';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\n\n@Injectable()\nexport class AulasService {\n  constructor(\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearAula(nombre: string, capacidad: number, escuelaId: number) {\n    const aula = this.aulas.create({\n      nombre,\n      capacidad,\n      escuela: { id: escuelaId }\n    });\n    return this.aulas.save(aula);\n  }\n\n  listarAulas() {\n    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarAula(aulaId: number) {\n    await this.aulas.delete(aulaId);\n  }\n\n  async modificarCapacidad(aulaId: number, capacidad: number) {\n    await this.aulas.update(aulaId, { capacidad });\n    return this.aulas.findOneBy({ id: aulaId });\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.service.ts\ncode src/aulas/aulas.service.ts",
+            "create": "code src/aulas/aulas.service.ts",
             "explain": "Mismo archivo AulasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.controller.ts",
             "path": "src/aulas/aulas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { AulasService } from './aulas.service';\n\n@Controller()\nexport class AulasController {\n  constructor(private readonly service: AulasService) {}\n\n  @Post('aulas')\n  crear(@Body() datos: { nombre: string; capacidad: number; escuelaId: number }) {\n    return this.service.crearAula(datos.nombre, datos.capacidad, datos.escuelaId);\n  }\n\n  @Get('aulas')\n  listar() {\n    return this.service.listarAulas();\n  }\n\n  @Delete('aulas/:aulaId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string) {\n    return this.service.eliminarAula(Number(aulaId));\n  }\n\n  @Patch('aulas/:aulaId')\n  modificar(@Param('aulaId') aulaId: string, @Body() datos: { capacidad: number }) {\n    return this.service.modificarCapacidad(Number(aulaId), datos.capacidad);\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.controller.ts\ncode src/aulas/aulas.controller.ts",
+            "create": "code src/aulas/aulas.controller.ts",
             "explain": "Mismo AulasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/aulas/aulas.service.ts",
             "path": "src/aulas/aulas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Aula } from './entities/aula.entity';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\n\n@Injectable()\nexport class AulasService {\n  constructor(\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearAula(nombre: string, capacidad: number, escuelaId: number) {\n    const aula = this.aulas.create({\n      nombre,\n      capacidad,\n      escuela: { id: escuelaId }\n    });\n    return this.aulas.save(aula);\n  }\n\n  listarAulas() {\n    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarAula(aulaId: number) {\n    await this.aulas.delete(aulaId);\n  }\n\n  async modificarCapacidad(aulaId: number, capacidad: number) {\n    await this.aulas.update(aulaId, { capacidad });\n    return this.aulas.findOneBy({ id: aulaId });\n  }\n\n  async cambiarEscuela(aulaId: number, escuelaId: number) {\n    await this.aulas.update(aulaId, { escuela: { id: escuelaId } });\n    return this.aulas.findOneBy({ id: aulaId });\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.service.ts\ncode src/aulas/aulas.service.ts",
+            "create": "code src/aulas/aulas.service.ts",
             "explain": "Mismo archivo AulasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.controller.ts",
             "path": "src/aulas/aulas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { AulasService } from './aulas.service';\n\n@Controller()\nexport class AulasController {\n  constructor(private readonly service: AulasService) {}\n\n  @Post('aulas')\n  crear(@Body() datos: { nombre: string; capacidad: number; escuelaId: number }) {\n    return this.service.crearAula(datos.nombre, datos.capacidad, datos.escuelaId);\n  }\n\n  @Get('aulas')\n  listar() {\n    return this.service.listarAulas();\n  }\n\n  @Delete('aulas/:aulaId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string) {\n    return this.service.eliminarAula(Number(aulaId));\n  }\n\n  @Patch('aulas/:aulaId')\n  modificar(@Param('aulaId') aulaId: string, @Body() datos: { capacidad: number }) {\n    return this.service.modificarCapacidad(Number(aulaId), datos.capacidad);\n  }\n\n  @Patch('aulas/:aulaId/escuela')\n  cambiarEscuela(@Param('aulaId') aulaId: string, @Body() datos: { escuelaId: number }) {\n    return this.service.cambiarEscuela(Number(aulaId), datos.escuelaId);\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.controller.ts\ncode src/aulas/aulas.controller.ts",
+            "create": "code src/aulas/aulas.controller.ts",
             "explain": "Mismo AulasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/aulas/aulas.service.ts",
             "path": "src/aulas/aulas.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Aula } from './entities/aula.entity';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\n\n@Injectable()\nexport class AulasService {\n  constructor(\n    @InjectRepository(Aula) private readonly aulas: Repository<Aula>,\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearAula(nombre: string, capacidad: number, escuelaId: number) {\n    const aula = this.aulas.create({\n      nombre,\n      capacidad,\n      escuela: { id: escuelaId }\n    });\n    return this.aulas.save(aula);\n  }\n\n  listarAulas() {\n    return this.aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarAula(aulaId: number) {\n    await this.aulas.delete(aulaId);\n  }\n\n  async modificarCapacidad(aulaId: number, capacidad: number) {\n    await this.aulas.update(aulaId, { capacidad });\n    return this.aulas.findOneBy({ id: aulaId });\n  }\n\n  async cambiarEscuela(aulaId: number, escuelaId: number) {\n    await this.aulas.update(aulaId, { escuela: { id: escuelaId } });\n    return this.aulas.findOneBy({ id: aulaId });\n  }\n\n  async consultarEscuela(escuelaId: number, minimo: number) {\n    const escuela = await this.escuelas.findOneBy({ id: escuelaId });\n    const aulas = await this.aulas.find({\n      where: {\n        escuela: { id: escuelaId },\n        capacidad: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { escuela, aulas };\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.service.ts\ncode src/aulas/aulas.service.ts",
+            "create": "code src/aulas/aulas.service.ts",
             "explain": "Mismo archivo AulasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/aulas/aulas.controller.ts",
             "path": "src/aulas/aulas.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { AulasService } from './aulas.service';\n\n@Controller()\nexport class AulasController {\n  constructor(private readonly service: AulasService) {}\n\n  @Post('aulas')\n  crear(@Body() datos: { nombre: string; capacidad: number; escuelaId: number }) {\n    return this.service.crearAula(datos.nombre, datos.capacidad, datos.escuelaId);\n  }\n\n  @Get('aulas')\n  listar() {\n    return this.service.listarAulas();\n  }\n\n  @Delete('aulas/:aulaId')\n  @HttpCode(204)\n  eliminar(@Param('aulaId') aulaId: string) {\n    return this.service.eliminarAula(Number(aulaId));\n  }\n\n  @Patch('aulas/:aulaId')\n  modificar(@Param('aulaId') aulaId: string, @Body() datos: { capacidad: number }) {\n    return this.service.modificarCapacidad(Number(aulaId), datos.capacidad);\n  }\n\n  @Patch('aulas/:aulaId/escuela')\n  cambiarEscuela(@Param('aulaId') aulaId: string, @Body() datos: { escuelaId: number }) {\n    return this.service.cambiarEscuela(Number(aulaId), datos.escuelaId);\n  }\n\n  @Get('escuelas/:escuelaId/aulas')\n  consultar(@Param('escuelaId') escuelaId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarEscuela(Number(escuelaId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/aulas\nls -d src/aulas\ntouch src/aulas/aulas.controller.ts\ncode src/aulas/aulas.controller.ts",
+            "create": "code src/aulas/aulas.controller.ts",
             "explain": "Mismo AulasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

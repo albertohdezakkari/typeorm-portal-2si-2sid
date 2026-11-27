@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; ObrasModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/obras/obras.module.ts",
             "path": "src/obras/obras.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './entities/obra.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  providers: [],\n  controllers: []\n})\nexport class ObrasModule {}",
-            "create": "mkdir -p src/obras\ncode src/obras/obras.module.ts",
+            "create": "npx --offline nest g module obras\ncode src/obras/obras.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ObrasModule } from './obras/obras.module';\n\nimport { AyuntamientosModule } from './ayuntamientos/ayuntamientos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AyuntamientosModule,\n    ObrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade ObrasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/ayuntamientos/ayuntamientos.service.ts",
             "path": "src/ayuntamientos/ayuntamientos.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Ayuntamiento } from './entities/ayuntamiento.entity';\n\n@Injectable()\nexport class AyuntamientosService {\n  constructor(\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearAyuntamiento(nombre: string) {\n    const ayuntamiento = this.ayuntamientos.create({ nombre });\n    return this.ayuntamientos.save(ayuntamiento);\n  }\n\n  listarAyuntamientos() {\n    return this.ayuntamientos.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/ayuntamientos\ncode src/ayuntamientos/ayuntamientos.service.ts",
+            "create": "npx --offline nest g module ayuntamientos\nnpx --offline nest g service ayuntamientos --no-spec\nnpx --offline nest g controller ayuntamientos --no-spec\ncode src/ayuntamientos/ayuntamientos.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/ayuntamientos/ayuntamientos.controller.ts",
             "path": "src/ayuntamientos/ayuntamientos.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Río\"}'\ncurl -i \"http://localhost:3000/ayuntamientos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AyuntamientosService } from './ayuntamientos.service';\n\n@Controller('ayuntamientos')\nexport class AyuntamientosController {\n  constructor(private readonly service: AyuntamientosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearAyuntamiento(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAyuntamientos();\n  }\n}",
-            "create": "mkdir -p src/ayuntamientos\ncode src/ayuntamientos/ayuntamientos.controller.ts",
+            "create": "code src/ayuntamientos/ayuntamientos.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/ayuntamientos/ayuntamientos.module.ts",
             "path": "src/ayuntamientos/ayuntamientos.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './entities/ayuntamiento.entity';\nimport { AyuntamientosService } from './ayuntamientos.service';\nimport { AyuntamientosController } from './ayuntamientos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento])],\n  providers: [AyuntamientosService],\n  controllers: [AyuntamientosController]\n})\nexport class AyuntamientosModule {}",
-            "create": "mkdir -p src/ayuntamientos\ncode src/ayuntamientos/ayuntamientos.module.ts",
+            "create": "code src/ayuntamientos/ayuntamientos.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ObrasModule } from './obras/obras.module';\n\nimport { AyuntamientosModule } from './ayuntamientos/ayuntamientos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AyuntamientosModule,\n    ObrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade ObrasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar ayuntamientos antes de crear obras.",
@@ -526,27 +540,33 @@
             "title": "src/obras/obras.service.ts",
             "path": "src/obras/obras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from './entities/obra.entity';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ObrasService {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearObra(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre,\n      presupuestoEuros,\n      ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObras() {\n    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.service.ts\ncode src/obras/obras.service.ts",
+            "create": "npx --offline nest g service obras --no-spec\ncode src/obras/obras.service.ts",
             "explain": "Mismo archivo ObrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.controller.ts",
             "path": "src/obras/obras.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ObrasService } from './obras.service';\n\n@Controller()\nexport class ObrasController {\n  constructor(private readonly service: ObrasService) {}\n\n  @Post('obras')\n  crear(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObra(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObras();\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.controller.ts\ncode src/obras/obras.controller.ts",
+            "create": "npx --offline nest g controller obras --no-spec\ncode src/obras/obras.controller.ts",
             "explain": "Mismo ObrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.module.ts",
             "path": "src/obras/obras.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './entities/obra.entity';\nimport { ObrasService } from './obras.service';\nimport { ObrasController } from './obras.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra])],\n  providers: [ObrasService],\n  controllers: [ObrasController]\n})\nexport class ObrasModule {}",
-            "create": "mkdir -p src/obras\ncode src/obras/obras.module.ts",
+            "create": "code src/obras/obras.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Obras. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/obras/obras.service.ts",
             "path": "src/obras/obras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from './entities/obra.entity';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ObrasService {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearObra(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre,\n      presupuestoEuros,\n      ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObras() {\n    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarObra(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.service.ts\ncode src/obras/obras.service.ts",
+            "create": "code src/obras/obras.service.ts",
             "explain": "Mismo archivo ObrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.controller.ts",
             "path": "src/obras/obras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { ObrasService } from './obras.service';\n\n@Controller()\nexport class ObrasController {\n  constructor(private readonly service: ObrasService) {}\n\n  @Post('obras')\n  crear(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObra(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObras();\n  }\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string) {\n    return this.service.eliminarObra(Number(obraId));\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.controller.ts\ncode src/obras/obras.controller.ts",
+            "create": "code src/obras/obras.controller.ts",
             "explain": "Mismo ObrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/obras/obras.service.ts",
             "path": "src/obras/obras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from './entities/obra.entity';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ObrasService {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearObra(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre,\n      presupuestoEuros,\n      ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObras() {\n    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarObra(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n\n  async modificarPresupuesto(obraId: number, presupuestoEuros: number) {\n    await this.obras.update(obraId, { presupuestoEuros });\n    return this.obras.findOneBy({ id: obraId });\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.service.ts\ncode src/obras/obras.service.ts",
+            "create": "code src/obras/obras.service.ts",
             "explain": "Mismo archivo ObrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.controller.ts",
             "path": "src/obras/obras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ObrasService } from './obras.service';\n\n@Controller()\nexport class ObrasController {\n  constructor(private readonly service: ObrasService) {}\n\n  @Post('obras')\n  crear(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObra(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObras();\n  }\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string) {\n    return this.service.eliminarObra(Number(obraId));\n  }\n\n  @Patch('obras/:obraId')\n  modificar(@Param('obraId') obraId: string, @Body() datos: { presupuestoEuros: number }) {\n    return this.service.modificarPresupuesto(Number(obraId), datos.presupuestoEuros);\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.controller.ts\ncode src/obras/obras.controller.ts",
+            "create": "code src/obras/obras.controller.ts",
             "explain": "Mismo ObrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/obras/obras.service.ts",
             "path": "src/obras/obras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Obra } from './entities/obra.entity';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ObrasService {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearObra(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre,\n      presupuestoEuros,\n      ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObras() {\n    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarObra(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n\n  async modificarPresupuesto(obraId: number, presupuestoEuros: number) {\n    await this.obras.update(obraId, { presupuestoEuros });\n    return this.obras.findOneBy({ id: obraId });\n  }\n\n  async cambiarAyuntamiento(obraId: number, ayuntamientoId: number) {\n    await this.obras.update(obraId, { ayuntamiento: { id: ayuntamientoId } });\n    return this.obras.findOneBy({ id: obraId });\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.service.ts\ncode src/obras/obras.service.ts",
+            "create": "code src/obras/obras.service.ts",
             "explain": "Mismo archivo ObrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.controller.ts",
             "path": "src/obras/obras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ObrasService } from './obras.service';\n\n@Controller()\nexport class ObrasController {\n  constructor(private readonly service: ObrasService) {}\n\n  @Post('obras')\n  crear(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObra(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObras();\n  }\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string) {\n    return this.service.eliminarObra(Number(obraId));\n  }\n\n  @Patch('obras/:obraId')\n  modificar(@Param('obraId') obraId: string, @Body() datos: { presupuestoEuros: number }) {\n    return this.service.modificarPresupuesto(Number(obraId), datos.presupuestoEuros);\n  }\n\n  @Patch('obras/:obraId/ayuntamiento')\n  cambiarAyuntamiento(@Param('obraId') obraId: string, @Body() datos: { ayuntamientoId: number }) {\n    return this.service.cambiarAyuntamiento(Number(obraId), datos.ayuntamientoId);\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.controller.ts\ncode src/obras/obras.controller.ts",
+            "create": "code src/obras/obras.controller.ts",
             "explain": "Mismo ObrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/obras/obras.service.ts",
             "path": "src/obras/obras.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Obra } from './entities/obra.entity';\nimport { Ayuntamiento } from '../ayuntamientos/entities/ayuntamiento.entity';\n\n@Injectable()\nexport class ObrasService {\n  constructor(\n    @InjectRepository(Obra) private readonly obras: Repository<Obra>,\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearObra(nombre: string, presupuestoEuros: number, ayuntamientoId: number) {\n    const obra = this.obras.create({\n      nombre,\n      presupuestoEuros,\n      ayuntamiento: { id: ayuntamientoId }\n    });\n    return this.obras.save(obra);\n  }\n\n  listarObras() {\n    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarObra(obraId: number) {\n    await this.obras.delete(obraId);\n  }\n\n  async modificarPresupuesto(obraId: number, presupuestoEuros: number) {\n    await this.obras.update(obraId, { presupuestoEuros });\n    return this.obras.findOneBy({ id: obraId });\n  }\n\n  async cambiarAyuntamiento(obraId: number, ayuntamientoId: number) {\n    await this.obras.update(obraId, { ayuntamiento: { id: ayuntamientoId } });\n    return this.obras.findOneBy({ id: obraId });\n  }\n\n  async consultarAyuntamiento(ayuntamientoId: number, minimo: number) {\n    const ayuntamiento = await this.ayuntamientos.findOneBy({ id: ayuntamientoId });\n    const obras = await this.obras.find({\n      where: {\n        ayuntamiento: { id: ayuntamientoId },\n        presupuestoEuros: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { ayuntamiento, obras };\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.service.ts\ncode src/obras/obras.service.ts",
+            "create": "code src/obras/obras.service.ts",
             "explain": "Mismo archivo ObrasService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/obras/obras.controller.ts",
             "path": "src/obras/obras.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { ObrasService } from './obras.service';\n\n@Controller()\nexport class ObrasController {\n  constructor(private readonly service: ObrasService) {}\n\n  @Post('obras')\n  crear(@Body() datos: { nombre: string; presupuestoEuros: number; ayuntamientoId: number }) {\n    return this.service.crearObra(datos.nombre, datos.presupuestoEuros, datos.ayuntamientoId);\n  }\n\n  @Get('obras')\n  listar() {\n    return this.service.listarObras();\n  }\n\n  @Delete('obras/:obraId')\n  @HttpCode(204)\n  eliminar(@Param('obraId') obraId: string) {\n    return this.service.eliminarObra(Number(obraId));\n  }\n\n  @Patch('obras/:obraId')\n  modificar(@Param('obraId') obraId: string, @Body() datos: { presupuestoEuros: number }) {\n    return this.service.modificarPresupuesto(Number(obraId), datos.presupuestoEuros);\n  }\n\n  @Patch('obras/:obraId/ayuntamiento')\n  cambiarAyuntamiento(@Param('obraId') obraId: string, @Body() datos: { ayuntamientoId: number }) {\n    return this.service.cambiarAyuntamiento(Number(obraId), datos.ayuntamientoId);\n  }\n\n  @Get('ayuntamientos/:ayuntamientoId/obras')\n  consultar(@Param('ayuntamientoId') ayuntamientoId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarAyuntamiento(Number(ayuntamientoId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/obras\nls -d src/obras\ntouch src/obras/obras.controller.ts\ncode src/obras/obras.controller.ts",
+            "create": "code src/obras/obras.controller.ts",
             "explain": "Mismo ObrasController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": true
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }

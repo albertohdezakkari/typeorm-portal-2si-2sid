@@ -5,7 +5,7 @@ import json,re
 
 ROOT=Path(__file__).resolve().parents[1]
 CONFIG=json.loads((ROOT/'scripts/nm-contextos.json').read_text())
-CACHE='nm-unico-todos-1'
+CACHE='nest-cli-1'
 
 @lru_cache(None)
 def adapter(case_id):
@@ -14,7 +14,7 @@ def adapter(case_id):
     mapping={'CH-31':case_id,'Alejandro':case_id,
              'Revisores':people.capitalize(),'revisores':people,'Revisor':person,'revisor':person.lower(),
              'Documentos':n['route'].capitalize(),'documentos':n['route'],'Documento':n['entity'],'documento':n['property'],
-             'Archivos':p['route'].capitalize(),'archivos':p['route'],'Archivo':p['entity'],'archivo':p['property']}
+             'Archivos':p['route'].capitalize(),'Archivo':p['entity']}
     if rest[-1]=='f':
         for start,end in [('el documento','la '),('ese documento','esa '),('el mismo documento','la misma '),('otro documento','otra ')]:
             mapping[start]=end+n['property']
@@ -32,7 +32,7 @@ def runtime(code,case_id):
     # El runtime raíz pasa a ser la plantilla común. La migración se añade una vez.
     if 'const modulePositionIsOld='not in code:
         code=adapter(case_id)['runtime'](code)
-    return code.replace('?v=nm-unico-alejandro-1','?v='+CACHE).replace('.json?v=altas-api-1','.json?v='+CACHE)
+    return code.replace('?v=nm-unico-alejandro-1','?v='+CACHE).replace('.json?v=altas-api-1','.json?v='+CACHE).replace('.json?v=nm-unico-todos-1','.json?v='+CACHE)
 
 def obsolete_files(case_id):
     people=CONFIG[case_id][1]

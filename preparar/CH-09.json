@@ -320,18 +320,22 @@
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    })\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
+            "create": "code src/app.module.ts",
             "explain": "Es la configuración de tu proyecto base. Se conserva ConfigModule, forRootAsync, autoLoadEntities y synchronize: true. Solo retiramos ProyeccionModule; ReparacionesModule se conectará en el siguiente paso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/salud.controller.ts",
             "path": "src/salud.controller.ts",
             "code": "import { Controller, Get } from '@nestjs/common';\nimport { DataSource } from 'typeorm';\n\n@Controller('salud')\nexport class SaludController {\n  constructor(private readonly dataSource: DataSource) {}\n\n  @Get()\n  comprobarConexion() {\n    return {\n      estado: this.dataSource.isInitialized ? 'ok' : 'sin conexión',\n      base: this.dataSource.options.database\n    };\n  }\n}",
-            "create": "mkdir -p src\ncode src/salud.controller.ts",
+            "create": "code src/salud.controller.ts",
             "explain": "DataSource.isInitialized informa de que TypeORM ha abierto la conexión. No hay SQL escrito a mano.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -399,18 +403,11 @@
             "title": "src/reparaciones/reparaciones.module.ts",
             "path": "src/reparaciones/reparaciones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from '../talleres/entities/taller.entity';\nimport { Reparacion } from './entities/reparacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion])],\n  providers: [],\n  controllers: []\n})\nexport class ReparacionesModule {}",
-            "create": "mkdir -p src/reparaciones\ncode src/reparaciones/reparaciones.module.ts",
+            "create": "npx --offline nest g module reparaciones\ncode src/reparaciones/reparaciones.module.ts",
             "explain": "Este módulo solo registra las Entities. Aún no importa un Service ni un Controller que no hayas creado.",
-            "terms": []
-          },
-          {
-            "kind": "file",
-            "title": "src/app.module.ts",
-            "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
-            "create": "mkdir -p src\ncode src/app.module.ts",
-            "explain": "Conserva la conexión de la base y añade ReparacionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "command",
@@ -431,30 +428,47 @@
             "title": "src/talleres/talleres.service.ts",
             "path": "src/talleres/talleres.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Taller } from './entities/taller.entity';\n\n@Injectable()\nexport class TalleresService {\n  constructor(\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearTaller(nombre: string) {\n    const taller = this.talleres.create({ nombre });\n    return this.talleres.save(taller);\n  }\n\n  listarTalleres() {\n    return this.talleres.find({ order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.service.ts",
+            "create": "npx --offline nest g module talleres\nnpx --offline nest g service talleres --no-spec\nnpx --offline nest g controller talleres --no-spec\ncode src/talleres/talleres.service.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/talleres/talleres.controller.ts",
             "path": "src/talleres/talleres.controller.ts",
             "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\ncurl -i \"http://localhost:3000/talleres\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { TalleresService } from './talleres.service';\n\n@Controller('talleres')\nexport class TalleresController {\n  constructor(private readonly service: TalleresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearTaller(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarTalleres();\n  }\n}",
-            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.controller.ts",
+            "create": "code src/talleres/talleres.controller.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/talleres/talleres.module.ts",
             "path": "src/talleres/talleres.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './entities/taller.entity';\nimport { TalleresService } from './talleres.service';\nimport { TalleresController } from './talleres.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller])],\n  providers: [TalleresService],\n  controllers: [TalleresController]\n})\nexport class TalleresModule {}",
-            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.module.ts",
+            "create": "code src/talleres/talleres.module.ts",
             "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
             "terms": [],
-            "apiFile": true
+            "apiFile": true,
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
+          },
+          {
+            "kind": "file",
+            "title": "src/app.module.ts",
+            "path": "src/app.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "create": "code src/app.module.ts",
+            "explain": "Conserva la conexión de la base y añade ReparacionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           }
         ],
         "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar talleres antes de crear reparaciones.",
@@ -526,27 +540,33 @@
             "title": "src/reparaciones/reparaciones.service.ts",
             "path": "src/reparaciones/reparaciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { Taller } from '../talleres/entities/taller.entity';\n\n@Injectable()\nexport class ReparacionesService {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearReparacion(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre,\n      costeCentimos,\n      taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparaciones() {\n    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.service.ts\ncode src/reparaciones/reparaciones.service.ts",
+            "create": "npx --offline nest g service reparaciones --no-spec\ncode src/reparaciones/reparaciones.service.ts",
             "explain": "Mismo archivo ReparacionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.controller.ts",
             "path": "src/reparaciones/reparaciones.controller.ts",
             "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ReparacionesService } from './reparaciones.service';\n\n@Controller()\nexport class ReparacionesController {\n  constructor(private readonly service: ReparacionesService) {}\n\n  @Post('reparaciones')\n  crear(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacion(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparaciones();\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.controller.ts\ncode src/reparaciones/reparaciones.controller.ts",
+            "create": "npx --offline nest g controller reparaciones --no-spec\ncode src/reparaciones/reparaciones.controller.ts",
             "explain": "Mismo ReparacionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Genera con Nest CLI y abre el archivo",
+            "createNote": "Ejecuta desde backend, donde están package.json y nest-cli.json. Nest crea las carpetas y registra las clases automáticamente. Si ya generaste estos archivos, abre el archivo indicado sin repetir generate. Después completa su contenido y guarda."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.module.ts",
             "path": "src/reparaciones/reparaciones.module.ts",
             "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from '../talleres/entities/taller.entity';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { ReparacionesService } from './reparaciones.service';\nimport { ReparacionesController } from './reparaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller, Reparacion])],\n  providers: [ReparacionesService],\n  controllers: [ReparacionesController]\n})\nexport class ReparacionesModule {}",
-            "create": "mkdir -p src/reparaciones\ncode src/reparaciones/reparaciones.module.ts",
+            "create": "code src/reparaciones/reparaciones.module.ts",
             "explain": "Un módulo pequeño: Entities, Service y Controller de Reparaciones. Los siguientes casos añaden métodos a los mismos archivos.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -628,18 +648,22 @@
             "title": "src/reparaciones/reparaciones.service.ts",
             "path": "src/reparaciones/reparaciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { Taller } from '../talleres/entities/taller.entity';\n\n@Injectable()\nexport class ReparacionesService {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearReparacion(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre,\n      costeCentimos,\n      taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparaciones() {\n    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarReparacion(reparacionId: number) {\n    await this.reparaciones.delete(reparacionId);\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.service.ts\ncode src/reparaciones/reparaciones.service.ts",
+            "create": "code src/reparaciones/reparaciones.service.ts",
             "explain": "Mismo archivo ReparacionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.controller.ts",
             "path": "src/reparaciones/reparaciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param } from '@nestjs/common';\nimport { ReparacionesService } from './reparaciones.service';\n\n@Controller()\nexport class ReparacionesController {\n  constructor(private readonly service: ReparacionesService) {}\n\n  @Post('reparaciones')\n  crear(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacion(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparaciones();\n  }\n\n  @Delete('reparaciones/:reparacionId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string) {\n    return this.service.eliminarReparacion(Number(reparacionId));\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.controller.ts\ncode src/reparaciones/reparaciones.controller.ts",
+            "create": "code src/reparaciones/reparaciones.controller.ts",
             "explain": "Mismo ReparacionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -693,18 +717,22 @@
             "title": "src/reparaciones/reparaciones.service.ts",
             "path": "src/reparaciones/reparaciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { Taller } from '../talleres/entities/taller.entity';\n\n@Injectable()\nexport class ReparacionesService {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearReparacion(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre,\n      costeCentimos,\n      taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparaciones() {\n    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarReparacion(reparacionId: number) {\n    await this.reparaciones.delete(reparacionId);\n  }\n\n  async modificarCosteCentimos(reparacionId: number, costeCentimos: number) {\n    await this.reparaciones.update(reparacionId, { costeCentimos });\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.service.ts\ncode src/reparaciones/reparaciones.service.ts",
+            "create": "code src/reparaciones/reparaciones.service.ts",
             "explain": "Mismo archivo ReparacionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.controller.ts",
             "path": "src/reparaciones/reparaciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ReparacionesService } from './reparaciones.service';\n\n@Controller()\nexport class ReparacionesController {\n  constructor(private readonly service: ReparacionesService) {}\n\n  @Post('reparaciones')\n  crear(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacion(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparaciones();\n  }\n\n  @Delete('reparaciones/:reparacionId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string) {\n    return this.service.eliminarReparacion(Number(reparacionId));\n  }\n\n  @Patch('reparaciones/:reparacionId')\n  modificar(@Param('reparacionId') reparacionId: string, @Body() datos: { costeCentimos: number }) {\n    return this.service.modificarCosteCentimos(Number(reparacionId), datos.costeCentimos);\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.controller.ts\ncode src/reparaciones/reparaciones.controller.ts",
+            "create": "code src/reparaciones/reparaciones.controller.ts",
             "explain": "Mismo ReparacionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -758,18 +786,22 @@
             "title": "src/reparaciones/reparaciones.service.ts",
             "path": "src/reparaciones/reparaciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { Taller } from '../talleres/entities/taller.entity';\n\n@Injectable()\nexport class ReparacionesService {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearReparacion(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre,\n      costeCentimos,\n      taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparaciones() {\n    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarReparacion(reparacionId: number) {\n    await this.reparaciones.delete(reparacionId);\n  }\n\n  async modificarCosteCentimos(reparacionId: number, costeCentimos: number) {\n    await this.reparaciones.update(reparacionId, { costeCentimos });\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n\n  async cambiarTaller(reparacionId: number, tallerId: number) {\n    await this.reparaciones.update(reparacionId, { taller: { id: tallerId } });\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.service.ts\ncode src/reparaciones/reparaciones.service.ts",
+            "create": "code src/reparaciones/reparaciones.service.ts",
             "explain": "Mismo archivo ReparacionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.controller.ts",
             "path": "src/reparaciones/reparaciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch } from '@nestjs/common';\nimport { ReparacionesService } from './reparaciones.service';\n\n@Controller()\nexport class ReparacionesController {\n  constructor(private readonly service: ReparacionesService) {}\n\n  @Post('reparaciones')\n  crear(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacion(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparaciones();\n  }\n\n  @Delete('reparaciones/:reparacionId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string) {\n    return this.service.eliminarReparacion(Number(reparacionId));\n  }\n\n  @Patch('reparaciones/:reparacionId')\n  modificar(@Param('reparacionId') reparacionId: string, @Body() datos: { costeCentimos: number }) {\n    return this.service.modificarCosteCentimos(Number(reparacionId), datos.costeCentimos);\n  }\n\n  @Patch('reparaciones/:reparacionId/taller')\n  cambiarTaller(@Param('reparacionId') reparacionId: string, @Body() datos: { tallerId: number }) {\n    return this.service.cambiarTaller(Number(reparacionId), datos.tallerId);\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.controller.ts\ncode src/reparaciones/reparaciones.controller.ts",
+            "create": "code src/reparaciones/reparaciones.controller.ts",
             "explain": "Mismo ReparacionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -823,18 +855,22 @@
             "title": "src/reparaciones/reparaciones.service.ts",
             "path": "src/reparaciones/reparaciones.service.ts",
             "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { MoreThanOrEqual, Repository } from 'typeorm';\nimport { Reparacion } from './entities/reparacion.entity';\nimport { Taller } from '../talleres/entities/taller.entity';\n\n@Injectable()\nexport class ReparacionesService {\n  constructor(\n    @InjectRepository(Reparacion) private readonly reparaciones: Repository<Reparacion>,\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearReparacion(nombre: string, costeCentimos: number, tallerId: number) {\n    const reparacion = this.reparaciones.create({\n      nombre,\n      costeCentimos,\n      taller: { id: tallerId }\n    });\n    return this.reparaciones.save(reparacion);\n  }\n\n  listarReparaciones() {\n    return this.reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } });\n  }\n\n  async eliminarReparacion(reparacionId: number) {\n    await this.reparaciones.delete(reparacionId);\n  }\n\n  async modificarCosteCentimos(reparacionId: number, costeCentimos: number) {\n    await this.reparaciones.update(reparacionId, { costeCentimos });\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n\n  async cambiarTaller(reparacionId: number, tallerId: number) {\n    await this.reparaciones.update(reparacionId, { taller: { id: tallerId } });\n    return this.reparaciones.findOneBy({ id: reparacionId });\n  }\n\n  async consultarTaller(tallerId: number, minimo: number) {\n    const taller = await this.talleres.findOneBy({ id: tallerId });\n    const reparaciones = await this.reparaciones.find({\n      where: {\n        taller: { id: tallerId },\n        costeCentimos: MoreThanOrEqual(minimo)\n      },\n      order: { id: 'ASC' }\n    });\n    return { taller, reparaciones };\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.service.ts\ncode src/reparaciones/reparaciones.service.ts",
+            "create": "code src/reparaciones/reparaciones.service.ts",
             "explain": "Mismo archivo ReparacionesService. Incluye los métodos anteriores y los de este caso. Usa directamente los repositorios de TypeORM.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.controller.ts",
             "path": "src/reparaciones/reparaciones.controller.ts",
             "code": "import { Body, Controller, Get, Post, Delete, HttpCode, Param, Patch, Query } from '@nestjs/common';\nimport { ReparacionesService } from './reparaciones.service';\n\n@Controller()\nexport class ReparacionesController {\n  constructor(private readonly service: ReparacionesService) {}\n\n  @Post('reparaciones')\n  crear(@Body() datos: { nombre: string; costeCentimos: number; tallerId: number }) {\n    return this.service.crearReparacion(datos.nombre, datos.costeCentimos, datos.tallerId);\n  }\n\n  @Get('reparaciones')\n  listar() {\n    return this.service.listarReparaciones();\n  }\n\n  @Delete('reparaciones/:reparacionId')\n  @HttpCode(204)\n  eliminar(@Param('reparacionId') reparacionId: string) {\n    return this.service.eliminarReparacion(Number(reparacionId));\n  }\n\n  @Patch('reparaciones/:reparacionId')\n  modificar(@Param('reparacionId') reparacionId: string, @Body() datos: { costeCentimos: number }) {\n    return this.service.modificarCosteCentimos(Number(reparacionId), datos.costeCentimos);\n  }\n\n  @Patch('reparaciones/:reparacionId/taller')\n  cambiarTaller(@Param('reparacionId') reparacionId: string, @Body() datos: { tallerId: number }) {\n    return this.service.cambiarTaller(Number(reparacionId), datos.tallerId);\n  }\n\n  @Get('talleres/:tallerId/reparaciones')\n  consultar(@Param('tallerId') tallerId: string, @Query('minimo') minimo = '0') {\n    return this.service.consultarTaller(Number(tallerId), Number(minimo));\n  }\n}",
-            "create": "mkdir -p src/reparaciones\nls -d src/reparaciones\ntouch src/reparaciones/reparaciones.controller.ts\ncode src/reparaciones/reparaciones.controller.ts",
+            "create": "code src/reparaciones/reparaciones.controller.ts",
             "explain": "Mismo ReparacionesController. Incluye las rutas anteriores y las de este caso.",
-            "terms": []
+            "terms": [],
+            "createTitle": "Abre el archivo existente",
+            "createNote": "Este archivo ya existe. Ábrelo y completa el contenido; no repitas el comando generate."
           },
           {
             "kind": "instruction",
@@ -1785,5 +1821,6 @@
     "backend": "backend",
     "pilot": false
   },
-  "apiRevision": 1
+  "apiRevision": 1,
+  "nestCliRevision": 1
 }
