@@ -13,6 +13,15 @@ export class AsignacionesService {
     @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>
   ) {}
 
+  crearRevisor(nombre: string, apellidos: string, email: string) {
+    const revisor = this.revisores.create({ nombre, apellidos, email });
+    return this.revisores.save(revisor);
+  }
+
+  listarRevisores() {
+    return this.revisores.find({ order: { id: 'ASC' } });
+  }
+
   async asignarRevisor(documentoId: number, revisorId: number, rol: string) {
     const documento = await this.documentos.findOneBy({ id: documentoId });
     const revisor = await this.revisores.findOneBy({ id: revisorId });

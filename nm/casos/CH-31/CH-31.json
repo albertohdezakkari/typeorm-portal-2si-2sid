@@ -100,7 +100,7 @@
         "kind": "model",
         "code": "import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\n\n@Entity({ name: 'REVISOR' })\nexport class Revisor {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'APELLIDOS', type: 'varchar', length: 160 })\n  apellidos!: string;\n\n  @Column({ name: 'EMAIL', type: 'varchar', length: 180 })\n  email!: string;\n\n  @OneToMany(() => Asignacion, asignacion => asignacion.revisor)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/revisores/entities/revisor.entity.ts",
-        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura sus módulos antes de volver a compilar. Este archivo define al revisor y su colección de asignaciones.",
+        "note": "Antes de editar las Entities, detén Nest con Ctrl+C en Terminal 1. Crea las dos Entities y configura el único módulo N:M antes de volver a compilar. Este archivo define al revisor y su colección de asignaciones.",
         "expect": "Este archivo está guardado. Completa las otras Entities y regístralas en el módulo antes de compilar.",
         "focus": "model",
         "cues": [
@@ -196,7 +196,7 @@
       {
         "id": "documento-inversa",
         "chapter": 1,
-        "title": "Relaciona la Documento existente con Asignacion",
+        "title": "Relaciona el Documento existente con Asignacion",
         "kind": "model",
         "code": "import {\n  Column, Entity, OneToMany, JoinColumn, ManyToOne, PrimaryGeneratedColumn\n} from 'typeorm';\nimport { Asignacion } from '../../asignaciones/entities/asignacion.entity';\nimport { Archivo } from '../../archivos/entities/archivo.entity';\n\n@Entity({ name: 'DOCUMENTO' })\nexport class Documento {\n  @PrimaryGeneratedColumn({ name: 'ID' })\n  id!: number;\n\n  @Column({ name: 'NOMBRE', type: 'varchar', length: 120 })\n  nombre!: string;\n\n  @Column({ name: 'PAGINAS', type: 'integer' })\n  paginas!: number;\n\n  @ManyToOne(() => Archivo, archivo => archivo.documentos, {\n    nullable: false\n  })\n  @JoinColumn({ name: 'ID_ARCHIVO' })\n  archivo!: Archivo;\n  @OneToMany(() => Asignacion, asignacion => asignacion.documento)\n  asignaciones!: Asignacion[];\n}\n",
         "path": "src/documentos/entities/documento.entity.ts",
@@ -239,33 +239,13 @@
         "updateExisting": true
       },
       {
-        "id": "revisores-modulo",
-        "chapter": 1,
-        "title": "Prepara RevisoresModule",
-        "kind": "module",
-        "path": "src/revisores/revisores.module.ts",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Revisor } from './entities/revisor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Revisor])],\n  providers: [],\n  controllers: []\n})\nexport class RevisoresModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
-        "expect": "El módulo existe y no importa clases que aún no has creado.",
-        "focus": "model",
-        "create": "mkdir -p src/revisores\ncode src/revisores/revisores.module.ts",
-        "cues": [
-          {
-            "token": "imports: [TypeOrmModule.forFeature([Revisor])]",
-            "start": 156,
-            "end": 202,
-            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
-          }
-        ]
-      },
-      {
         "id": "asignaciones-modulo",
         "chapter": 1,
-        "title": "Prepara AsignacionesModule",
+        "title": "Prepara un único módulo para la N:M",
         "kind": "module",
         "path": "src/asignaciones/asignaciones.module.ts",
         "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Documento, Revisor])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
-        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "note": "Este módulo agrupa Documento, Revisor y Asignacion y prepara sus tres repositorios. Cuando crees el Service y el Controller, completarás este mismo archivo. No se crea un módulo por Entity.",
         "expect": "El módulo existe y no importa clases que aún no has creado.",
         "focus": "model",
         "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
@@ -281,24 +261,18 @@
       {
         "id": "registrar",
         "chapter": 1,
-        "title": "Conecta los dos nuevos módulos",
+        "title": "Conecta el módulo N:M una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { DocumentosModule } from './documentos/documentos.module';\nimport { RevisoresModule } from './revisores/revisores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ArchivosModule } from './archivos/archivos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ArchivosModule,\n    DocumentosModule,\n    RevisoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { DocumentosModule } from './documentos/documentos.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ArchivosModule } from './archivos/archivos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ArchivosModule,\n    DocumentosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
-        "note": "Mantén DocumentosModule y la conexión original. Añade RevisoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
-        "expect": "AppModule conserva Documentos y añade Revisores y Asignaciones; synchronize: true crea las nuevas tablas.",
+        "note": "Conserva ArchivosModule, DocumentosModule y la conexión 1:N. Añade solo AsignacionesModule para el caso N:M completo. Si seguiste la versión anterior, retira RevisoresModule de AppModule y sus archivos module, service y controller; conserva revisor.entity.ts.",
+        "expect": "AppModule conserva el 1:N e importa AsignacionesModule una sola vez. Este módulo reúne las tres Entities de la N:M.",
         "focus": "model",
         "cues": [
           {
-            "token": "RevisoresModule,",
-            "start": 1223,
-            "end": 1239,
-            "note": "Carga el módulo que registra Revisor."
-          },
-          {
             "token": "AsignacionesModule\n",
-            "start": 1244,
-            "end": 1263,
+            "start": 1159,
+            "end": 1178,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -311,7 +285,7 @@
         "kind": "command",
         "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
+        "note": "Guarda primero las nuevas Entities, AsignacionesModule y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest compila y arranca. TypeORM crea REVISOR y ASIGNACION desde las Entities y conserva ARCHIVO y DOCUMENTO. Todavía no hay que crear vínculos.",
         "focus": "model",
         "cues": [
@@ -333,100 +307,118 @@
       {
         "id": "crear-listar-service",
         "chapter": 3,
-        "title": "Crear RevisoresService",
+        "title": "Crea el Service del caso N:M",
         "kind": "service",
-        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Revisor } from './entities/revisor.entity';\n\n@Injectable()\nexport class RevisoresService {\n  constructor(\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n}",
-        "path": "src/revisores/revisores.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\nimport { Asignacion } from './entities/asignacion.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>,\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n}",
+        "path": "src/asignaciones/asignaciones.service.ts",
+        "note": "Un solo Service recibe los tres repositorios: Documento, Revisor y Asignacion. Empieza con crearRevisor y listarRevisores; los siguientes casos amplían este mismo archivo.",
         "expect": "POST devuelve el revisor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "service",
         "cues": [
           {
+            "token": "@InjectRepository(Asignacion)",
+            "note": "Repositorio del vínculo: permite guardar y consultar cada pareja de IDs.",
+            "start": 561,
+            "end": 590
+          },
+          {
+            "token": "@InjectRepository(Documento)",
+            "note": "Repositorio del primer extremo: permite comprobar que el documento existe.",
+            "start": 396,
+            "end": 424
+          },
+          {
+            "token": "@InjectRepository(Revisor)",
+            "note": "Repositorio del segundo extremo: permite crear, listar y comprobar los revisores.",
+            "start": 481,
+            "end": 507
+          },
+          {
             "token": "this.revisores.create({ nombre, apellidos, email })",
-            "start": 424,
-            "end": 475,
+            "start": 740,
+            "end": 791,
             "note": "Prepara el perfil sin guardarlo todavía."
           },
           {
             "token": "this.revisores.save(revisor)",
-            "start": 488,
-            "end": 516,
+            "start": 804,
+            "end": 832,
             "note": "Guarda la Entity y devuelve su ID generado."
           },
           {
             "token": "this.revisores.find({ order: { id: 'ASC' } })",
-            "start": 556,
-            "end": 601,
+            "start": 872,
+            "end": 917,
             "note": "Lista el catálogo usando la misma Entity."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/revisores\ntouch src/revisores/revisores.service.ts\ncode src/revisores/revisores.service.ts"
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "crear-listar-entry",
         "chapter": 3,
-        "title": "Crear RevisoresController",
+        "title": "Crea el Controller del caso N:M",
         "kind": "entry",
-        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { RevisoresService } from './revisores.service';\n\n@Controller('revisores')\nexport class RevisoresController {\n  constructor(private readonly service: RevisoresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarRevisores();\n  }\n}",
-        "path": "src/revisores/revisores.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "code": "import { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n}",
+        "path": "src/asignaciones/asignaciones.controller.ts",
+        "note": "Un solo Controller recibe todas las peticiones N:M. Empieza con POST /revisores y GET /revisores. Las siguientes operaciones se añaden a este mismo archivo.",
         "expect": "POST devuelve el revisor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "entry",
         "cues": [
           {
-            "token": "@Controller('revisores')",
-            "start": 119,
-            "end": 143,
-            "note": "Agrupa las rutas del catálogo de revisores."
+            "token": "@Controller()",
+            "note": "Las rutas completas se indican en cada método, porque este Controller atiende Revisores y Asignaciones.",
+            "start": 125,
+            "end": 138
           },
           {
-            "token": "@Post()",
-            "start": 243,
-            "end": 250,
-            "note": "POST crea un perfil con nombre, apellidos y correo."
+            "token": "@Post('revisores')",
+            "note": "POST /revisores crea un revisor a través del mismo Service N:M.",
+            "start": 244,
+            "end": 262
+          },
+          {
+            "token": "@Get('revisores')",
+            "note": "GET /revisores lista los revisores desde el mismo Service.",
+            "start": 438,
+            "end": 455
           },
           {
             "token": "this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email)",
-            "start": 341,
-            "end": 410,
+            "start": 360,
+            "end": 429,
             "note": "Entrega los tres valores al Service."
-          },
-          {
-            "token": "@Get()",
-            "start": 419,
-            "end": 425,
-            "note": "GET utiliza listarRevisores en ese mismo Service."
           }
         ],
         "updateExisting": false,
-        "create": "mkdir -p src/revisores\ntouch src/revisores/revisores.controller.ts\ncode src/revisores/revisores.controller.ts"
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "crear-listar-registro",
         "chapter": 3,
-        "title": "Registrar Revisores una sola vez",
+        "title": "Conecta el Service y el Controller N:M",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Revisor } from './entities/revisor.entity';\nimport { RevisoresService } from './revisores.service';\nimport { RevisoresController } from './revisores.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Revisor])],\n  providers: [RevisoresService],\n  controllers: [RevisoresController]\n})\nexport class RevisoresModule {}",
-        "path": "src/revisores/revisores.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni DocumentosModule.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Documento, Revisor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}\n",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Actualiza el único AsignacionesModule que preparaste con las tres Entities. Añade AsignacionesService a providers y AsignacionesController a controllers. No añadas otro módulo a AppModule.",
         "expect": "POST devuelve el revisor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "route",
         "cues": [
           {
-            "token": "providers: [RevisoresService]",
-            "start": 324,
-            "end": 353,
-            "note": "Registra el único Service de este recurso."
+            "token": "providers: [AsignacionesService]",
+            "start": 498,
+            "end": 530,
+            "note": "Registra el único Service del caso N:M."
           },
           {
-            "token": "controllers: [RevisoresController]",
-            "start": 357,
-            "end": 391,
-            "note": "Registra el único Controller de este recurso."
+            "token": "controllers: [AsignacionesController]",
+            "start": 534,
+            "end": 571,
+            "note": "Registra el único Controller del caso N:M."
           }
         ],
-        "create": "code src/revisores/revisores.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
@@ -470,94 +462,68 @@
       {
         "id": "asignar-revisor-service",
         "chapter": 4,
-        "title": "Crear AsignacionesService",
+        "title": "Añade asignarRevisor al mismo Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Crea este archivo una sola vez. El Service recibe las Entities con InjectRepository y utiliza sus métodos de TypeORM.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearRevisor, listarRevisores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "POST crea la asignación de un documento existente con el revisor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "service",
         "cues": [
           {
             "token": "async asignarRevisor(documentoId: number, revisorId: number, rol: string)",
-            "start": 711,
-            "end": 784,
+            "start": 982,
+            "end": 1055,
             "note": "Los dos IDs y el rol llegan del Controller."
           },
           {
             "token": "this.documentos.findOneBy({ id: documentoId })",
-            "start": 815,
-            "end": 861,
+            "start": 1086,
+            "end": 1132,
             "note": "Lee el documento con el repositorio de TypeORM."
           },
           {
             "token": "this.revisores.findOneBy({ id: revisorId })",
-            "start": 889,
-            "end": 932,
+            "start": 1160,
+            "end": 1203,
             "note": "Lee el revisor antes de asociarlo."
           },
           {
             "token": "this.asignaciones.insert(asignacion)",
-            "start": 1126,
-            "end": 1162,
+            "start": 1397,
+            "end": 1433,
             "note": "Inserta la pareja; su PK compuesta impide duplicados."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.service.ts\ncode src/asignaciones/asignaciones.service.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.service.ts"
       },
       {
         "id": "asignar-revisor-entry",
         "chapter": 4,
-        "title": "Crear AsignacionesController",
+        "title": "Añade la asignación al mismo Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n}",
+        "code": "import { Get, Body, Controller, Param, Post } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Crea este archivo una sola vez. El Controller recibe la petición y llama al Service.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Revisores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "POST crea la asignación de un documento existente con el revisor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Post('documentos/:documentoId/asignaciones')",
-            "start": 246,
-            "end": 291,
+            "start": 535,
+            "end": 580,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol)",
-            "start": 409,
-            "end": 485,
+            "start": 698,
+            "end": 774,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
-        "updateExisting": false,
-        "create": "mkdir -p src/asignaciones\ntouch src/asignaciones/asignaciones.controller.ts\ncode src/asignaciones/asignaciones.controller.ts"
-      },
-      {
-        "id": "asignar-revisor-registro",
-        "chapter": 4,
-        "title": "Registrar Asignaciones una sola vez",
-        "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Documento, Revisor])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
-        "path": "src/asignaciones/asignaciones.module.ts",
-        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni DocumentosModule.",
-        "expect": "POST crea la asignación de un documento existente con el revisor que acabas de crear. Repetir esa pareja devuelve 409.",
-        "focus": "route",
-        "cues": [
-          {
-            "token": "providers: [AsignacionesService]",
-            "start": 498,
-            "end": 530,
-            "note": "Registra el único Service de este recurso."
-          },
-          {
-            "token": "controllers: [AsignacionesController]",
-            "start": 534,
-            "end": 571,
-            "note": "Registra el único Controller de este recurso."
-          }
-        ],
-        "create": "code src/asignaciones/asignaciones.module.ts"
+        "updateExisting": true,
+        "create": "code src/asignaciones/asignaciones.controller.ts"
       },
       {
         "id": "asignar-revisor-ejecutar",
@@ -603,22 +569,22 @@
         "chapter": 5,
         "title": "Añadir listarPorDocumento al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearRevisor, listarRevisores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve las asignaciones de ese documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorDocumento(documentoId: number)",
-            "start": 1420,
-            "end": 1459,
+            "start": 1691,
+            "end": 1730,
             "note": "Recibe un ID de documento."
           },
           {
             "token": "this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } })",
-            "start": 1473,
-            "end": 1552,
+            "start": 1744,
+            "end": 1823,
             "note": "Filtra las asignaciones por documento y ordena por revisor."
           }
         ],
@@ -630,22 +596,22 @@
         "chapter": 5,
         "title": "Añadir listarPorDocumento al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve las asignaciones de esa documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Revisores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve las asignaciones de ese documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('documentos/:documentoId/asignaciones')",
-            "start": 499,
-            "end": 543,
+            "start": 783,
+            "end": 827,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorDocumento(Number(documentoId))",
-            "start": 621,
-            "end": 673,
+            "start": 905,
+            "end": 957,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -660,7 +626,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve las asignaciones de esa documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "request",
         "cues": [
           {
@@ -686,7 +652,7 @@
         "code": "curl -i \"http://localhost:3000/documentos/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve las asignaciones de esa documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
+        "expect": "GET devuelve las asignaciones de ese documento. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -696,22 +662,22 @@
         "chapter": 6,
         "title": "Añadir listarPorRevisor al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los documentos en las que participa ese revisor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearRevisor, listarRevisores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
+        "expect": "GET devuelve los documentos en los que participa ese revisor. No presupone asignaciones cargadas previamente.",
         "focus": "service",
         "cues": [
           {
             "token": "listarPorRevisor(revisorId: number)",
-            "start": 1561,
-            "end": 1596,
+            "start": 1832,
+            "end": 1867,
             "note": "Recibe un ID de revisor."
           },
           {
             "token": "this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } })",
-            "start": 1610,
-            "end": 1689,
+            "start": 1881,
+            "end": 1960,
             "note": "Lee los mismos vínculos desde el otro extremo."
           }
         ],
@@ -723,22 +689,22 @@
         "chapter": 6,
         "title": "Añadir listarPorRevisor al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
-        "expect": "GET devuelve los documentos en las que participa ese revisor. No presupone asignaciones cargadas previamente.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Revisores y las operaciones anteriores. El módulo ya lo tiene registrado.",
+        "expect": "GET devuelve los documentos en los que participa ese revisor. No presupone asignaciones cargadas previamente.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Get('revisores/:revisorId/asignaciones')",
-            "start": 682,
-            "end": 723,
+            "start": 966,
+            "end": 1007,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.listarPorRevisor(Number(revisorId))",
-            "start": 795,
-            "end": 843,
+            "start": 1079,
+            "end": 1127,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -753,7 +719,7 @@
         "code": "npm run build\nnpm run start:dev",
         "path": "",
         "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
-        "expect": "GET devuelve los documentos en las que participa ese revisor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los documentos en los que participa ese revisor. No presupone asignaciones cargadas previamente.",
         "focus": "request",
         "cues": [
           {
@@ -779,7 +745,7 @@
         "code": "curl -i \"http://localhost:3000/revisores/1/asignaciones\"",
         "path": "",
         "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
-        "expect": "GET devuelve los documentos en las que participa ese revisor. No presupone asignaciones cargadas previamente.",
+        "expect": "GET devuelve los documentos en los que participa ese revisor. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -789,28 +755,28 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n\n  async modificarRol(documentoId: number, revisorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ documentoId, revisorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { documentoId, revisorId, rol };\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n\n  async modificarRol(documentoId: number, revisorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ documentoId, revisorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { documentoId, revisorId, rol };\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearRevisor, listarRevisores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el documento y el revisor.",
         "focus": "service",
         "cues": [
           {
             "token": "async modificarRol(documentoId: number, revisorId: number, rol: string)",
-            "start": 1698,
-            "end": 1769,
+            "start": 1969,
+            "end": 2040,
             "note": "Recibe la pareja completa y el nuevo rol."
           },
           {
             "token": "this.asignaciones.update({ documentoId, revisorId }, { rol })",
-            "start": 1800,
-            "end": 1861,
+            "start": 2071,
+            "end": 2132,
             "note": "Las dos claves seleccionan una asignación. Solo cambia ROL."
           },
           {
             "token": "if (!resultado.affected)",
-            "start": 1867,
-            "end": 1891,
+            "start": 2138,
+            "end": 2162,
             "note": "Si no había esa pareja, devuelve 404."
           }
         ],
@@ -822,22 +788,22 @@
         "chapter": 7,
         "title": "Añadir modificarRol al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n\n  @Patch('documentos/:documentoId/asignaciones/:revisorId')\n  modificarRol(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(documentoId), Number(revisorId), datos.rol);\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n\n  @Patch('documentos/:documentoId/asignaciones/:revisorId')\n  modificarRol(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(documentoId), Number(revisorId), datos.rol);\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Revisores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva el documento y el revisor.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Patch('documentos/:documentoId/asignaciones/:revisorId')",
-            "start": 859,
-            "end": 916,
+            "start": 1143,
+            "end": 1200,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.modificarRol(Number(documentoId), Number(revisorId), datos.rol)",
-            "start": 1063,
-            "end": 1139,
+            "start": 1347,
+            "end": 1423,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -888,22 +854,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Service",
         "kind": "service",
-        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n\n  async modificarRol(documentoId: number, revisorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ documentoId, revisorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { documentoId, revisorId, rol };\n  }\n\n  async eliminarAsignacion(documentoId: number, revisorId: number) {\n    await this.asignaciones.delete({ documentoId, revisorId });\n  }\n}",
+        "code": "import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { QueryFailedError, Repository } from 'typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Documento } from '../documentos/entities/documento.entity';\nimport { Revisor } from '../revisores/entities/revisor.entity';\n\n@Injectable()\nexport class AsignacionesService {\n  constructor(\n    @InjectRepository(Asignacion) private readonly asignaciones: Repository<Asignacion>,\n    @InjectRepository(Documento) private readonly documentos: Repository<Documento>,\n    @InjectRepository(Revisor) private readonly revisores: Repository<Revisor>\n  ) {}\n\n  crearRevisor(nombre: string, apellidos: string, email: string) {\n    const revisor = this.revisores.create({ nombre, apellidos, email });\n    return this.revisores.save(revisor);\n  }\n\n  listarRevisores() {\n    return this.revisores.find({ order: { id: 'ASC' } });\n  }\n\n  async asignarRevisor(documentoId: number, revisorId: number, rol: string) {\n    const documento = await this.documentos.findOneBy({ id: documentoId });\n    const revisor = await this.revisores.findOneBy({ id: revisorId });\n    if (!documento || !revisor) {\n      throw new NotFoundException('No existe el documento o el revisor');\n    }\n    const asignacion = { documentoId, revisorId, rol };\n    try {\n      await this.asignaciones.insert(asignacion);\n      return asignacion;\n    } catch (error) {\n      if (error instanceof QueryFailedError && error.driverError.code === '23505') {\n        throw new ConflictException('El revisor ya está asignado a ese documento');\n      }\n      throw error;\n    }\n  }\n\n  listarPorDocumento(documentoId: number) {\n    return this.asignaciones.find({ where: { documentoId }, order: { revisorId: 'ASC' } });\n  }\n\n  listarPorRevisor(revisorId: number) {\n    return this.asignaciones.find({ where: { revisorId }, order: { documentoId: 'ASC' } });\n  }\n\n  async modificarRol(documentoId: number, revisorId: number, rol: string) {\n    const resultado = await this.asignaciones.update({ documentoId, revisorId }, { rol });\n    if (!resultado.affected) throw new NotFoundException('No existe la asignación');\n    return { documentoId, revisorId, rol };\n  }\n\n  async eliminarAsignacion(documentoId: number, revisorId: number) {\n    await this.asignaciones.delete({ documentoId, revisorId });\n  }\n}",
         "path": "src/asignaciones/asignaciones.service.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesService. El archivo completo conserva crearRevisor, listarRevisores y los métodos anteriores. Los tres repositorios ya están inyectados; no registres otro Service.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el documento y el revisor siguen existiendo.",
         "focus": "service",
         "cues": [
           {
             "token": "async eliminarAsignacion(documentoId: number, revisorId: number)",
-            "start": 1999,
-            "end": 2063,
+            "start": 2270,
+            "end": 2334,
             "note": "Ambos IDs identifican el vínculo."
           },
           {
             "token": "this.asignaciones.delete({ documentoId, revisorId })",
-            "start": 2076,
-            "end": 2128,
+            "start": 2347,
+            "end": 2399,
             "note": "Borra el vínculo; conserva Documento y Revisor."
           }
         ],
@@ -915,22 +881,22 @@
         "chapter": 8,
         "title": "Añadir eliminarAsignacion al Controller",
         "kind": "entry",
-        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n\n  @Patch('documentos/:documentoId/asignaciones/:revisorId')\n  modificarRol(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(documentoId), Number(revisorId), datos.rol);\n  }\n\n  @Delete('documentos/:documentoId/asignaciones/:revisorId')\n  @HttpCode(204)\n  eliminar(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string) {\n    return this.service.eliminarAsignacion(Number(documentoId), Number(revisorId));\n  }\n}",
+        "code": "import { Body, Controller, Param, Post, Get, Patch, Delete, HttpCode } from '@nestjs/common';\nimport { AsignacionesService } from './asignaciones.service';\n\n@Controller()\nexport class AsignacionesController {\n  constructor(private readonly service: AsignacionesService) {}\n\n  @Post('revisores')\n  crearRevisor(@Body() datos: { nombre: string; apellidos: string; email: string }) {\n    return this.service.crearRevisor(datos.nombre, datos.apellidos, datos.email);\n  }\n\n  @Get('revisores')\n  listarRevisores() {\n    return this.service.listarRevisores();\n  }\n\n  @Post('documentos/:documentoId/asignaciones')\n  asignar(@Param('documentoId') documentoId: string, @Body() datos: { revisorId: number; rol: string }) {\n    return this.service.asignarRevisor(Number(documentoId), datos.revisorId, datos.rol);\n  }\n\n  @Get('documentos/:documentoId/asignaciones')\n  listarPorDocumento(@Param('documentoId') documentoId: string) {\n    return this.service.listarPorDocumento(Number(documentoId));\n  }\n\n  @Get('revisores/:revisorId/asignaciones')\n  listarPorRevisor(@Param('revisorId') revisorId: string) {\n    return this.service.listarPorRevisor(Number(revisorId));\n  }\n\n  @Patch('documentos/:documentoId/asignaciones/:revisorId')\n  modificarRol(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string,\n    @Body() datos: { rol: string }) {\n    return this.service.modificarRol(Number(documentoId), Number(revisorId), datos.rol);\n  }\n\n  @Delete('documentos/:documentoId/asignaciones/:revisorId')\n  @HttpCode(204)\n  eliminar(@Param('documentoId') documentoId: string, @Param('revisorId') revisorId: string) {\n    return this.service.eliminarAsignacion(Number(documentoId), Number(revisorId));\n  }\n}",
         "path": "src/asignaciones/asignaciones.controller.ts",
-        "note": "Añade este método al mismo archivo de Asignaciones. Puedes copiar el archivo completo: conserva los métodos anteriores. No crees otra clase ni vuelvas a registrarla.",
+        "note": "Amplía el mismo AsignacionesController. El archivo completo conserva las rutas de Revisores y las operaciones anteriores. El módulo ya lo tiene registrado.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; el documento y el revisor siguen existiendo.",
         "focus": "entry",
         "cues": [
           {
             "token": "@Delete('documentos/:documentoId/asignaciones/:revisorId')",
-            "start": 1166,
-            "end": 1224,
+            "start": 1450,
+            "end": 1508,
             "note": "Esta ruta identifica el caso y sus parámetros."
           },
           {
             "token": "this.service.eliminarAsignacion(Number(documentoId), Number(revisorId))",
-            "start": 1348,
-            "end": 1419,
+            "start": 1632,
+            "end": 1703,
             "note": "El Controller convierte los IDs a número y llama al Service."
           }
         ],
@@ -996,7 +962,7 @@
         "kind": "review",
         "code": "",
         "path": "",
-        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro revisor, asígnalo a la misma documento y asigna un revisor a otra documento. Todos los datos se crean mediante los Controllers que has programado.",
+        "note": "Para practicar una N:M con más filas, repite los mismos POST: crea otro revisor, asígnalo a el mismo documento y asigna un revisor a otro documento. Todos los datos se crean mediante los Controllers que has programado.",
         "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
         "focus": "model",
         "cues": [],
@@ -3014,7 +2980,9 @@
     "asignacion": "asig-inversas",
     "prof-inversa": "revisor",
     "datos": "crear-listar-service",
-    "cargar": "crear-listar-service"
+    "cargar": "crear-listar-service",
+    "revisores-modulo": "asignaciones-modulo",
+    "asignar-revisor-registro": "crear-listar-registro"
   },
   "retiredNestDirectories": [
     "src/documentos/crear-listar/",
@@ -3325,5 +3293,76 @@
     "route": "revisores",
     "input": "revisorId",
     "role": "Catalogación"
-  }
+  },
+  "nmModuleMigration": {
+    "previousIds": [
+      "situacion",
+      "logico",
+      "retomar",
+      "revisor",
+      "asig-inversas",
+      "documento-inversa",
+      "revisores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-revisor-service",
+      "asignar-revisor-entry",
+      "asignar-revisor-registro",
+      "asignar-revisor-ejecutar",
+      "asignar-revisor-curl",
+      "listar-por-documento-service",
+      "listar-por-documento-entry",
+      "listar-por-documento-ejecutar",
+      "listar-por-documento-curl",
+      "listar-por-revisor-service",
+      "listar-por-revisor-entry",
+      "listar-por-revisor-ejecutar",
+      "listar-por-revisor-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "aliases": {
+      "revisores-modulo": "asignaciones-modulo",
+      "asignar-revisor-registro": "crear-listar-registro"
+    },
+    "retained": [
+      "situacion",
+      "logico",
+      "retomar",
+      "revisor",
+      "asig-inversas",
+      "documento-inversa",
+      "asignaciones-modulo",
+      "arrancar",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-revisor-ejecutar",
+      "asignar-revisor-curl",
+      "listar-por-documento-ejecutar",
+      "listar-por-documento-curl",
+      "listar-por-revisor-ejecutar",
+      "listar-por-revisor-curl",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "nmModuleRevision": 1
 }

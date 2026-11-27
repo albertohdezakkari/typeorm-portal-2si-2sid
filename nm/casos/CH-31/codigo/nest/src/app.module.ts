@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { resolve } from 'node:path';
 import { SaludController } from './salud.controller';
 import { DocumentosModule } from './documentos/documentos.module';
-import { RevisoresModule } from './revisores/revisores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
 import { ArchivosModule } from './archivos/archivos.module';
@@ -30,7 +29,6 @@ import { ArchivosModule } from './archivos/archivos.module';
     }),
     ArchivosModule,
     DocumentosModule,
-    RevisoresModule,
     AsignacionesModule
   ],
   controllers: [SaludController]
