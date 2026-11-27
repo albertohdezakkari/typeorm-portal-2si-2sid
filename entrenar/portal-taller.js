@@ -45,7 +45,7 @@
           }
         },
       });
-      frame.src = 'entrenar/?v=tecnologia-derecha-1';
+      frame.src = 'entrenar/?v=tecnologia-derecha-2';
       // Arturo empieza en Preparar; los demás conservan sus enlaces directos.
       if (caseData.id !== 'CH-22' && location.hash === '#entrenar') document.querySelector('#workspace [data-tab="training"]').click();
     } catch {
