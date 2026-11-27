@@ -35,12 +35,14 @@
   const flow = (nodes, caption = '') => `<div class="mq-flow" aria-label="${esc(caption)}">${nodes.map((n,i) => `<div class="mq-node"><span class="mq-node-number">${i+1}</span><i class="mq-glyph" aria-hidden="true">${['⌘','{ }','↳','▤'][i%4]}</i><strong>${esc(n[0])}</strong><small>${esc(n[1])}</small></div>${i<nodes.length-1?'<span class="mq-arrow" aria-hidden="true">→</span>':''}`).join('')}</div>`;
 
   function renderBases() {
+    const pilot=Boolean(data.projectBase);
+    const repo=pilot?data.projectBase.url:'https://github.com/albertohdezakkari/typeorm-base';
     panel('bases').innerHTML = head('Punto de partida · repositorios existentes', 'Dos tecnologías. Tu mismo caso.', `Elige la base que vas a preparar. Después vuelve al taller de ${data.context.title} para construir tus entidades y tus cinco casos.`) +
       `<div class="mq-repositories">
-        <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/typeorm-base" target="_blank" rel="noopener">albertohdezakkari / typeorm-base ↗</a>
+        <article class="mq-repo"><div class="mq-repo-label"><span>01 / SQL</span><b>Base Nest</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">@</i><h3>Nest + TypeORM</h3><p>PostgreSQL · relaciones · Entities</p><a class="mq-repo-name" href="${repo}" target="_blank" rel="noopener">albertohdezakkari / ${pilot?'examen-typeorm-27-11-26-01':'typeorm-base'} ↗</a>
         ${flow([['backend/','Tu proyecto Nest'],['Entities',data.context.parent.entity+' · '+data.context.child.entity],[data.nestSimpleRevision?'Service':'Repository','Consulta PostgreSQL']],'Desde la base a tus entidades')}
-        <ul class="mq-facts"><li><b>Carpeta de trabajo</b><code>backend/</code></li><li><b>Configuración que carga esta base</b><code>backend/.env.example</code></li><li><b>Comprobación de conexión</b><code>GET /salud</code></li></ul>
-        <a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a></div></article>
+        <ul class="mq-facts"><li><b>Carpeta de trabajo</b><code>backend/</code></li><li><b>Configuración que carga esta base</b><code>${pilot?'backend/.env + .env.example':'backend/.env.example'}</code></li><li><b>Comprobación de conexión</b><code>GET /salud</code></li></ul>
+        ${pilot?'<button type="button" class="mq-button" data-mq-prepare>Preparar mi backend paso a paso</button>':'<a class="mq-button" href="https://albertohdezakkari.github.io/typeorm-base/preparacion.html" target="_blank" rel="noopener">Abrir la guía de esta base ↗</a>'}</div></article>
         <article class="mq-repo mq-cloud"><div class="mq-repo-label"><span>02 / NoSQL</span><b>Ejemplo funcional</b></div><div class="mq-repo-body"><i class="mq-repo-icon" aria-hidden="true">λ</i><h3>Serverless + Toolbox</h3><p>AWS · Lambda · DynamoDB</p><a class="mq-repo-name" href="https://github.com/albertohdezakkari/festival-checkin-01" target="_blank" rel="noopener">albertohdezakkari / festival-checkin-01 ↗</a>
         ${flow([['YAML','Crea recursos AWS'],['Table + Entity','Describe tus datos'],['Repository','Envía el comando']],'Desde la infraestructura a la escritura')}
         <ul class="mq-facts"><li><b>Guía de arranque</b><code>0-codespaces.md</code></li><li><b>Framework local</b><code>Serverless 3.40.0</code></li><li><b>Ejemplo que ya funciona</b><span>Festival: 3 tablas · 6 Lambdas</span></li></ul>
@@ -53,6 +55,11 @@
   }
 
   function renderSheets() {
+    if(data.projectBase&&track==='nest'){
+      const entity=data.steps.nest.find(s=>s.name==='Crear Entity Obra');
+      panel('fichas-duales').innerHTML=head('Tu material de estudio','El mismo código que estás construyendo','Estudia las Entities, el módulo y las llamadas entre Service y Controller. El recorrido N:M continúa este mismo backend.')+techTabs()+`<div class="mq-split"><div>${flow([['Entities','Ayuntamiento y Obra'],['ObrasModule','Registra Entities, Service y Controller'],['Service','Repository de TypeORM inyectado'],['Controller','Recibe las peticiones HTTP']],'Los archivos del proyecto de Arturo')}${action('training','Observar y montar el código')}</div><div>${sourceCode(entity.path,entity.code)}</div></div>`;
+      return;
+    }
     const models = data.steps[track].filter(s => s.chapter === 0 && /Entity|Table/.test(s.name));
     const shown = models.find(s => s.name.includes(track === 'nest' ? data.context.child.entity : 'Entity')) || models[0];
     panel('fichas-duales').innerHTML = head('Fichas · lectura y papel', 'El modelo, las capas y los cinco casos', 'Compara las dos tecnologías con el mismo contexto. Conservas también las cuatro fichas TypeORM anteriores, con su impresión original.') + techTabs() +
@@ -64,7 +71,7 @@
     const step = data.steps[track].find(s => s.chapter === operation && s.name === (simple?'Service':'Repository'));
     const op = data.operations.find(x => x.ch === operation);
     panel('consultas-duales').innerHTML = head('Referencia · las dos tecnologías', 'Una operación, dos formas de acceder al dato', simple?'Selecciona una operación. Todas se añaden al mismo '+data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Service, que utiliza las Entities de TypeORM.':'Selecciona un caso y compara su Repository. El código procede del taller aprobado, incluidos sus imports y sus modelos.') + techTabs() + operationNav() +
-      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller',data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Controller'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div><div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`;
+      `<div class="mq-split"><div>${sourceCode(step.path,step.code)}</div><div class="mq-scene">${flow(simple?[['Petición',op.fields],['Controller',data.context.child.route[0].toUpperCase()+data.context.child.route.slice(1)+'Controller'],['Service',op.nestMethod],['Datos','Entity · TypeORM']]:[['Entrada',op.fields],['Service',op.service],['Repository',op.repo],['Datos',track === 'nest' ? 'TypeORM · PostgreSQL' : op.command]],'Camino de los parámetros')}<div class="mq-result"><span>Resultado esperado</span><p>${esc(op.result)}</p></div><p>En DynamoDB, Table describe claves e índices; Entity declara los atributos. En TypeORM, las Entities describen columnas y relaciones.</p>${action('training','Seguir la animación y montar las piezas')}</div></div>${data.projectBase?'':`<div class="mq-footlink">Conservas las consultas SQL y QueryBuilder anteriores. ${action('queries','Abrir consultas TypeORM anteriores')}</div>`}`;
   }
 
   function renderChecks() {
@@ -72,7 +79,7 @@
     const s = preparation.tracks[track].find(s => s.id === 'caso-' + operation);
     const commands = s.blocks.filter(b => b.kind === 'command' && !/reinicia|despliega|sintaxis/i.test(b.title));
     panel('pruebas-duales').innerHTML = head('Comprobación · secuencia del taller', 'Prueba los mismos cinco casos', 'Ejecuta las pruebas en orden sobre tu proyecto ya preparado. Compara las respuestas reales con el resultado esperado; esta pantalla no ejecuta peticiones.') + techTabs() + operationNav() +
-      `<div class="mq-check-prereq"><strong>${track === 'nest' ? 'Nest arrancado · Terminal 2' : 'AWS desplegado · terminal del Codespace'}</strong><span>${track === 'nest' ? 'Las peticiones apuntan a http://localhost:3000.' : 'API_URL debe contener la URL real de tu HTTP API.'}</span></div><div class="mq-split"><div>${commands.map(b => sourceCode(b.title,b.code,b.explain)).join('')}</div><div class="mq-scene mq-check-scene"><span class="mq-eyebrow">Caso 0${operation}</span><h3>${esc(data.chapters[operation])}</h3><div class="mq-request"><b>${esc(op.verb)}</b><code>${esc(op.route)}</code></div>${flow([['Petición','Terminal'],[track === 'nest' ? 'Controller' : 'Handler','Recibe los datos'],['Respuesta','JSON']],'Recorrido de la prueba')}<div class="mq-result"><span>Qué debes observar</span><p>${esc(operation < 3 ? 'Conserva el ID real devuelto al crear el registro. Tras crear hay cuatro registros; al eliminar solo el de prueba vuelven a quedar 7, 8 y 9.' : op.result)}</p></div><p>Los números de las fichas explican la traza. El alta real devuelve su propio ID; las pruebas lo conservan en la variable del registro de prueba.</p></div></div><p class="mq-note">El comprobador anterior pertenece al entrenamiento anterior y mantiene sus rutas originales. No se reutiliza como comprobador de estos cinco casos.</p>${action('functional','Abrir comprobador anterior')}`;
+      `<div class="mq-check-prereq"><strong>${track === 'nest' ? 'Nest arrancado · Terminal 2' : 'AWS desplegado · terminal del Codespace'}</strong><span>${track === 'nest' ? 'Las peticiones apuntan a http://localhost:3000.' : 'API_URL debe contener la URL real de tu HTTP API.'}</span></div><div class="mq-split"><div>${commands.map(b => sourceCode(b.title,b.code,b.explain)).join('')}</div><div class="mq-scene mq-check-scene"><span class="mq-eyebrow">Caso 0${operation}</span><h3>${esc(data.chapters[operation])}</h3><div class="mq-request"><b>${esc(op.verb)}</b><code>${esc(op.route)}</code></div>${flow([['Petición','Terminal'],[track === 'nest' ? 'Controller' : 'Handler','Recibe los datos'],['Respuesta','JSON']],'Recorrido de la prueba')}<div class="mq-result"><span>Qué debes observar</span><p>${esc(operation < 3 ? 'Conserva el ID real devuelto al crear el registro. Tras crear hay cuatro registros; al eliminar solo el de prueba vuelven a quedar las tres obras originales.' : op.result)}</p></div><p>Los números de las fichas explican la traza. El alta real devuelve su propio ID; las pruebas lo conservan en la variable del registro de prueba.</p></div></div>${data.projectBase?'':`<p class="mq-note">El comprobador anterior pertenece al entrenamiento anterior y mantiene sus rutas originales. No se reutiliza como comprobador de estos cinco casos.</p>${action('functional','Abrir comprobador anterior')}`}`;
   }
 
   function renderReferences() {
@@ -166,12 +173,17 @@
     }
     show(location.hash === '#entrenar' ? 'training' : 'bases');
     try {
-      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=orm-todos-1`, `preparar/${encodeURIComponent(context.id)}.json?v=orm-todos-1`].map(async url => {
+      const results = await Promise.all([`entrenar/casos/${encodeURIComponent(context.id)}.json?v=base-arturo-1`, `preparar/${encodeURIComponent(context.id)}.json?v=base-arturo-1`].map(async url => {
         const response = await fetch(url); if (!response.ok) throw new Error('No se pudo abrir ' + url); return response.json();
       }));
       if (request !== revision || !mounted) return;
       [data,preparation] = results;
       if(data.nestSimpleRevision){workspace.dataset.simpleNest='true';trainingHeading.textContent='Entrenar con mis fichas';}
+      if(data.projectBase){
+        mainNav.querySelector('[data-tab="anteriores"]').hidden=true;
+        mainNav.querySelector('[data-tab="fichas-duales"]').textContent='3 · Repasar el código';
+        for(const b of mainNav.querySelectorAll('[role="tab"]'))if(b.dataset.tab==='simulacion')b.textContent='6 · Simulación y entregas';
+      }
       renderBases();
       renderReferences();
     } catch {
@@ -184,6 +196,7 @@
 
   workspace.addEventListener('click', async event => {
     if (!mounted) return;
+    if(event.target.closest('[data-mq-prepare]')){window.abrirPreparacionGuiada?.('nest');return;}
     const go = event.target.closest('[data-mq-go]');
     if (go) { show(go.dataset.mqGo); return; }
     const tech = event.target.closest('[data-mq-track]');

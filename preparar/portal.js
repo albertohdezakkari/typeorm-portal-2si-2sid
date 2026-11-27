@@ -21,7 +21,7 @@
     header.textContent = '01 · Prepara y ejecuta tu proyecto';
     intro.textContent = 'Prepara el entorno, estudia tu modelo y aplica los casos sobre tu propia copia.';
     try {
-      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=orm-todos-1`);
+      const response = await fetch(`preparar/${encodeURIComponent(caseId)}.json?v=base-arturo-1`);
       if (!response.ok) throw new Error('No se ha cargado el recorrido');
       const data = await response.json();
       if (request !== generation) return;
@@ -71,6 +71,12 @@
           records: [`El ID 1 identifica ${parent.examples[0]}.`, `Los registros 7 y 9 de ${child.entity} guardan la referencia al ID 1.`, `El ID 2 identifica ${parent.examples[1]}.`, `El registro 8 de ${child.entity} guarda la referencia al ID 2.`],
           trace: ['La llamada transporta los datos de la operación.', cloud ? 'El handler recibe body, pathParameters o queryStringParameters.' : 'El controller recibe body, parámetros de ruta o filtros de consulta.', !cloud&&data.nestSimpleRevision?'El Service usa directamente Repository<'+child.entity+'> y Repository<'+parent.entity+'>, proporcionados por TypeORM.':'El service organiza el caso y llama al repository.', cloud ? 'El repository usa el modelo y envía el comando de Toolbox.' : data.nestSimpleRevision?'Las Entities indican las columnas y la relación que TypeORM utiliza al leer o guardar.':'El repository usa la Entity y ejecuta la lectura o escritura SQL.']
         };
+        if(!cloud&&data.projectBase){
+          if(step().scene==='workspace')return ['Tu copia personal, abierta en VS Code.','origin apunta al repositorio de tu cuenta.','backend contiene package.json, .env y src.','Aquí preparas las Entities, el módulo, Service y Controller de Arturo.'][state.focus];
+          if(step().scene==='model')return ['AppModule conserva la conexión e importa ObrasModule.','ObrasModule registra las Entities con forFeature.',`${parent.entity} define su PK y la colección inversa de obras.`,`${child.entity} define sus datos y la relación con Ayuntamiento.`][state.focus];
+          if(step().scene==='connection')return ['Tu contraseña está en .env; el resto de valores se obtiene de .env.example.','ConfigModule lee ambos archivos y permite pedir sus valores mediante ConfigService.','TypeOrmModule abre la conexión y registra DataSource en Nest.','SaludController recibe DataSource por su constructor y devuelve su estado en GET /salud.'][state.focus];
+          if(step().id==='base')return ['Trabaja dentro de backend.','npm ci instala las versiones fijadas de esta base.','.env guarda tu contraseña real.','AppModule ya carga .env y .env.example.'][state.focus];
+        }
         if(!cloud&&data.ormDataRevision&&step().scene==='records')return ['findOneBy busca el primer registro principal; save lo crea si no existe.','Las Entities relacionan estos registros con el primer registro principal. Sus IDs reales se guardan en ids-aula.env.','Se prepara el segundo registro principal sin cambiar uno ya existente.','El registro secundario se relaciona con ese segundo principal. find() permite leer lo guardado.'][state.focus];
         return (meanings[step().scene] || [step().lead, block().explain, step().lead, step().expect])[state.focus];
       }
@@ -257,7 +263,7 @@
         if (step().scene === 'model') {
           if (state.track === 'nest') {
             if (b.path?.includes('app.module')) return 0;
-            if (b.path?.includes('taller.module')) return 1;
+            if (b.path?.includes(data.projectBase?'obras.module':'taller.module')) return 1;
             if (b.path === parent.file) return 2;
             if (b.path === child.file) return 3;
           } else {
@@ -279,7 +285,7 @@
         let path=null;
         if (step().scene==='model') {
           path=state.track==='cloud' ? ['serverless.yml','src/datos/dynamo.mjs',context.modelFile,context.modelFile][index]
-            : ['src/app.module.ts','src/taller.module.ts',parent.file,child.file][index];
+            : ['src/app.module.ts',data.projectBase?'src/obras/obras.module.ts':'src/taller.module.ts',parent.file,child.file][index];
         }
         let found=path ? step().blocks.findIndex(b=>b.path===path) : -1;
         if (step().scene==='trace') {

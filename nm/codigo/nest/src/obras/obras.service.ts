@@ -21,7 +21,7 @@ export class ObrasService {
   }
 
   listarObras() {
-    return this.obras.find({ order: { id: 'ASC' } });
+    return this.obras.find({ relations: { ayuntamiento: true }, order: { id: 'ASC' } });
   }
 
   async eliminarObra(obraId: number) {

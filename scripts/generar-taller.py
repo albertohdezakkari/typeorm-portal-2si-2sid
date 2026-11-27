@@ -167,7 +167,9 @@ def compile_case(case, classic, base, sources, pdf_folder):
             for cue in step['cues']:
                 assert cue['text'] in step['code'],(cid,step['name'],cue['text'])
     from nest_sencillo import apply_training
-    return apply_training(d)
+    result=apply_training(d)
+    from examen_base_arturo import training
+    return training(result)
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--fuentes',type=Path,required=True);parser.add_argument('--pdfs',type=Path,required=True)

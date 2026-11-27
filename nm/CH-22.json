@@ -69,7 +69,7 @@
         "kind": "command",
         "code": "# Terminal 2 · misma carpeta del backend.\npwd\ncurl -i http://localhost:3000/salud\ncurl -i http://localhost:3000/obras",
         "path": "",
-        "note": "Tu proyecto base 1:N ya está preparado: conserva sus dependencias, configuración, tablas y datos. Abre su carpeta real en VS Code. Aquí solo vas a ejecutarlo y comprobar que sigue funcionando antes de añadir la N:M. Si Nest ya está en marcha, deja esa terminal abierta y pasa directamente a las pruebas del bloque 2.",
+        "note": "Continúa en la carpeta backend de tu proyecto Ayuntamiento/Obra ya preparado en 1:N. No clones ni instales otra base. Conserva .env, dependencias, tablas, datos y tus casos anteriores. Si Nest ya está ejecutándose, pasa directamente al bloque 2.",
         "expect": "Terminal 1: Nest sigue ejecutándose. Terminal 2: /salud y /obras devuelven HTTP 200. Se conservan las tres obras; «Mejora de acera» mantiene presupuesto 15000 y pertenece al segundo ayuntamiento. Las fichas dibujan IDs de ejemplo; las pruebas usan los IDs reales generados en tu proyecto.",
         "focus": "model",
         "cues": [
@@ -85,9 +85,9 @@
           {
             "title": "1 · Ejecuta tu proyecto base",
             "terminal": "Terminal 1 · carpeta real de tu backend",
-            "instruction": "Abre Terminal → Nueva terminal dentro de tu backend. PostgreSQL debe estar encendido; si está detenido, inicia el servidor que ya utilizabas en 1:N. Ejecuta npm run build para compilar el código existente y, cuando termine sin errores, npm run start para ejecutarlo con su configuración actual.",
-            "code": "npm run build\nnpm run start",
-            "expect": "Ves «Nest application successfully started». La Terminal 1 queda ocupada atendiendo peticiones: es normal. Déjala abierta y continúa en otra terminal."
+            "instruction": "Enciende PostgreSQL como hacías en 1:N. Abre Terminal 1 dentro de backend y ejecuta npm run start:dev. No reinstales dependencias ni vuelvas a configurar .env.",
+            "code": "npm run start:dev",
+            "expect": "Ves «Nest application successfully started». Deja Terminal 1 abierta; start:dev recompila al guardar."
           }
         ],
         "commandTitle": "2 · Terminal 2 · Comprueba el proyecto que ya funciona",
@@ -239,36 +239,95 @@
         "create": "mkdir -p src/asignaciones/entities\nls -d src/asignaciones/entities\ntouch src/asignaciones/entities/asignacion.entity.ts\ncode src/asignaciones/entities/asignacion.entity.ts"
       },
       {
+        "id": "profesionales-modulo",
+        "chapter": 1,
+        "title": "Prepara ProfesionalesModule",
+        "kind": "module",
+        "path": "src/profesionales/profesionales.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Profesional } from './entities/profesional.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Profesional])],\n  providers: [],\n  controllers: []\n})\nexport class ProfesionalesModule {}",
+        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "expect": "El módulo existe y no importa clases que aún no has creado.",
+        "focus": "model",
+        "create": "mkdir -p src/profesionales\ncode src/profesionales/profesionales.module.ts",
+        "cues": [
+          {
+            "token": "imports: [TypeOrmModule.forFeature([Profesional])]",
+            "start": 164,
+            "end": 214,
+            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
+          }
+        ]
+      },
+      {
+        "id": "asignaciones-modulo",
+        "chapter": 1,
+        "title": "Prepara AsignacionesModule",
+        "kind": "module",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Obra, Profesional])],\n  providers: [],\n  controllers: []\n})\nexport class AsignacionesModule {}",
+        "note": "Registra las Entities necesarias. El Service y el Controller se conectarán cuando los crees en su caso de uso.",
+        "expect": "El módulo existe y no importa clases que aún no has creado.",
+        "focus": "model",
+        "create": "mkdir -p src/asignaciones\ncode src/asignaciones/asignaciones.module.ts",
+        "cues": [
+          {
+            "token": "imports: [TypeOrmModule.forFeature([Asignacion, Obra, Profesional])]",
+            "start": 292,
+            "end": 360,
+            "note": "forFeature prepara los repositorios de estas Entities para este módulo."
+          }
+        ]
+      },
+      {
         "id": "registrar",
         "chapter": 1,
-        "title": "Registra las cuatro Entities",
+        "title": "Conecta los dos nuevos módulos",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController],\n  providers: [ObrasService]\n})\nexport class TallerModule {}",
-        "path": "src/taller.module.ts",
-        "note": "Conserva ObrasController y ObrasService. Añade únicamente las dos nuevas Entities. Los Services y Controllers N:M se registrarán después de crearlos.",
-        "expect": "El módulo conserva todos los casos 1:N. Solo añade las nuevas Entities; aún no importa casos N:M.",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ObrasModule } from './obras/obras.module';\nimport { ProfesionalesModule } from './profesionales/profesionales.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ObrasModule,\n    ProfesionalesModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "path": "src/app.module.ts",
+        "note": "Mantén ObrasModule y la conexión original. Añade ProfesionalesModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
+        "expect": "AppModule conserva Obras y añade Profesionales y Asignaciones; synchronize: true crea las nuevas tablas.",
         "focus": "model",
         "cues": [
           {
-            "token": "TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])",
-            "start": 504,
-            "end": 575,
-            "note": "Registra las cuatro Entities. Cada Service recibirá sus repositorios de TypeORM."
+            "token": "ProfesionalesModule,",
+            "start": 1133,
+            "end": 1153,
+            "note": "Carga el módulo que registra Profesional."
+          },
+          {
+            "token": "AsignacionesModule\n",
+            "start": 1158,
+            "end": 1177,
+            "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "code src/app.module.ts"
       },
       {
         "id": "arrancar",
         "chapter": 1,
         "title": "Compila y arranca con los nuevos modelos",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "Terminal 1: detén antes Nest con Ctrl+C. La base de práctica utiliza synchronize para añadir las tablas. No borres las tablas anteriores.",
+        "note": "Guarda primero las nuevas Entities, los dos módulos y AppModule. Detén el proceso anterior con Ctrl+C antes de ejecutar estas líneas en Terminal 1. La conexión y las tablas 1:N se conservan.",
         "expect": "Nest arranca sin imports inexistentes y PostgreSQL contiene PROFESIONAL y ASIGNACION.",
         "focus": "model",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Compila todos los archivos guardados y detecta imports pendientes."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Arranca Nest y mantiene la recompilación automática."
+          }
+        ],
         "create": null
       },
       {
@@ -314,22 +373,22 @@
         "chapter": 2,
         "title": "Carga los vínculos y sus IDs reales",
         "kind": "command",
-        "code": "npm run build\nnode --env-file=.env dist/datos/cargar-datos-nm.js\n. ./ids-aula.env",
+        "code": "npm run build\nnode dist/datos/cargar-datos-nm.js\n. ./ids-aula.env",
         "path": "",
         "note": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. OBRA_1_ID es el ID real de «Mejora de acera»; OBRA_2_ID, el de «Zona de sombra». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
         "expect": "Ves tres vínculos iniciales. Las variables guardan los IDs reales de las obras y de Diego y Ana.",
         "focus": "model",
         "cues": [
           {
-            "token": "node --env-file=.env dist/datos/cargar-datos-nm.js",
+            "token": "node dist/datos/cargar-datos-nm.js",
             "start": 14,
-            "end": 64,
+            "end": 48,
             "note": "Ejecuta el archivo compilado con la conexión de tu .env. save() escribe y find() lee."
           },
           {
             "token": ". ./ids-aula.env",
-            "start": 65,
-            "end": 81,
+            "start": 49,
+            "end": 65,
             "note": "Carga los IDs reales en esta terminal para los curl siguientes."
           }
         ],
@@ -412,38 +471,51 @@
         "chapter": 3,
         "title": "Registrar Profesionales una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesService } from './profesionales/profesionales.service';\nimport { ProfesionalesController } from './profesionales/profesionales.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController, ProfesionalesController],\n  providers: [ObrasService, ProfesionalesService]\n})\nexport class TallerModule {}",
-        "path": "src/taller.module.ts",
-        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Profesional } from './entities/profesional.entity';\nimport { ProfesionalesService } from './profesionales.service';\nimport { ProfesionalesController } from './profesionales.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Profesional])],\n  providers: [ProfesionalesService],\n  controllers: [ProfesionalesController]\n})\nexport class ProfesionalesModule {}",
+        "path": "src/profesionales/profesionales.module.ts",
+        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ObrasModule.",
         "expect": "POST devuelve el ID real del nuevo profesional; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "route",
         "cues": [
           {
-            "token": "controllers: [",
-            "start": 742,
-            "end": 756,
-            "note": "Nest conecta las rutas de los Controllers."
+            "token": "providers: [ProfesionalesService]",
+            "start": 352,
+            "end": 385,
+            "note": "Registra el único Service de este recurso."
           },
           {
-            "token": "providers: [",
-            "start": 801,
-            "end": 813,
-            "note": "Nest puede entregar estos Services por sus constructores."
+            "token": "controllers: [ProfesionalesController]",
+            "start": 389,
+            "end": 427,
+            "note": "Registra el único Controller de este recurso."
           }
         ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "code src/profesionales/profesionales.module.ts"
       },
       {
         "id": "crear-listar-ejecutar",
         "chapter": 3,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "POST devuelve el ID real del nuevo profesional; GET muestra los dos perfiles iniciales y a Lucía.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -543,38 +615,51 @@
         "chapter": 4,
         "title": "Registrar Asignaciones una sola vez",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './ayuntamientos/entities/ayuntamiento.entity';\nimport { Obra } from './obras/entities/obra.entity';\nimport { ObrasService } from './obras/obras.service';\nimport { ObrasController } from './obras/obras.controller';\nimport { Profesional } from './profesionales/entities/profesional.entity';\nimport { Asignacion } from './asignaciones/entities/asignacion.entity';\nimport { ProfesionalesService } from './profesionales/profesionales.service';\nimport { ProfesionalesController } from './profesionales/profesionales.controller';\nimport { AsignacionesService } from './asignaciones/asignaciones.service';\nimport { AsignacionesController } from './asignaciones/asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento, Obra, Profesional, Asignacion])],\n  controllers: [ObrasController, ProfesionalesController, AsignacionesController],\n  providers: [ObrasService, ProfesionalesService, AsignacionesService]\n})\nexport class TallerModule {}",
-        "path": "src/taller.module.ts",
-        "note": "Registra el Service y el Controller que acabas de crear. Las operaciones siguientes añadirán métodos a estas mismas clases.",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Asignacion } from './entities/asignacion.entity';\nimport { Obra } from '../obras/entities/obra.entity';\nimport { Profesional } from '../profesionales/entities/profesional.entity';\nimport { AsignacionesService } from './asignaciones.service';\nimport { AsignacionesController } from './asignaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Asignacion, Obra, Profesional])],\n  providers: [AsignacionesService],\n  controllers: [AsignacionesController]\n})\nexport class AsignacionesModule {}",
+        "path": "src/asignaciones/asignaciones.module.ts",
+        "note": "Es el módulo que ya creaste. Añade su Service a providers y su Controller a controllers. No modifiques la conexión ni ObrasModule.",
         "expect": "Se crea el vínculo de la segunda obra con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "route",
         "cues": [
           {
-            "token": "controllers: [",
-            "start": 898,
-            "end": 912,
-            "note": "Nest conecta las rutas de los Controllers."
+            "token": "providers: [AsignacionesService]",
+            "start": 494,
+            "end": 526,
+            "note": "Registra el único Service de este recurso."
           },
           {
-            "token": "providers: [",
-            "start": 981,
-            "end": 993,
-            "note": "Nest puede entregar estos Services por sus constructores."
+            "token": "controllers: [AsignacionesController]",
+            "start": 530,
+            "end": 567,
+            "note": "Registra el único Controller de este recurso."
           }
         ],
-        "create": "mkdir -p src\nls -d src\ntouch src/taller.module.ts\ncode src/taller.module.ts"
+        "create": "code src/asignaciones/asignaciones.module.ts"
       },
       {
         "id": "asignar-profesional-ejecutar",
         "chapter": 4,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "Se crea el vínculo de la segunda obra con Ana. Repetir esa pareja devuelve 409 y conserva el rol anterior.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -662,12 +747,25 @@
         "chapter": 5,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "La obra principal devuelve sus dos profesionales y sus roles.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -755,12 +853,25 @@
         "chapter": 6,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "Diego devuelve sus vínculos con la obra principal y la secundaria.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -854,12 +965,25 @@
         "chapter": 7,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "Solo el vínculo de la obra principal con Diego cambia a Jefe de equipo.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -947,12 +1071,25 @@
         "chapter": 8,
         "title": "Aplica los archivos en tu proyecto",
         "kind": "command",
-        "code": "npm run build\nnpm run start",
+        "code": "npm run build\nnpm run start:dev",
         "path": "",
-        "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
+        "note": "Guarda los archivos del caso. Si start:dev ya está abierto, espera su recompilación y pasa al curl; no abras otro servidor. Si está detenido, ejecuta estas líneas en Terminal 1.",
         "expect": "Se elimina solo ese vínculo; se conservan las obras, los profesionales y los otros tres vínculos.",
         "focus": "request",
-        "cues": [],
+        "cues": [
+          {
+            "token": "npm run build",
+            "start": 0,
+            "end": 13,
+            "note": "Comprueba que los archivos del caso compilan."
+          },
+          {
+            "token": "npm run start:dev",
+            "start": 14,
+            "end": 31,
+            "note": "Mantiene el servidor escuchando mientras pruebas desde Terminal 2."
+          }
+        ],
         "create": null
       },
       {
@@ -2969,7 +3106,7 @@
     "persistencia",
     "repaso"
   ],
-  "nestSimpleRevision": 2,
+  "nestSimpleRevision": 3,
   "nestRetainedIds": [
     "situacion",
     "logico",
@@ -3088,6 +3225,46 @@
       "eliminar-asignacion-curl",
       "persistencia",
       "repaso"
+    ],
+    "2": [
+      "situacion",
+      "logico",
+      "retomar",
+      "profesional",
+      "obra-inversa",
+      "asig-inversas",
+      "registrar",
+      "arrancar",
+      "datos",
+      "cargar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-profesional-service",
+      "asignar-profesional-entry",
+      "asignar-profesional-registro",
+      "asignar-profesional-ejecutar",
+      "asignar-profesional-curl",
+      "listar-por-obra-service",
+      "listar-por-obra-entry",
+      "listar-por-obra-ejecutar",
+      "listar-por-obra-curl",
+      "listar-por-profesional-service",
+      "listar-por-profesional-entry",
+      "listar-por-profesional-ejecutar",
+      "listar-por-profesional-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
     ]
   },
   "nestRetainedByRevision": {
@@ -3149,6 +3326,40 @@
       "eliminar-asignacion-curl",
       "persistencia",
       "repaso"
+    ],
+    "2": [
+      "situacion",
+      "logico",
+      "profesional",
+      "obra-inversa",
+      "asig-inversas",
+      "datos",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-profesional-service",
+      "asignar-profesional-entry",
+      "asignar-profesional-ejecutar",
+      "asignar-profesional-curl",
+      "listar-por-obra-service",
+      "listar-por-obra-entry",
+      "listar-por-obra-ejecutar",
+      "listar-por-obra-curl",
+      "listar-por-profesional-service",
+      "listar-por-profesional-entry",
+      "listar-por-profesional-ejecutar",
+      "listar-por-profesional-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
     ]
   },
   "nestStepAliases": {
@@ -3180,5 +3391,11 @@
     "listar-por-profesional-curl",
     "modificar-rol-curl",
     "eliminar-asignacion-curl"
-  ]
+  ],
+  "projectBase": {
+    "url": "https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01",
+    "revision": "87d14758960120570436906207b09073bb3731c3",
+    "backend": "backend",
+    "pilot": true
+  }
 }
