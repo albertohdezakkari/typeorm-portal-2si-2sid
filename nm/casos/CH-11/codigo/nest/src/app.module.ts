@@ -7,6 +7,8 @@ import { ReservasModule } from './reservas/reservas.module';
 import { HuespedesModule } from './huespedes/huespedes.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { HotelesModule } from './hoteles/hoteles.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    HotelesModule,
     ReservasModule,
     HuespedesModule,
     AsignacionesModule

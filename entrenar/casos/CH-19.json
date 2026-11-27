@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Puerto",
+        "path": "src/puertos/puertos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Puerto } from './entities/puerto.entity';\n\n@Injectable()\nexport class PuertosService {\n  constructor(\n    @InjectRepository(Puerto) private readonly puertos: Repository<Puerto>\n  ) {}\n\n  crearPuerto(nombre: string) {\n    const puerto = this.puertos.create({ nombre });\n    return this.puertos.save(puerto);\n  }\n\n  listarPuertos() {\n    return this.puertos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.puertos.save(puerto);",
+            "title": "Service · Puerto",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Puerto",
+        "path": "src/puertos/puertos.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\ncurl -i \"http://localhost:3000/puertos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { PuertosService } from './puertos.service';\n\n@Controller('puertos')\nexport class PuertosController {\n  constructor(private readonly service: PuertosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearPuerto(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarPuertos();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Puerto",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Puerto",
+        "path": "src/puertos/puertos.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Puerto } from './entities/puerto.entity';\nimport { PuertosService } from './puertos.service';\nimport { PuertosController } from './puertos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Puerto])],\n  providers: [PuertosService],\n  controllers: [PuertosController]\n})\nexport class PuertosModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Puerto",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EmbarcacionesModule } from './embarcaciones/embarcaciones.module';\n\nimport { PuertosModule } from './puertos/puertos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PuertosModule,\n    EmbarcacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar puertos",
+        "path": "Peticiones · puertos",
+        "code": "curl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\n\ncurl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Faro\"}'\n\ncurl -i \"http://localhost:3000/puertos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/puertos\" \\",
+            "title": "Crear y listar puertos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/embarcaciones/embarcaciones.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /embarcaciones\n{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}\n\n201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/embarcaciones\"\n\ncurl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa\",\"esloraMetros\":6,\"puertoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Albatros\",\"esloraMetros\":14,\"puertoId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa · nuevo\",\"esloraMetros\":26,\"puertoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}'\n\ncurl -i \"http://localhost:3000/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /embarcaciones/10\n\n204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/embarcaciones/4\"\n\ncurl -i \"http://localhost:3000/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /embarcaciones/7\n{\"esloraMetros\":20}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'\n\ncurl -i \"http://localhost:3000/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /embarcaciones/7/puerto\n{\"puertoId\":2}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/1/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"puertoId\":2}'\n\ncurl -i \"http://localhost:3000/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /puertos/2/embarcaciones?minimo=15\n\n200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/puertos/2/embarcaciones?minimo=15\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /embarcaciones }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /embarcaciones }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /embarcaciones/{embarcacionId} }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId} }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId}/puerto }\n  consultarPuerto:\n    handler: src/puertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /puertos/{puertoId}/embarcaciones }",
+        "code": "functions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /embarcaciones }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /embarcaciones }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /embarcaciones/{embarcacionId} }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId} }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /embarcaciones/{embarcacionId}/puerto }\n  consultarPuerto:\n    handler: src/puertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /puertos/{puertoId}/embarcaciones }",
         "cues": [
           {
             "text": "src/embarcaciones/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Puerto",
+        "path": "src/puertos/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUERTO } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function crearPuertoRepository(puerto) {\n  await MODELO_PUERTO.build(EntityRepository).put(\n    puerto,\n    { condition: { attr: 'puertoId', exists: false } }\n  );\n}\n\nexport async function listarPuertosRepository() {\n  const { Items = [] } = await MODELO_PUERTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Puerto",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Puerto",
+        "path": "src/puertos/crear-listar/service.mjs",
+        "code": "import { crearPuertoRepository, listarPuertosRepository } from './repository.mjs';\n\nexport async function crearPuertoService(nombre) {\n  const puertoId = Date.now();\n  const puerto = { puertoId, nombre };\n  await crearPuertoRepository(puerto);\n  return puerto;\n}\n\nexport function listarPuertosService() {\n  return listarPuertosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Puerto",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Puerto",
+        "path": "src/puertos/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\ncurl -i \"$API_URL/puertos\"\n*/\n// POST /puertos con JSON: {\"nombre\":\"Puerto del Mar\"}\n// GET /puertos lista los registros y sus IDs.\nimport { crearPuertoService, listarPuertosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const puerto = await crearPuertoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(puerto) };\n}\n\nexport async function listarHandler() {\n  const puertos = await listarPuertosService();\n  return { statusCode: 200, body: JSON.stringify(puertos) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Puerto",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar puertos",
+        "path": "Peticiones · puertos",
+        "code": "curl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\n\ncurl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Faro\"}'\n\ncurl -i \"$API_URL/puertos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/puertos\" \\",
+            "title": "Crear y listar puertos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /embarcaciones\n{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}\n\n201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /embarcaciones → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/embarcaciones\"\n\ncurl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa\",\"esloraMetros\":6,\"puertoId\":1}'\n\ncurl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Albatros\",\"esloraMetros\":14,\"puertoId\":2}'\n\ncurl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa · nuevo\",\"esloraMetros\":26,\"puertoId\":1}'\n\ncurl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}'\n\ncurl -i \"$API_URL/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /embarcaciones/10\n\n204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /embarcaciones → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/embarcaciones/4\"\n\ncurl -i \"$API_URL/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /embarcaciones/7\n{\"esloraMetros\":20}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/embarcaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'\n\ncurl -i \"$API_URL/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /embarcaciones/7/puerto\n{\"puertoId\":2}\n\n200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/embarcaciones/1/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"puertoId\":2}'\n\ncurl -i \"$API_URL/embarcaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /puertos/2/embarcaciones?minimo=15\n\n200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/puertos/2/embarcaciones?minimo=15\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EmbarcacionesModule } from './embarcaciones/embarcaciones.module';\n\nimport { PuertosModule } from './puertos/puertos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PuertosModule,\n    EmbarcacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

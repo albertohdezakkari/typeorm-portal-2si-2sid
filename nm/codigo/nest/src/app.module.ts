@@ -7,6 +7,8 @@ import { ObrasModule } from './obras/obras.module';
 import { ProfesionalesModule } from './profesionales/profesionales.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { AyuntamientosModule } from './ayuntamientos/ayuntamientos.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    AyuntamientosModule,
     ObrasModule,
     ProfesionalesModule,
     AsignacionesModule

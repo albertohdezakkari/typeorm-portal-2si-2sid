@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ComandasModule } from './comandas/comandas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ComandasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ComandasModule } from './comandas/comandas.module';\n\nimport { CafeteriasModule } from './cafeterias/cafeterias.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CafeteriasModule,\n    ComandasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ComandasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás CAFETERIA y COMANDA, creadas por TypeORM con la FK ID_CAFETERIA.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/cafeterias.service.ts",
+            "path": "src/cafeterias/cafeterias.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cafeteria } from './entities/cafeteria.entity';\n\n@Injectable()\nexport class CafeteriasService {\n  constructor(\n    @InjectRepository(Cafeteria) private readonly cafeterias: Repository<Cafeteria>\n  ) {}\n\n  crearCafeteria(nombre: string) {\n    const cafeteria = this.cafeterias.create({ nombre });\n    return this.cafeterias.save(cafeteria);\n  }\n\n  listarCafeterias() {\n    return this.cafeterias.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/cafeterias\ncode src/cafeterias/cafeterias.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/cafeterias.controller.ts",
+            "path": "src/cafeterias/cafeterias.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Plaza\"}'\ncurl -i \"http://localhost:3000/cafeterias\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { CafeteriasService } from './cafeterias.service';\n\n@Controller('cafeterias')\nexport class CafeteriasController {\n  constructor(private readonly service: CafeteriasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearCafeteria(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarCafeterias();\n  }\n}",
+            "create": "mkdir -p src/cafeterias\ncode src/cafeterias/cafeterias.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/cafeterias.module.ts",
+            "path": "src/cafeterias/cafeterias.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cafeteria } from './entities/cafeteria.entity';\nimport { CafeteriasService } from './cafeterias.service';\nimport { CafeteriasController } from './cafeterias.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cafeteria])],\n  providers: [CafeteriasService],\n  controllers: [CafeteriasController]\n})\nexport class CafeteriasModule {}",
+            "create": "mkdir -p src/cafeterias\ncode src/cafeterias/cafeterias.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado CAFETERIA y COMANDA desde las Entities. AppModule importa ComandasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar cafeterias antes de crear comandas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar cafeterias por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Cafeteria } from '../cafeterias/entities/cafeteria.entity';\nimport { Comanda } from '../comandas/entities/comanda.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const cafeterias = db.getRepository(Cafeteria);\n    const comandas = db.getRepository(Comanda);\n\n    const primero = await cafeterias.findOneBy({ nombre: 'Cafetería Plaza' })\n      ?? await cafeterias.save({ nombre: 'Cafetería Plaza' });\n    const segundo = await cafeterias.findOneBy({ nombre: 'Cafetería Jardín' })\n      ?? await cafeterias.save({ nombre: 'Cafetería Jardín' });\n\n    const principal = await comandas.findOneBy({ nombre: 'Comanda C-01' })\n      ?? await comandas.save({ nombre: 'Comanda C-01', importeCentimos: 450, cafeteria: primero });\n    const secundaria = await comandas.findOneBy({ nombre: 'Comanda C-02' })\n      ?? await comandas.save({ nombre: 'Comanda C-02', importeCentimos: 1250, cafeteria: segundo });\n    const otra = await comandas.findOneBy({ nombre: 'Comanda C-01 · nuevo' })\n      ?? await comandas.save({ nombre: 'Comanda C-01 · nuevo', importeCentimos: 2150, cafeteria: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export CAFETERIA_1_ID=${primero.id}`,\n      `export CAFETERIA_2_ID=${segundo.id}`,\n      `export COMANDA_1_ID=${principal.id}`,\n      `export COMANDA_2_ID=${secundaria.id}`,\n      `export COMANDA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await comandas.find({ relations: { cafeteria: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Cafetería Plaza",
+            "code": "curl -i -X POST \"http://localhost:3000/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Plaza\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Comanda principal: %s\\nOtro cafeteria: %s\\n' \"$COMANDA_1_ID\" \"$CAFETERIA_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Cafetería Jardín",
+            "code": "curl -i -X POST \"http://localhost:3000/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Jardín\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar cafeterias",
+            "code": "curl -i \"http://localhost:3000/cafeterias\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos cafeterias y tres comandas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /cafeterias muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Cafetería Plaza",
-          "Comanda C-01 y otra comanda",
-          "Cafetería Jardín",
-          "Comanda C-02"
+          "POST /cafeterias",
+          "Controller / Handler",
+          "Service",
+          "GET /cafeterias"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/comandas/comandas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/comandas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"importeCentimos\\\":451,\\\"cafeteriaId\\\":$CAFETERIA_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/comandas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Comanda C-01",
+            "code": "curl -i -X POST \"http://localhost:3000/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-01\",\"importeCentimos\":450,\"cafeteriaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Comanda C-02",
+            "code": "curl -i -X POST \"http://localhost:3000/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-02\",\"importeCentimos\":1250,\"cafeteriaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Comanda C-01 · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-01 · nuevo\",\"importeCentimos\":2150,\"cafeteriaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/comandas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro comandas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/comandas/comandas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/comandas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/comandas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/comandas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/comandas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la comanda de prueba. Siguen las tres comandas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/comandas/comandas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar importe",
-            "code": "curl -i -X PATCH \"http://localhost:3000/comandas/$COMANDA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"importeCentimos\":1700}'\ncurl -i http://localhost:3000/comandas",
+            "title": "Cambiar importe",
+            "code": "curl -i -X PATCH \"http://localhost:3000/comandas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"importeCentimos\":1700}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/comandas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La comanda principal tiene importe 1700 y conserva su cafeteria.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/comandas/comandas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/comandas/$COMANDA_1_ID/cafeteria\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"cafeteriaId\\\":$CAFETERIA_2_ID}\"\ncurl -i http://localhost:3000/comandas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/comandas/1/cafeteria\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cafeteriaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/comandas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La comanda principal pasa al segundo cafeteria y conserva su importe 1700.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COMANDA_1_ID es el ID real de «Comanda C-01»; COMANDA_2_ID, el de «Comanda C-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/comandas/comandas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/cafeterias/$CAFETERIA_2_ID/comandas?minimo=1251\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/cafeterias/2/comandas?minimo=1251\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo cafeteria y la comanda principal; el filtro excluye las otras dos comandas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"COMANDAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/crear-listar/repository.mjs",
+            "path": "src/cafeterias/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_CAFETERIA } from '../../models/cafeteria-comanda.model.mjs';\n\nexport async function crearCafeteriaRepository(cafeteria) {\n  await MODELO_CAFETERIA.build(EntityRepository).put(\n    cafeteria,\n    { condition: { attr: 'cafeteriaId', exists: false } }\n  );\n}\n\nexport async function listarCafeteriasRepository() {\n  const { Items = [] } = await MODELO_CAFETERIA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/cafeterias/crear-listar\ncode src/cafeterias/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/crear-listar/service.mjs",
+            "path": "src/cafeterias/crear-listar/service.mjs",
+            "code": "import { crearCafeteriaRepository, listarCafeteriasRepository } from './repository.mjs';\n\nexport async function crearCafeteriaService(nombre) {\n  const cafeteriaId = Date.now();\n  const cafeteria = { cafeteriaId, nombre };\n  await crearCafeteriaRepository(cafeteria);\n  return cafeteria;\n}\n\nexport function listarCafeteriasService() {\n  return listarCafeteriasRepository();\n}",
+            "create": "mkdir -p src/cafeterias/crear-listar\ncode src/cafeterias/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cafeterias/crear-listar/handler.mjs",
+            "path": "src/cafeterias/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Plaza\"}'\ncurl -i \"$API_URL/cafeterias\"\n*/\n// POST /cafeterias con JSON: {\"nombre\":\"Cafetería Plaza\"}\n// GET /cafeterias lista los registros y sus IDs.\nimport { crearCafeteriaService, listarCafeteriasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const cafeteria = await crearCafeteriaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(cafeteria) };\n}\n\nexport async function listarHandler() {\n  const cafeterias = await listarCafeteriasService();\n  return { statusCode: 200, body: JSON.stringify(cafeterias) };\n}",
+            "create": "mkdir -p src/cafeterias/crear-listar\ncode src/cafeterias/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen CAFETERIAS_tuEquipo y COMANDAS_tuEquipo. PK del lado N: COMANDA_ID; índice: PorCafeteria. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar cafeterias antes de crear comandas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar cafeterias por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Cafeteria 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"CAFETERIAS_${TALLER_EQUIPO}\\\" VALUE {'CAFETERIA_ID':1,'NOMBRE':'Cafetería Plaza'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Cafetería Plaza",
+            "code": "curl -i -X POST \"$API_URL/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Plaza\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cafeteria 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"CAFETERIAS_${TALLER_EQUIPO}\\\" VALUE {'CAFETERIA_ID':2,'NOMBRE':'Cafetería Jardín'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Cafetería Jardín",
+            "code": "curl -i -X POST \"$API_URL/cafeterias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cafetería Jardín\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comanda 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COMANDAS_${TALLER_EQUIPO}\\\" VALUE {'COMANDA_ID':7,'NOMBRE':'Comanda C-01','IMPORTE_CENTIMOS':450,'CAFETERIA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comanda 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COMANDAS_${TALLER_EQUIPO}\\\" VALUE {'COMANDA_ID':8,'NOMBRE':'Comanda C-02','IMPORTE_CENTIMOS':1250,'CAFETERIA_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comanda 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COMANDAS_${TALLER_EQUIPO}\\\" VALUE {'COMANDA_ID':9,'NOMBRE':'Comanda C-01 · nuevo','IMPORTE_CENTIMOS':2150,'CAFETERIA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"CAFETERIAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"COMANDAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar cafeterias",
+            "code": "curl -i \"$API_URL/cafeterias\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Cafeteria y tres de Comanda, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /cafeterias muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Cafeteria 1",
-          "Comanda 7 y 9",
-          "Cafeteria 2",
-          "Comanda 8"
+          "POST /cafeterias",
+          "Controller / Handler",
+          "Service",
+          "GET /cafeterias"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/comandas/crear-listar/handler.mjs\nnode --check src/comandas/crear-listar/service.mjs\nnode --check src/comandas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/comandas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).comandaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/comandas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Comanda C-01",
+            "code": "curl -i -X POST \"$API_URL/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-01\",\"importeCentimos\":450,\"cafeteriaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarComandas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Comanda C-02",
+            "code": "curl -i -X POST \"$API_URL/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-02\",\"importeCentimos\":1250,\"cafeteriaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Comanda C-01 · nuevo",
+            "code": "curl -i -X POST \"$API_URL/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Comanda C-01 · nuevo\",\"importeCentimos\":2150,\"cafeteriaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/comandas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"importeCentimos\":451,\"cafeteriaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/comandas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/comandas/eliminar/handler.mjs\nnode --check src/comandas/eliminar/service.mjs\nnode --check src/comandas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/comandas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/comandas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/comandas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/comandas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/comandas/modificar-importe-centimos/handler.mjs\nnode --check src/comandas/modificar-importe-centimos/service.mjs\nnode --check src/comandas/modificar-importe-centimos/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar importe",
-            "code": "curl -i -X PATCH \"$API_URL/comandas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"importeCentimos\":1700}'\ncurl -i \"$API_URL/comandas\"",
+            "title": "Cambiar importe",
+            "code": "curl -i -X PATCH \"$API_URL/comandas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"importeCentimos\":1700}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/comandas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n  trasladarComanda:\n    handler: src/comandas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/cafeteria' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n  trasladarComanda:\n    handler: src/comandas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/cafeteria' }\n\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/comandas/trasladar/handler.mjs\nnode --check src/comandas/trasladar/service.mjs\nnode --check src/comandas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/comandas/7/cafeteria\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cafeteriaId\":2}'\ncurl -i \"$API_URL/comandas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/comandas/1/cafeteria\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cafeteriaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/comandas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · importeCentimos = 1700 céntimos · cafeteriaId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n  trasladarComanda:\n    handler: src/comandas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/cafeteria' }\n  consultarCafeteria:\n    handler: src/cafeterias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/cafeterias/{cafeteriaId}/comandas' }\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
+            "code": "service: taller-ch23\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CAFETERIAS: { Ref: TablaCafeterias }\n    TABLA_COMANDAS: { Ref: TablaComandas }\n\n\nfunctions:\n  crearCafeteria:\n    handler: src/cafeterias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cafeterias }\n  listarCafeterias:\n    handler: src/cafeterias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cafeterias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearComanda:\n    handler: src/comandas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/comandas' }\n  listarComandas:\n    handler: src/comandas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/comandas' }\n  eliminarComanda:\n    handler: src/comandas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/comandas/{comandaId}' }\n  modificarImporteCentimos:\n    handler: src/comandas/modificar-importe-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}' }\n  trasladarComanda:\n    handler: src/comandas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/comandas/{comandaId}/cafeteria' }\n  consultarCafeteria:\n    handler: src/cafeterias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/cafeterias/{cafeteriaId}/comandas' }\nresources:\n  Resources:\n    TablaCafeterias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CAFETERIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CAFETERIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CAFETERIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CAFETERIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaComandas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMANDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMANDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   IMPORTE_CENTIMOS (N: número).\n        #   CAFETERIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COMANDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COMANDA_ID, AttributeType: N }\n          - { AttributeName: CAFETERIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMANDA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COMANDAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCafeteria\n            # Clave compuesta = partition key + sort key:\n            # (CAFETERIA_ID, COMANDA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CAFETERIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Cafeteria.\n              - AttributeName: COMANDA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COMANDAS copiados al índice.\n                - NOMBRE\n                - IMPORTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cafeterias/consultar/handler.mjs\nnode --check src/cafeterias/consultar/service.mjs\nnode --check src/cafeterias/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/cafeterias/2/comandas?minimo=1251\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/cafeterias/2/comandas?minimo=1251\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Cafetería Jardín + registro 7 (1700 céntimos). Excluye el 8 (1250 céntimos) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"COMANDAS_${TALLER_EQUIPO}\\\" WHERE COMANDA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

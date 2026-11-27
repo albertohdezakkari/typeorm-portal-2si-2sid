@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Archivo",
+        "path": "src/archivos/archivos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Archivo } from './entities/archivo.entity';\n\n@Injectable()\nexport class ArchivosService {\n  constructor(\n    @InjectRepository(Archivo) private readonly archivos: Repository<Archivo>\n  ) {}\n\n  crearArchivo(nombre: string) {\n    const archivo = this.archivos.create({ nombre });\n    return this.archivos.save(archivo);\n  }\n\n  listarArchivos() {\n    return this.archivos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.archivos.save(archivo);",
+            "title": "Service · Archivo",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Archivo",
+        "path": "src/archivos/archivos.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo Municipal\"}'\ncurl -i \"http://localhost:3000/archivos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ArchivosService } from './archivos.service';\n\n@Controller('archivos')\nexport class ArchivosController {\n  constructor(private readonly service: ArchivosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearArchivo(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarArchivos();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Archivo",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Archivo",
+        "path": "src/archivos/archivos.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Archivo } from './entities/archivo.entity';\nimport { ArchivosService } from './archivos.service';\nimport { ArchivosController } from './archivos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Archivo])],\n  providers: [ArchivosService],\n  controllers: [ArchivosController]\n})\nexport class ArchivosModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Archivo",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { DocumentosModule } from './documentos/documentos.module';\n\nimport { ArchivosModule } from './archivos/archivos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ArchivosModule,\n    DocumentosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar archivos",
+        "path": "Peticiones · archivos",
+        "code": "curl -i -X POST \"http://localhost:3000/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo Municipal\"}'\n\ncurl -i -X POST \"http://localhost:3000/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo del Centro\"}'\n\ncurl -i \"http://localhost:3000/archivos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/archivos\" \\",
+            "title": "Crear y listar archivos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/documentos/documentos.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /documentos\n{\"nombre\":\"Registro de prueba\",\"paginas\":21,\"archivoId\":2}\n\n201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/documentos\"\n\ncurl -i -X POST \"http://localhost:3000/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Inventario antiguo\",\"paginas\":20,\"archivoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Memoria del barrio\",\"paginas\":75,\"archivoId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Inventario antiguo · nuevo\",\"paginas\":115,\"archivoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"paginas\":21,\"archivoId\":2}'\n\ncurl -i \"http://localhost:3000/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /documentos/10\n\n204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/documentos/4\"\n\ncurl -i \"http://localhost:3000/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /documentos/7\n{\"paginas\":95}\n\n200 · Registro 7 · paginas = 95 páginas · archivoId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · paginas = 95 páginas · archivoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · paginas = 95 páginas · archivoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/documentos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"paginas\":95}'\n\ncurl -i \"http://localhost:3000/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /documentos/7/archivo\n{\"archivoId\":2}\n\n200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/documentos/1/archivo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"archivoId\":2}'\n\ncurl -i \"http://localhost:3000/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /archivos/2/documentos?minimo=76\n\n200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/archivos/2/documentos?minimo=76\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearDocumento:\n    handler: src/documentos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /documentos }\n  listarDocumentos:\n    handler: src/documentos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /documentos }\n  eliminarDocumento:\n    handler: src/documentos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /documentos/{documentoId} }\n  modificarPaginas:\n    handler: src/documentos/modificar-paginas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /documentos/{documentoId} }\n  trasladarDocumento:\n    handler: src/documentos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /documentos/{documentoId}/archivo }\n  consultarArchivo:\n    handler: src/archivos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /archivos/{archivoId}/documentos }",
+        "code": "functions:\n  crearArchivo:\n    handler: src/archivos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /archivos }\n  listarArchivos:\n    handler: src/archivos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /archivos }\n  crearDocumento:\n    handler: src/documentos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /documentos }\n  listarDocumentos:\n    handler: src/documentos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /documentos }\n  eliminarDocumento:\n    handler: src/documentos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /documentos/{documentoId} }\n  modificarPaginas:\n    handler: src/documentos/modificar-paginas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /documentos/{documentoId} }\n  trasladarDocumento:\n    handler: src/documentos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /documentos/{documentoId}/archivo }\n  consultarArchivo:\n    handler: src/archivos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /archivos/{archivoId}/documentos }",
         "cues": [
           {
             "text": "src/documentos/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Archivo",
+        "path": "src/archivos/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ARCHIVO } from '../../models/archivo-documento.model.mjs';\n\nexport async function crearArchivoRepository(archivo) {\n  await MODELO_ARCHIVO.build(EntityRepository).put(\n    archivo,\n    { condition: { attr: 'archivoId', exists: false } }\n  );\n}\n\nexport async function listarArchivosRepository() {\n  const { Items = [] } = await MODELO_ARCHIVO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Archivo",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Archivo",
+        "path": "src/archivos/crear-listar/service.mjs",
+        "code": "import { crearArchivoRepository, listarArchivosRepository } from './repository.mjs';\n\nexport async function crearArchivoService(nombre) {\n  const archivoId = Date.now();\n  const archivo = { archivoId, nombre };\n  await crearArchivoRepository(archivo);\n  return archivo;\n}\n\nexport function listarArchivosService() {\n  return listarArchivosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Archivo",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Archivo",
+        "path": "src/archivos/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo Municipal\"}'\ncurl -i \"$API_URL/archivos\"\n*/\n// POST /archivos con JSON: {\"nombre\":\"Archivo Municipal\"}\n// GET /archivos lista los registros y sus IDs.\nimport { crearArchivoService, listarArchivosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const archivo = await crearArchivoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(archivo) };\n}\n\nexport async function listarHandler() {\n  const archivos = await listarArchivosService();\n  return { statusCode: 200, body: JSON.stringify(archivos) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Archivo",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch31\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ARCHIVOS: { Ref: TablaArchivos }\n    TABLA_DOCUMENTOS: { Ref: TablaDocumentos }\n\n\nfunctions:\n  crearArchivo:\n    handler: src/archivos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /archivos }\n  listarArchivos:\n    handler: src/archivos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /archivos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaArchivos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ARCHIVOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ARCHIVO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ARCHIVO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ARCHIVO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ARCHIVO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaDocumentos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: DOCUMENTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: DOCUMENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PAGINAS (N: número).\n        #   ARCHIVO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_DOCUMENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: DOCUMENTO_ID, AttributeType: N }\n          - { AttributeName: ARCHIVO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: DOCUMENTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en DOCUMENTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorArchivo\n            # Clave compuesta = partition key + sort key:\n            # (ARCHIVO_ID, DOCUMENTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ARCHIVO_ID\n                KeyType: HASH   # Partition key. Agrupa por Archivo.\n              - AttributeName: DOCUMENTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de DOCUMENTOS copiados al índice.\n                - NOMBRE\n                - PAGINAS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar archivos",
+        "path": "Peticiones · archivos",
+        "code": "curl -i -X POST \"$API_URL/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo Municipal\"}'\n\ncurl -i -X POST \"$API_URL/archivos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Archivo del Centro\"}'\n\ncurl -i \"$API_URL/archivos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/archivos\" \\",
+            "title": "Crear y listar archivos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /documentos\n{\"nombre\":\"Registro de prueba\",\"paginas\":21,\"archivoId\":2}\n\n201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /documentos → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/documentos\"\n\ncurl -i -X POST \"$API_URL/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Inventario antiguo\",\"paginas\":20,\"archivoId\":1}'\n\ncurl -i -X POST \"$API_URL/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Memoria del barrio\",\"paginas\":75,\"archivoId\":2}'\n\ncurl -i -X POST \"$API_URL/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Inventario antiguo · nuevo\",\"paginas\":115,\"archivoId\":1}'\n\ncurl -i -X POST \"$API_URL/documentos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"paginas\":21,\"archivoId\":2}'\n\ncurl -i \"$API_URL/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /documentos/10\n\n204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /documentos → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/documentos/4\"\n\ncurl -i \"$API_URL/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /documentos/7\n{\"paginas\":95}\n\n200 · Registro 7 · paginas = 95 páginas · archivoId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · paginas = 95 páginas · archivoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · paginas = 95 páginas · archivoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/documentos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"paginas\":95}'\n\ncurl -i \"$API_URL/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /documentos/7/archivo\n{\"archivoId\":2}\n\n200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · paginas = 95 páginas · archivoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/documentos/1/archivo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"archivoId\":2}'\n\ncurl -i \"$API_URL/documentos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /archivos/2/documentos?minimo=76\n\n200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Archivo del Centro + registro 7 (95 páginas). Excluye el 8 (75 páginas) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/archivos/2/documentos?minimo=76\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { DocumentosModule } from './documentos/documentos.module';\n\nimport { ArchivosModule } from './archivos/archivos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ArchivosModule,\n    DocumentosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch31\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ARCHIVOS: { Ref: TablaArchivos }\n    TABLA_DOCUMENTOS: { Ref: TablaDocumentos }\n\n\nfunctions:\n  crearArchivo:\n    handler: src/archivos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /archivos }\n  listarArchivos:\n    handler: src/archivos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /archivos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaArchivos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ARCHIVOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ARCHIVO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ARCHIVO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ARCHIVO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ARCHIVO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaDocumentos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: DOCUMENTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: DOCUMENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PAGINAS (N: número).\n        #   ARCHIVO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_DOCUMENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: DOCUMENTO_ID, AttributeType: N }\n          - { AttributeName: ARCHIVO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: DOCUMENTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en DOCUMENTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorArchivo\n            # Clave compuesta = partition key + sort key:\n            # (ARCHIVO_ID, DOCUMENTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ARCHIVO_ID\n                KeyType: HASH   # Partition key. Agrupa por Archivo.\n              - AttributeName: DOCUMENTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de DOCUMENTOS copiados al índice.\n                - NOMBRE\n                - PAGINAS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

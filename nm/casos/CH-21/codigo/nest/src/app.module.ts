@@ -7,6 +7,8 @@ import { MuestrasModule } from './muestras/muestras.module';
 import { AnalistasModule } from './analistas/analistas.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { LaboratoriosModule } from './laboratorios/laboratorios.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    LaboratoriosModule,
     MuestrasModule,
     AnalistasModule,
     AsignacionesModule

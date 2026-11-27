@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Estudio",
+        "path": "src/estudios/estudios.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Estudio } from './entities/estudio.entity';\n\n@Injectable()\nexport class EstudiosService {\n  constructor(\n    @InjectRepository(Estudio) private readonly estudios: Repository<Estudio>\n  ) {}\n\n  crearEstudio(nombre: string) {\n    const estudio = this.estudios.create({ nombre });\n    return this.estudios.save(estudio);\n  }\n\n  listarEstudios() {\n    return this.estudios.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.estudios.save(estudio);",
+            "title": "Service · Estudio",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Estudio",
+        "path": "src/estudios/estudios.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Prisma\"}'\ncurl -i \"http://localhost:3000/estudios\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EstudiosService } from './estudios.service';\n\n@Controller('estudios')\nexport class EstudiosController {\n  constructor(private readonly service: EstudiosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearEstudio(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEstudios();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Estudio",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Estudio",
+        "path": "src/estudios/estudios.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Estudio } from './entities/estudio.entity';\nimport { EstudiosService } from './estudios.service';\nimport { EstudiosController } from './estudios.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Estudio])],\n  providers: [EstudiosService],\n  controllers: [EstudiosController]\n})\nexport class EstudiosModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Estudio",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EscenasModule } from './escenas/escenas.module';\n\nimport { EstudiosModule } from './estudios/estudios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EstudiosModule,\n    EscenasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar estudios",
+        "path": "Peticiones · estudios",
+        "code": "curl -i -X POST \"http://localhost:3000/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Prisma\"}'\n\ncurl -i -X POST \"http://localhost:3000/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Lumen\"}'\n\ncurl -i \"http://localhost:3000/estudios\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/estudios\" \\",
+            "title": "Crear y listar estudios",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/escenas/escenas.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /escenas\n{\"nombre\":\"Registro de prueba\",\"duracionSegundos\":31,\"estudioId\":2}\n\n201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/escenas\"\n\ncurl -i -X POST \"http://localhost:3000/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena de apertura\",\"duracionSegundos\":30,\"estudioId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena del puente\",\"duracionSegundos\":95,\"estudioId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena de apertura · nuevo\",\"duracionSegundos\":155,\"estudioId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"duracionSegundos\":31,\"estudioId\":2}'\n\ncurl -i \"http://localhost:3000/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /escenas/10\n\n204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/escenas/4\"\n\ncurl -i \"http://localhost:3000/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /escenas/7\n{\"duracionSegundos\":125}\n\n200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/escenas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionSegundos\":125}'\n\ncurl -i \"http://localhost:3000/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /escenas/7/estudio\n{\"estudioId\":2}\n\n200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/escenas/1/estudio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"estudioId\":2}'\n\ncurl -i \"http://localhost:3000/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /estudios/2/escenas?minimo=96\n\n200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/estudios/2/escenas?minimo=96\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearEscena:\n    handler: src/escenas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escenas }\n  listarEscenas:\n    handler: src/escenas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escenas }\n  eliminarEscena:\n    handler: src/escenas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /escenas/{escenaId} }\n  modificarDuracionSegundos:\n    handler: src/escenas/modificar-duracion-segundos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /escenas/{escenaId} }\n  trasladarEscena:\n    handler: src/escenas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /escenas/{escenaId}/estudio }\n  consultarEstudio:\n    handler: src/estudios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /estudios/{estudioId}/escenas }",
+        "code": "functions:\n  crearEstudio:\n    handler: src/estudios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estudios }\n  listarEstudios:\n    handler: src/estudios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estudios }\n  crearEscena:\n    handler: src/escenas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escenas }\n  listarEscenas:\n    handler: src/escenas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escenas }\n  eliminarEscena:\n    handler: src/escenas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /escenas/{escenaId} }\n  modificarDuracionSegundos:\n    handler: src/escenas/modificar-duracion-segundos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /escenas/{escenaId} }\n  trasladarEscena:\n    handler: src/escenas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /escenas/{escenaId}/estudio }\n  consultarEstudio:\n    handler: src/estudios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /estudios/{estudioId}/escenas }",
         "cues": [
           {
             "text": "src/escenas/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Estudio",
+        "path": "src/estudios/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ESTUDIO } from '../../models/estudio-escena.model.mjs';\n\nexport async function crearEstudioRepository(estudio) {\n  await MODELO_ESTUDIO.build(EntityRepository).put(\n    estudio,\n    { condition: { attr: 'estudioId', exists: false } }\n  );\n}\n\nexport async function listarEstudiosRepository() {\n  const { Items = [] } = await MODELO_ESTUDIO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Estudio",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Estudio",
+        "path": "src/estudios/crear-listar/service.mjs",
+        "code": "import { crearEstudioRepository, listarEstudiosRepository } from './repository.mjs';\n\nexport async function crearEstudioService(nombre) {\n  const estudioId = Date.now();\n  const estudio = { estudioId, nombre };\n  await crearEstudioRepository(estudio);\n  return estudio;\n}\n\nexport function listarEstudiosService() {\n  return listarEstudiosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Estudio",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Estudio",
+        "path": "src/estudios/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Prisma\"}'\ncurl -i \"$API_URL/estudios\"\n*/\n// POST /estudios con JSON: {\"nombre\":\"Estudio Prisma\"}\n// GET /estudios lista los registros y sus IDs.\nimport { crearEstudioService, listarEstudiosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const estudio = await crearEstudioService(nombre);\n  return { statusCode: 201, body: JSON.stringify(estudio) };\n}\n\nexport async function listarHandler() {\n  const estudios = await listarEstudiosService();\n  return { statusCode: 200, body: JSON.stringify(estudios) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Estudio",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch17\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTUDIOS: { Ref: TablaEstudios }\n    TABLA_ESCENAS: { Ref: TablaEscenas }\n\n\nfunctions:\n  crearEstudio:\n    handler: src/estudios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estudios }\n  listarEstudios:\n    handler: src/estudios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estudios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEstudios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTUDIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTUDIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTUDIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTUDIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTUDIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEscenas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCENAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCENA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_SEGUNDOS (N: número).\n        #   ESTUDIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ESCENA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ESCENA_ID, AttributeType: N }\n          - { AttributeName: ESTUDIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCENA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ESCENAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstudio\n            # Clave compuesta = partition key + sort key:\n            # (ESTUDIO_ID, ESCENA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTUDIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Estudio.\n              - AttributeName: ESCENA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ESCENAS copiados al índice.\n                - NOMBRE\n                - DURACION_SEGUNDOS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar estudios",
+        "path": "Peticiones · estudios",
+        "code": "curl -i -X POST \"$API_URL/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Prisma\"}'\n\ncurl -i -X POST \"$API_URL/estudios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estudio Lumen\"}'\n\ncurl -i \"$API_URL/estudios\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/estudios\" \\",
+            "title": "Crear y listar estudios",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /escenas\n{\"nombre\":\"Registro de prueba\",\"duracionSegundos\":31,\"estudioId\":2}\n\n201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /escenas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/escenas\"\n\ncurl -i -X POST \"$API_URL/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena de apertura\",\"duracionSegundos\":30,\"estudioId\":1}'\n\ncurl -i -X POST \"$API_URL/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena del puente\",\"duracionSegundos\":95,\"estudioId\":2}'\n\ncurl -i -X POST \"$API_URL/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escena de apertura · nuevo\",\"duracionSegundos\":155,\"estudioId\":1}'\n\ncurl -i -X POST \"$API_URL/escenas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"duracionSegundos\":31,\"estudioId\":2}'\n\ncurl -i \"$API_URL/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /escenas/10\n\n204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /escenas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/escenas/4\"\n\ncurl -i \"$API_URL/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /escenas/7\n{\"duracionSegundos\":125}\n\n200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · duracionSegundos = 125 s · estudioId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/escenas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionSegundos\":125}'\n\ncurl -i \"$API_URL/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /escenas/7/estudio\n{\"estudioId\":2}\n\n200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · duracionSegundos = 125 s · estudioId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/escenas/1/estudio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"estudioId\":2}'\n\ncurl -i \"$API_URL/escenas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /estudios/2/escenas?minimo=96\n\n200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Estudio Lumen + registro 7 (125 s). Excluye el 8 (95 s) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/estudios/2/escenas?minimo=96\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EscenasModule } from './escenas/escenas.module';\n\nimport { EstudiosModule } from './estudios/estudios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EstudiosModule,\n    EscenasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch17\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTUDIOS: { Ref: TablaEstudios }\n    TABLA_ESCENAS: { Ref: TablaEscenas }\n\n\nfunctions:\n  crearEstudio:\n    handler: src/estudios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estudios }\n  listarEstudios:\n    handler: src/estudios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estudios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEstudios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTUDIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTUDIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTUDIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTUDIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTUDIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEscenas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCENAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCENA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_SEGUNDOS (N: número).\n        #   ESTUDIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ESCENA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ESCENA_ID, AttributeType: N }\n          - { AttributeName: ESTUDIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCENA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ESCENAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstudio\n            # Clave compuesta = partition key + sort key:\n            # (ESTUDIO_ID, ESCENA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTUDIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Estudio.\n              - AttributeName: ESCENA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ESCENAS copiados al índice.\n                - NOMBRE\n                - DURACION_SEGUNDOS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

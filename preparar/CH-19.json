@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EmbarcacionesModule } from './embarcaciones/embarcaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EmbarcacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { EmbarcacionesModule } from './embarcaciones/embarcaciones.module';\n\nimport { PuertosModule } from './puertos/puertos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PuertosModule,\n    EmbarcacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade EmbarcacionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás PUERTO y EMBARCACION, creadas por TypeORM con la FK ID_PUERTO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/puertos.service.ts",
+            "path": "src/puertos/puertos.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Puerto } from './entities/puerto.entity';\n\n@Injectable()\nexport class PuertosService {\n  constructor(\n    @InjectRepository(Puerto) private readonly puertos: Repository<Puerto>\n  ) {}\n\n  crearPuerto(nombre: string) {\n    const puerto = this.puertos.create({ nombre });\n    return this.puertos.save(puerto);\n  }\n\n  listarPuertos() {\n    return this.puertos.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/puertos\ncode src/puertos/puertos.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/puertos.controller.ts",
+            "path": "src/puertos/puertos.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\ncurl -i \"http://localhost:3000/puertos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { PuertosService } from './puertos.service';\n\n@Controller('puertos')\nexport class PuertosController {\n  constructor(private readonly service: PuertosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearPuerto(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarPuertos();\n  }\n}",
+            "create": "mkdir -p src/puertos\ncode src/puertos/puertos.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/puertos.module.ts",
+            "path": "src/puertos/puertos.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Puerto } from './entities/puerto.entity';\nimport { PuertosService } from './puertos.service';\nimport { PuertosController } from './puertos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Puerto])],\n  providers: [PuertosService],\n  controllers: [PuertosController]\n})\nexport class PuertosModule {}",
+            "create": "mkdir -p src/puertos\ncode src/puertos/puertos.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado PUERTO y EMBARCACION desde las Entities. AppModule importa EmbarcacionesModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar puertos antes de crear embarcaciones.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar puertos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Puerto } from '../puertos/entities/puerto.entity';\nimport { Embarcacion } from '../embarcaciones/entities/embarcacion.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const puertos = db.getRepository(Puerto);\n    const embarcaciones = db.getRepository(Embarcacion);\n\n    const primero = await puertos.findOneBy({ nombre: 'Puerto del Mar' })\n      ?? await puertos.save({ nombre: 'Puerto del Mar' });\n    const segundo = await puertos.findOneBy({ nombre: 'Puerto del Faro' })\n      ?? await puertos.save({ nombre: 'Puerto del Faro' });\n\n    const principal = await embarcaciones.findOneBy({ nombre: 'Brisa' })\n      ?? await embarcaciones.save({ nombre: 'Brisa', esloraMetros: 6, puerto: primero });\n    const secundaria = await embarcaciones.findOneBy({ nombre: 'Albatros' })\n      ?? await embarcaciones.save({ nombre: 'Albatros', esloraMetros: 14, puerto: segundo });\n    const otra = await embarcaciones.findOneBy({ nombre: 'Brisa · nuevo' })\n      ?? await embarcaciones.save({ nombre: 'Brisa · nuevo', esloraMetros: 26, puerto: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export PUERTO_1_ID=${primero.id}`,\n      `export PUERTO_2_ID=${segundo.id}`,\n      `export EMBARCACION_1_ID=${principal.id}`,\n      `export EMBARCACION_2_ID=${secundaria.id}`,\n      `export EMBARCACION_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await embarcaciones.find({ relations: { puerto: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Puerto del Mar",
+            "code": "curl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Embarcacion principal: %s\\nOtro puerto: %s\\n' \"$EMBARCACION_1_ID\" \"$PUERTO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Puerto del Faro",
+            "code": "curl -i -X POST \"http://localhost:3000/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Faro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar puertos",
+            "code": "curl -i \"http://localhost:3000/puertos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos puertos y tres embarcaciones de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /puertos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Puerto del Mar",
-          "Brisa y otra embarcacion",
-          "Puerto del Faro",
-          "Albatros"
+          "POST /puertos",
+          "Controller / Handler",
+          "Service",
+          "GET /puertos"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/embarcaciones/embarcaciones.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/embarcaciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"esloraMetros\\\":7,\\\"puertoId\\\":$PUERTO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/embarcaciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Brisa",
+            "code": "curl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa\",\"esloraMetros\":6,\"puertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Albatros",
+            "code": "curl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Albatros\",\"esloraMetros\":14,\"puertoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Brisa · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa · nuevo\",\"esloraMetros\":26,\"puertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/embarcaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro embarcaciones. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/embarcaciones/embarcaciones.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/embarcaciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/embarcaciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/embarcaciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/embarcaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la embarcacion de prueba. Siguen las tres embarcaciones originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/embarcaciones/embarcaciones.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar eslora",
-            "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/$EMBARCACION_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'\ncurl -i http://localhost:3000/embarcaciones",
+            "title": "Cambiar eslora",
+            "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/embarcaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La embarcacion principal tiene eslora 20 y conserva su puerto.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/embarcaciones/embarcaciones.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/$EMBARCACION_1_ID/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"puertoId\\\":$PUERTO_2_ID}\"\ncurl -i http://localhost:3000/embarcaciones",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/embarcaciones/1/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"puertoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/embarcaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La embarcacion principal pasa al segundo puerto y conserva su eslora 20.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EMBARCACION_1_ID es el ID real de «Brisa»; EMBARCACION_2_ID, el de «Albatros». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/embarcaciones/embarcaciones.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/puertos/$PUERTO_2_ID/embarcaciones?minimo=15\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/puertos/2/embarcaciones?minimo=15\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo puerto y la embarcacion principal; el filtro excluye las otras dos embarcaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"EMBARCACIONES_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/crear-listar/repository.mjs",
+            "path": "src/puertos/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PUERTO } from '../../models/puerto-embarcacion.model.mjs';\n\nexport async function crearPuertoRepository(puerto) {\n  await MODELO_PUERTO.build(EntityRepository).put(\n    puerto,\n    { condition: { attr: 'puertoId', exists: false } }\n  );\n}\n\nexport async function listarPuertosRepository() {\n  const { Items = [] } = await MODELO_PUERTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/puertos/crear-listar\ncode src/puertos/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/crear-listar/service.mjs",
+            "path": "src/puertos/crear-listar/service.mjs",
+            "code": "import { crearPuertoRepository, listarPuertosRepository } from './repository.mjs';\n\nexport async function crearPuertoService(nombre) {\n  const puertoId = Date.now();\n  const puerto = { puertoId, nombre };\n  await crearPuertoRepository(puerto);\n  return puerto;\n}\n\nexport function listarPuertosService() {\n  return listarPuertosRepository();\n}",
+            "create": "mkdir -p src/puertos/crear-listar\ncode src/puertos/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/puertos/crear-listar/handler.mjs",
+            "path": "src/puertos/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'\ncurl -i \"$API_URL/puertos\"\n*/\n// POST /puertos con JSON: {\"nombre\":\"Puerto del Mar\"}\n// GET /puertos lista los registros y sus IDs.\nimport { crearPuertoService, listarPuertosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const puerto = await crearPuertoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(puerto) };\n}\n\nexport async function listarHandler() {\n  const puertos = await listarPuertosService();\n  return { statusCode: 200, body: JSON.stringify(puertos) };\n}",
+            "create": "mkdir -p src/puertos/crear-listar\ncode src/puertos/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen PUERTOS_tuEquipo y EMBARCACIONES_tuEquipo. PK del lado N: EMBARCACION_ID; índice: PorPuerto. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar puertos antes de crear embarcaciones.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar puertos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Puerto 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PUERTOS_${TALLER_EQUIPO}\\\" VALUE {'PUERTO_ID':1,'NOMBRE':'Puerto del Mar'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Puerto del Mar",
+            "code": "curl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Mar\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Puerto 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PUERTOS_${TALLER_EQUIPO}\\\" VALUE {'PUERTO_ID':2,'NOMBRE':'Puerto del Faro'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Puerto del Faro",
+            "code": "curl -i -X POST \"$API_URL/puertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Puerto del Faro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Embarcacion 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EMBARCACIONES_${TALLER_EQUIPO}\\\" VALUE {'EMBARCACION_ID':7,'NOMBRE':'Brisa','ESLORA_METROS':6,'PUERTO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Embarcacion 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EMBARCACIONES_${TALLER_EQUIPO}\\\" VALUE {'EMBARCACION_ID':8,'NOMBRE':'Albatros','ESLORA_METROS':14,'PUERTO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Embarcacion 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EMBARCACIONES_${TALLER_EQUIPO}\\\" VALUE {'EMBARCACION_ID':9,'NOMBRE':'Brisa · nuevo','ESLORA_METROS':26,'PUERTO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PUERTOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"EMBARCACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar puertos",
+            "code": "curl -i \"$API_URL/puertos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Puerto y tres de Embarcacion, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /puertos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Puerto 1",
-          "Embarcacion 7 y 9",
-          "Puerto 2",
-          "Embarcacion 8"
+          "POST /puertos",
+          "Controller / Handler",
+          "Service",
+          "GET /puertos"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/embarcaciones/crear-listar/handler.mjs\nnode --check src/embarcaciones/crear-listar/service.mjs\nnode --check src/embarcaciones/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/embarcaciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).embarcacionId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/embarcaciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Brisa",
+            "code": "curl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa\",\"esloraMetros\":6,\"puertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarEmbarcaciones --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Albatros",
+            "code": "curl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Albatros\",\"esloraMetros\":14,\"puertoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Brisa · nuevo",
+            "code": "curl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Brisa · nuevo\",\"esloraMetros\":26,\"puertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/embarcaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"esloraMetros\":7,\"puertoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/embarcaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/embarcaciones/eliminar/handler.mjs\nnode --check src/embarcaciones/eliminar/service.mjs\nnode --check src/embarcaciones/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/embarcaciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/embarcaciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/embarcaciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/embarcaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/embarcaciones/modificar-eslora-metros/handler.mjs\nnode --check src/embarcaciones/modificar-eslora-metros/service.mjs\nnode --check src/embarcaciones/modificar-eslora-metros/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar eslora",
-            "code": "curl -i -X PATCH \"$API_URL/embarcaciones/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'\ncurl -i \"$API_URL/embarcaciones\"",
+            "title": "Cambiar eslora",
+            "code": "curl -i -X PATCH \"$API_URL/embarcaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"esloraMetros\":20}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/embarcaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · esloraMetros = 20 m · puertoId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/puerto' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/puerto' }\n\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/embarcaciones/trasladar/handler.mjs\nnode --check src/embarcaciones/trasladar/service.mjs\nnode --check src/embarcaciones/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/embarcaciones/7/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"puertoId\":2}'\ncurl -i \"$API_URL/embarcaciones\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/embarcaciones/1/puerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"puertoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/embarcaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · esloraMetros = 20 m · puertoId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/puerto' }\n  consultarPuerto:\n    handler: src/puertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/puertos/{puertoId}/embarcaciones' }\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
+            "code": "service: taller-ch19\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PUERTOS: { Ref: TablaPuertos }\n    TABLA_EMBARCACIONES: { Ref: TablaEmbarcaciones }\n\n\nfunctions:\n  crearPuerto:\n    handler: src/puertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /puertos }\n  listarPuertos:\n    handler: src/puertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /puertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearEmbarcacion:\n    handler: src/embarcaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/embarcaciones' }\n  listarEmbarcaciones:\n    handler: src/embarcaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/embarcaciones' }\n  eliminarEmbarcacion:\n    handler: src/embarcaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/embarcaciones/{embarcacionId}' }\n  modificarEsloraMetros:\n    handler: src/embarcaciones/modificar-eslora-metros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}' }\n  trasladarEmbarcacion:\n    handler: src/embarcaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/embarcaciones/{embarcacionId}/puerto' }\n  consultarPuerto:\n    handler: src/puertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/puertos/{puertoId}/embarcaciones' }\nresources:\n  Resources:\n    TablaPuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PUERTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaEmbarcaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EMBARCACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EMBARCACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ESLORA_METROS (N: número).\n        #   PUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EMBARCACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EMBARCACION_ID, AttributeType: N }\n          - { AttributeName: PUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EMBARCACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EMBARCACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorPuerto\n            # Clave compuesta = partition key + sort key:\n            # (PUERTO_ID, EMBARCACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Puerto.\n              - AttributeName: EMBARCACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EMBARCACIONES copiados al índice.\n                - NOMBRE\n                - ESLORA_METROS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/puertos/consultar/handler.mjs\nnode --check src/puertos/consultar/service.mjs\nnode --check src/puertos/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/puertos/2/embarcaciones?minimo=15\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/puertos/2/embarcaciones?minimo=15\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Puerto del Faro + registro 7 (20 m). Excluye el 8 (14 m) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"EMBARCACIONES_${TALLER_EQUIPO}\\\" WHERE EMBARCACION_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Vivero",
+        "path": "src/viveros/viveros.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Vivero } from './entities/vivero.entity';\n\n@Injectable()\nexport class ViverosService {\n  constructor(\n    @InjectRepository(Vivero) private readonly viveros: Repository<Vivero>\n  ) {}\n\n  crearVivero(nombre: string) {\n    const vivero = this.viveros.create({ nombre });\n    return this.viveros.save(vivero);\n  }\n\n  listarViveros() {\n    return this.viveros.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.viveros.save(vivero);",
+            "title": "Service · Vivero",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Vivero",
+        "path": "src/viveros/viveros.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Raíz\"}'\ncurl -i \"http://localhost:3000/viveros\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ViverosService } from './viveros.service';\n\n@Controller('viveros')\nexport class ViverosController {\n  constructor(private readonly service: ViverosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearVivero(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarViveros();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Vivero",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Vivero",
+        "path": "src/viveros/viveros.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Vivero } from './entities/vivero.entity';\nimport { ViverosService } from './viveros.service';\nimport { ViverosController } from './viveros.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Vivero])],\n  providers: [ViverosService],\n  controllers: [ViverosController]\n})\nexport class ViverosModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Vivero",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlantasModule } from './plantas/plantas.module';\n\nimport { ViverosModule } from './viveros/viveros.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ViverosModule,\n    PlantasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar viveros",
+        "path": "Peticiones · viveros",
+        "code": "curl -i -X POST \"http://localhost:3000/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Raíz\"}'\n\ncurl -i -X POST \"http://localhost:3000/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Hoja\"}'\n\ncurl -i \"http://localhost:3000/viveros\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/viveros\" \\",
+            "title": "Crear y listar viveros",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/plantas/plantas.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /plantas\n{\"nombre\":\"Registro de prueba\",\"alturaCm\":26,\"viveroId\":2}\n\n201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/plantas\"\n\ncurl -i -X POST \"http://localhost:3000/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lavanda\",\"alturaCm\":25,\"viveroId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Romero\",\"alturaCm\":70,\"viveroId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lavanda · nuevo\",\"alturaCm\":120,\"viveroId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"alturaCm\":26,\"viveroId\":2}'\n\ncurl -i \"http://localhost:3000/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /plantas/10\n\n204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/plantas/4\"\n\ncurl -i \"http://localhost:3000/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /plantas/7\n{\"alturaCm\":95}\n\n200 · Registro 7 · alturaCm = 95 cm · viveroId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · alturaCm = 95 cm · viveroId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · alturaCm = 95 cm · viveroId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/plantas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"alturaCm\":95}'\n\ncurl -i \"http://localhost:3000/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /plantas/7/vivero\n{\"viveroId\":2}\n\n200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/plantas/1/vivero\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"viveroId\":2}'\n\ncurl -i \"http://localhost:3000/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /viveros/2/plantas?minimo=71\n\n200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/viveros/2/plantas?minimo=71\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /plantas }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /plantas }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /plantas/{plantaId} }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plantas/{plantaId} }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plantas/{plantaId}/vivero }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /viveros/{viveroId}/plantas }",
+        "code": "functions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /plantas }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /plantas }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /plantas/{plantaId} }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plantas/{plantaId} }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /plantas/{plantaId}/vivero }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /viveros/{viveroId}/plantas }",
         "cues": [
           {
             "text": "src/plantas/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Vivero",
+        "path": "src/viveros/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_VIVERO } from '../../models/vivero-planta.model.mjs';\n\nexport async function crearViveroRepository(vivero) {\n  await MODELO_VIVERO.build(EntityRepository).put(\n    vivero,\n    { condition: { attr: 'viveroId', exists: false } }\n  );\n}\n\nexport async function listarViverosRepository() {\n  const { Items = [] } = await MODELO_VIVERO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Vivero",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Vivero",
+        "path": "src/viveros/crear-listar/service.mjs",
+        "code": "import { crearViveroRepository, listarViverosRepository } from './repository.mjs';\n\nexport async function crearViveroService(nombre) {\n  const viveroId = Date.now();\n  const vivero = { viveroId, nombre };\n  await crearViveroRepository(vivero);\n  return vivero;\n}\n\nexport function listarViverosService() {\n  return listarViverosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Vivero",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Vivero",
+        "path": "src/viveros/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Raíz\"}'\ncurl -i \"$API_URL/viveros\"\n*/\n// POST /viveros con JSON: {\"nombre\":\"Vivero Raíz\"}\n// GET /viveros lista los registros y sus IDs.\nimport { crearViveroService, listarViverosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const vivero = await crearViveroService(nombre);\n  return { statusCode: 201, body: JSON.stringify(vivero) };\n}\n\nexport async function listarHandler() {\n  const viveros = await listarViverosService();\n  return { statusCode: 200, body: JSON.stringify(viveros) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Vivero",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar viveros",
+        "path": "Peticiones · viveros",
+        "code": "curl -i -X POST \"$API_URL/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Raíz\"}'\n\ncurl -i -X POST \"$API_URL/viveros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vivero Hoja\"}'\n\ncurl -i \"$API_URL/viveros\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/viveros\" \\",
+            "title": "Crear y listar viveros",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /plantas\n{\"nombre\":\"Registro de prueba\",\"alturaCm\":26,\"viveroId\":2}\n\n201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /plantas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/plantas\"\n\ncurl -i -X POST \"$API_URL/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lavanda\",\"alturaCm\":25,\"viveroId\":1}'\n\ncurl -i -X POST \"$API_URL/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Romero\",\"alturaCm\":70,\"viveroId\":2}'\n\ncurl -i -X POST \"$API_URL/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lavanda · nuevo\",\"alturaCm\":120,\"viveroId\":1}'\n\ncurl -i -X POST \"$API_URL/plantas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"alturaCm\":26,\"viveroId\":2}'\n\ncurl -i \"$API_URL/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /plantas/10\n\n204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /plantas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/plantas/4\"\n\ncurl -i \"$API_URL/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /plantas/7\n{\"alturaCm\":95}\n\n200 · Registro 7 · alturaCm = 95 cm · viveroId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · alturaCm = 95 cm · viveroId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · alturaCm = 95 cm · viveroId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/plantas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"alturaCm\":95}'\n\ncurl -i \"$API_URL/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /plantas/7/vivero\n{\"viveroId\":2}\n\n200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · alturaCm = 95 cm · viveroId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/plantas/1/vivero\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"viveroId\":2}'\n\ncurl -i \"$API_URL/plantas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /viveros/2/plantas?minimo=71\n\n200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Vivero Hoja + registro 7 (95 cm). Excluye el 8 (70 cm) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/viveros/2/plantas?minimo=71\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlantasModule } from './plantas/plantas.module';\n\nimport { ViverosModule } from './viveros/viveros.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ViverosModule,\n    PlantasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

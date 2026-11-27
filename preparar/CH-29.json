@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\nimport { GranjasModule } from './granjas/granjas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GranjasModule,\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade CosechasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás GRANJA y COSECHA, creadas por TypeORM con la FK ID_GRANJA.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/granjas.service.ts",
+            "path": "src/granjas/granjas.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Granja } from './entities/granja.entity';\n\n@Injectable()\nexport class GranjasService {\n  constructor(\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearGranja(nombre: string) {\n    const granja = this.granjas.create({ nombre });\n    return this.granjas.save(granja);\n  }\n\n  listarGranjas() {\n    return this.granjas.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/granjas.controller.ts",
+            "path": "src/granjas/granjas.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\ncurl -i \"http://localhost:3000/granjas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { GranjasService } from './granjas.service';\n\n@Controller('granjas')\nexport class GranjasController {\n  constructor(private readonly service: GranjasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearGranja(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarGranjas();\n  }\n}",
+            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/granjas.module.ts",
+            "path": "src/granjas/granjas.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './entities/granja.entity';\nimport { GranjasService } from './granjas.service';\nimport { GranjasController } from './granjas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja])],\n  providers: [GranjasService],\n  controllers: [GranjasController]\n})\nexport class GranjasModule {}",
+            "create": "mkdir -p src/granjas\ncode src/granjas/granjas.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado GRANJA y COSECHA desde las Entities. AppModule importa CosechasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar granjas antes de crear cosechas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar granjas por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Granja } from '../granjas/entities/granja.entity';\nimport { Cosecha } from '../cosechas/entities/cosecha.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const granjas = db.getRepository(Granja);\n    const cosechas = db.getRepository(Cosecha);\n\n    const primero = await granjas.findOneBy({ nombre: 'Granja del Sol' })\n      ?? await granjas.save({ nombre: 'Granja del Sol' });\n    const segundo = await granjas.findOneBy({ nombre: 'Granja del Monte' })\n      ?? await granjas.save({ nombre: 'Granja del Monte' });\n\n    const principal = await cosechas.findOneBy({ nombre: 'Cosecha de tomate' })\n      ?? await cosechas.save({ nombre: 'Cosecha de tomate', kilos: 80, granja: primero });\n    const secundaria = await cosechas.findOneBy({ nombre: 'Cosecha de calabaza' })\n      ?? await cosechas.save({ nombre: 'Cosecha de calabaza', kilos: 220, granja: segundo });\n    const otra = await cosechas.findOneBy({ nombre: 'Cosecha de tomate · nuevo' })\n      ?? await cosechas.save({ nombre: 'Cosecha de tomate · nuevo', kilos: 380, granja: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export GRANJA_1_ID=${primero.id}`,\n      `export GRANJA_2_ID=${segundo.id}`,\n      `export COSECHA_1_ID=${principal.id}`,\n      `export COSECHA_2_ID=${secundaria.id}`,\n      `export COSECHA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await cosechas.find({ relations: { granja: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Granja del Sol",
+            "code": "curl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Cosecha principal: %s\\nOtro granja: %s\\n' \"$COSECHA_1_ID\" \"$GRANJA_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Granja del Monte",
+            "code": "curl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Monte\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar granjas",
+            "code": "curl -i \"http://localhost:3000/granjas\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos granjas y tres cosechas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /granjas muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Granja del Sol",
-          "Cosecha de tomate y otra cosecha",
-          "Granja del Monte",
-          "Cosecha de calabaza"
+          "POST /granjas",
+          "Controller / Handler",
+          "Service",
+          "GET /granjas"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/cosechas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"kilos\\\":81,\\\"granjaId\\\":$GRANJA_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/cosechas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Cosecha de tomate",
+            "code": "curl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate\",\"kilos\":80,\"granjaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Cosecha de calabaza",
+            "code": "curl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de calabaza\",\"kilos\":220,\"granjaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Cosecha de tomate · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate · nuevo\",\"kilos\":380,\"granjaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/cosechas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro cosechas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/cosechas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/cosechas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/cosechas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/cosechas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la cosecha de prueba. Siguen las tres cosechas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar producción",
-            "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/$COSECHA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'\ncurl -i http://localhost:3000/cosechas",
+            "title": "Cambiar producción",
+            "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/cosechas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La cosecha principal tiene producción 300 y conserva su granja.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/$COSECHA_1_ID/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"granjaId\\\":$GRANJA_2_ID}\"\ncurl -i http://localhost:3000/cosechas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/1/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"granjaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/cosechas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La cosecha principal pasa al segundo granja y conserva su producción 300.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. COSECHA_1_ID es el ID real de «Cosecha de tomate»; COSECHA_2_ID, el de «Cosecha de calabaza». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/cosechas/cosechas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/granjas/$GRANJA_2_ID/cosechas?minimo=221\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/granjas/2/cosechas?minimo=221\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo granja y la cosecha principal; el filtro excluye las otras dos cosechas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"COSECHAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/crear-listar/repository.mjs",
+            "path": "src/granjas/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearGranjaRepository(granja) {\n  await MODELO_GRANJA.build(EntityRepository).put(\n    granja,\n    { condition: { attr: 'granjaId', exists: false } }\n  );\n}\n\nexport async function listarGranjasRepository() {\n  const { Items = [] } = await MODELO_GRANJA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/granjas/crear-listar\ncode src/granjas/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/crear-listar/service.mjs",
+            "path": "src/granjas/crear-listar/service.mjs",
+            "code": "import { crearGranjaRepository, listarGranjasRepository } from './repository.mjs';\n\nexport async function crearGranjaService(nombre) {\n  const granjaId = Date.now();\n  const granja = { granjaId, nombre };\n  await crearGranjaRepository(granja);\n  return granja;\n}\n\nexport function listarGranjasService() {\n  return listarGranjasRepository();\n}",
+            "create": "mkdir -p src/granjas/crear-listar\ncode src/granjas/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/granjas/crear-listar/handler.mjs",
+            "path": "src/granjas/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\ncurl -i \"$API_URL/granjas\"\n*/\n// POST /granjas con JSON: {\"nombre\":\"Granja del Sol\"}\n// GET /granjas lista los registros y sus IDs.\nimport { crearGranjaService, listarGranjasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const granja = await crearGranjaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(granja) };\n}\n\nexport async function listarHandler() {\n  const granjas = await listarGranjasService();\n  return { statusCode: 200, body: JSON.stringify(granjas) };\n}",
+            "create": "mkdir -p src/granjas/crear-listar\ncode src/granjas/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen GRANJAS_tuEquipo y COSECHAS_tuEquipo. PK del lado N: COSECHA_ID; índice: PorGranja. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar granjas antes de crear cosechas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar granjas por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Granja 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"GRANJAS_${TALLER_EQUIPO}\\\" VALUE {'GRANJA_ID':1,'NOMBRE':'Granja del Sol'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Granja del Sol",
+            "code": "curl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Granja 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"GRANJAS_${TALLER_EQUIPO}\\\" VALUE {'GRANJA_ID':2,'NOMBRE':'Granja del Monte'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Granja del Monte",
+            "code": "curl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Monte\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cosecha 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COSECHAS_${TALLER_EQUIPO}\\\" VALUE {'COSECHA_ID':7,'NOMBRE':'Cosecha de tomate','KILOS':80,'GRANJA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Cosecha 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COSECHAS_${TALLER_EQUIPO}\\\" VALUE {'COSECHA_ID':8,'NOMBRE':'Cosecha de calabaza','KILOS':220,'GRANJA_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Cosecha 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COSECHAS_${TALLER_EQUIPO}\\\" VALUE {'COSECHA_ID':9,'NOMBRE':'Cosecha de tomate · nuevo','KILOS':380,'GRANJA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"GRANJAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"COSECHAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar granjas",
+            "code": "curl -i \"$API_URL/granjas\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Granja y tres de Cosecha, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /granjas muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Granja 1",
-          "Cosecha 7 y 9",
-          "Granja 2",
-          "Cosecha 8"
+          "POST /granjas",
+          "Controller / Handler",
+          "Service",
+          "GET /granjas"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cosechas/crear-listar/handler.mjs\nnode --check src/cosechas/crear-listar/service.mjs\nnode --check src/cosechas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/cosechas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).cosechaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/cosechas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Cosecha de tomate",
+            "code": "curl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate\",\"kilos\":80,\"granjaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarCosechas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Cosecha de calabaza",
+            "code": "curl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de calabaza\",\"kilos\":220,\"granjaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Cosecha de tomate · nuevo",
+            "code": "curl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate · nuevo\",\"kilos\":380,\"granjaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/cosechas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cosechas/eliminar/handler.mjs\nnode --check src/cosechas/eliminar/service.mjs\nnode --check src/cosechas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/cosechas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/cosechas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/cosechas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/cosechas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cosechas/modificar-kilos/handler.mjs\nnode --check src/cosechas/modificar-kilos/service.mjs\nnode --check src/cosechas/modificar-kilos/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar producción",
-            "code": "curl -i -X PATCH \"$API_URL/cosechas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'\ncurl -i \"$API_URL/cosechas\"",
+            "title": "Cambiar producción",
+            "code": "curl -i -X PATCH \"$API_URL/cosechas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/cosechas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/granja' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/granja' }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cosechas/trasladar/handler.mjs\nnode --check src/cosechas/trasladar/service.mjs\nnode --check src/cosechas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/cosechas/7/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"granjaId\":2}'\ncurl -i \"$API_URL/cosechas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/cosechas/1/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"granjaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/cosechas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/granja' }\n  consultarGranja:\n    handler: src/granjas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/granjas/{granjaId}/cosechas' }\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+            "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/cosechas' }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/cosechas' }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/cosechas/{cosechaId}' }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}' }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/cosechas/{cosechaId}/granja' }\n  consultarGranja:\n    handler: src/granjas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/granjas/{granjaId}/cosechas' }\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/granjas/consultar/handler.mjs\nnode --check src/granjas/consultar/service.mjs\nnode --check src/granjas/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/granjas/2/cosechas?minimo=221\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/granjas/2/cosechas?minimo=221\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"COSECHAS_${TALLER_EQUIPO}\\\" WHERE COSECHA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

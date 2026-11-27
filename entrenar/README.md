@@ -1,12 +1,12 @@
-# Taller integrado en las fichas
+# Taller de las APIs de cada alumno
 
-La versión validada con Arturo está aplicada a todos los alumnos. En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo, abre **1 · Preparar proyecto base**, lee su README completo y continúa en **2 · Entrenar con mis fichas**.
+En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo, lee el README de la base en **Preparar proyecto base** y continúa en **Entrenar con mis fichas**.
 
-Cada contexto conserva sus entidades, campos y cinco casos 1:N: 22 pasos Nest/TypeORM y 26 Serverless/DynamoDB Toolbox. Los archivos completos se ven y se copian directamente, con sus explicaciones y dibujos estáticos. No hay animaciones, puzles ni montaje obligatorio. Las comprobaciones reales se ejecutan en el backend del alumno.
+La relación 1:N tiene 27 pasos Nest y 31 Serverless. Se programan los dos extremos: Entities, Service y Controller del principal, su módulo y las altas y listados; después, los casos del relacionado con su FK. En Serverless, las rutas se conectan a sus Handlers, Services y Repositories basados en Entity.
 
-La ampliación N:M continúa ese mismo proyecto. Los dos recorridos comparten sus colores, menús abiertos a todo el ancho y selector de tecnología compacto a la derecha. Nest organiza Entities → módulo → Service → Controller, con un Service y Controller por recurso. Serverless conserva YAML → Table + Entity → Handler → Service → Repository, con las operaciones desde EntityRepository.
+Todas las altas se hacen con peticiones normales a esas APIs. La zona **Prueba ambos lados de la relación** prepara un curl por acción, con datos e IDs editables. Copia el ID de la respuesta de POST y úsalo al crear el relacionado. No hay scripts de datos, ficheros de IDs ni inserciones directas en DynamoDB.
 
-Las marcas anteriores y la posición 1:N se conservan. Al abrir N:M se muestra el primer apartado y la cabecera desde arriba. El progreso pertenece a este navegador y se guarda por correo, contexto y relación.
+La ampliación N:M continúa el mismo proyecto y las mismas APIs 1:N. Los archivos se muestran completos y se pueden copiar; menús abiertos, colores comunes y selector de tecnología a la derecha. Las comprobaciones se ejecutan en la terminal del alumno.
 
 ## Integración
 

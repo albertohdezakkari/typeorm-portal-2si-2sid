@@ -7,6 +7,8 @@ import { PublicacionesModule } from './publicaciones/publicaciones.module';
 import { AutoresModule } from './autores/autores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { EditorialesModule } from './editoriales/editoriales.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    EditorialesModule,
     PublicacionesModule,
     AutoresModule,
     AsignacionesModule

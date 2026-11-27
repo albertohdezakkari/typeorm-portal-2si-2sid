@@ -69,7 +69,7 @@
         "kind": "command",
         "code": "# Terminal 2 · misma carpeta del backend.\npwd\ncurl -i http://localhost:3000/salud\ncurl -i http://localhost:3000/plantas",
         "path": "",
-        "note": "Continúa en la carpeta backend de tu proyecto Vivero/Planta ya preparado en 1:N. No clones ni instales otra base. Conserva .env, dependencias, tablas, datos y tus casos anteriores. Si Nest ya está ejecutándose, pasa directamente al bloque 2.",
+        "note": "Continúa en el backend 1:N existente. Los registros de ambos extremos se crean mediante POST y se consultan con GET; conserva sus IDs reales. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "expect": "Tu API 1:N sigue funcionando: /salud y /plantas devuelven HTTP 200. Conserva las plantas y sus IDs; este bloque solo añade Jardinero y Asignacion.",
         "focus": "model",
         "cues": [
@@ -283,7 +283,7 @@
         "chapter": 1,
         "title": "Conecta los dos nuevos módulos",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlantasModule } from './plantas/plantas.module';\nimport { JardinerosModule } from './jardineros/jardineros.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PlantasModule,\n    JardinerosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PlantasModule } from './plantas/plantas.module';\nimport { JardinerosModule } from './jardineros/jardineros.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { ViverosModule } from './viveros/viveros.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ViverosModule,\n    PlantasModule,\n    JardinerosModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
         "note": "Mantén PlantasModule y la conexión original. Añade JardinerosModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
         "expect": "AppModule conserva Plantas y añade Jardineros y Asignaciones; synchronize: true crea las nuevas tablas.",
@@ -291,14 +291,14 @@
         "cues": [
           {
             "token": "JardinerosModule,",
-            "start": 1132,
-            "end": 1149,
+            "start": 1210,
+            "end": 1227,
             "note": "Carga el módulo que registra Jardinero."
           },
           {
             "token": "AsignacionesModule\n",
-            "start": 1154,
-            "end": 1173,
+            "start": 1232,
+            "end": 1251,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -461,7 +461,7 @@
         "kind": "command",
         "code": "curl -i -X POST \"http://localhost:3000/jardineros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Diego\",\"apellidos\":\"Ruiz López\",\"email\":\"diego.ruiz@example.test\"}'\ncurl -i \"http://localhost:3000/jardineros\"",
         "path": "",
-        "note": "Terminal 2: ejecuta POST para crear un jardinero a través del Controller y su Service. Anota el ID que devuelve la respuesta; GET lista los jardineros. Los ejemplos siguientes usan jardinero 1: si recibes otro ID, utiliza el tuyo.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "POST devuelve el jardinero creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "response",
         "cues": [],
@@ -590,9 +590,9 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i http://localhost:3000/plantas\ncurl -i -X POST \"http://localhost:3000/plantas/7/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jardineroId\":1,\"rol\":\"Riego\"}'",
+        "code": "curl -i http://localhost:3000/plantas\ncurl -i -X POST \"http://localhost:3000/plantas/1/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jardineroId\":1,\"rol\":\"Riego\"}'",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "POST crea la asignación de una planta existente con el jardinero que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "response",
         "cues": [],
@@ -683,9 +683,9 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i \"http://localhost:3000/plantas/7/asignaciones\"",
+        "code": "curl -i \"http://localhost:3000/plantas/1/asignaciones\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "GET devuelve las asignaciones de esa planta. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
@@ -778,7 +778,7 @@
         "kind": "command",
         "code": "curl -i \"http://localhost:3000/jardineros/1/asignaciones\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "GET devuelve las plantas en las que participa ese jardinero. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
@@ -875,9 +875,9 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"http://localhost:3000/plantas/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": "curl -i -X PATCH \"http://localhost:3000/plantas/1/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la planta y el jardinero.",
         "focus": "response",
         "cues": [],
@@ -968,9 +968,9 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"http://localhost:3000/plantas/7/asignaciones/1\"",
+        "code": "curl -i -X DELETE \"http://localhost:3000/plantas/1/asignaciones/1\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la planta y el jardinero siguen existiendo.",
         "focus": "response",
         "cues": [],
@@ -981,9 +981,9 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "curl -i \"http://localhost:3000/plantas/7/asignaciones\"\ncurl -i http://localhost:3000/plantas\ncurl -i http://localhost:3000/jardineros",
+        "code": "curl -i \"http://localhost:3000/plantas/1/asignaciones\"\ncurl -i http://localhost:3000/plantas\ncurl -i http://localhost:3000/jardineros",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la planta 7 y el jardinero 1. Sustituye esos números por el ID de una planta que ya exista (GET /plantas) y por el ID devuelto al crear el jardinero. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "La pareja eliminada ya no aparece. La planta y el jardinero siguen en sus listados; si habías creado más asignaciones, se conservan las demás.",
         "focus": "response",
         "cues": [],
@@ -1088,7 +1088,7 @@
         "kind": "command",
         "code": "# Abre una terminal en la carpeta de tu backend Serverless.\npwd\nls package.json serverless.yml src\naws sts get-caller-identity\nprintf 'Equipo: %s\\nAPI: %s\\n' \"$TALLER_EQUIPO\" \"$API_URL\"\ncurl -i \"$API_URL/salud\"\ncurl -i \"$API_URL/plantas\"",
         "path": "",
-        "note": "Sitúa la terminal en la carpeta de tu proyecto Serverless 1:N, donde están package.json, serverless.yml y src. En VS Code o Codespaces puedes abrir esa carpeta en el terminal integrado. Conserva el nombre y la ubicación de tu proyecto y recupera las variables AWS_PROFILE, AWS_REGION, TALLER_EQUIPO y API_URL de tu despliegue. Si partes de cero, usa Abrir preparación 1:N y completa sus modelos y cinco casos antes de ampliar. Si tu proyecto está en otro ordenador, clona tu propio repositorio y abre la carpeta del backend. Continúa sobre esa copia.",
+        "note": "Continúa en el backend 1:N existente. Los registros de ambos extremos se crean mediante POST y se consultan con GET; conserva sus IDs reales. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "expect": "La API responde con HTTP 200. Se conservan los registros 7, 8 y 9 de Planta. El registro 7 mantiene ALTURA_CM = 95 y VIVERO_ID = 2, como al terminar el 1:N.",
         "focus": "model",
         "cues": [
@@ -1112,7 +1112,7 @@
         "chapter": 1,
         "title": "Añade las dos tablas sin reemplazar las anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "Archivo acumulativo completo. env:TALLER_EQUIPO lee directamente la variable que has exportado en la terminal; si vale equipo01, ASIGNACIONES_${env:TALLER_EQUIPO} se convierte en ASIGNACIONES_equipo01. Los campos NOMBRE, APELLIDOS, EMAIL y ROL se declaran en Entity; AttributeDefinitions solo contiene claves. NonKeyAttributes copia ROL al índice.",
         "expect": "Cuatro tablas, las rutas 1:N originales y ninguna función N:M todavía.",
@@ -1132,20 +1132,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 1962,
-            "end": 1975,
+            "start": 2236,
+            "end": 2249,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3217,
-            "end": 3231,
+            "start": 3491,
+            "end": 3505,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 4640,
-            "end": 4652,
+            "start": 4914,
+            "end": 4926,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1253,32 +1253,6 @@
         "create": null
       },
       {
-        "id": "datos",
-        "chapter": 2,
-        "title": "Carga los jardineros y las asignaciones",
-        "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"JARDINEROS_${TALLER_EQUIPO}\\\" VALUE {'JARDINERO_ID':1,'NOMBRE':'Diego','APELLIDOS':'Ruiz López','EMAIL':'diego.ruiz@example.test'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"JARDINEROS_${TALLER_EQUIPO}\\\" VALUE {'JARDINERO_ID':2,'NOMBRE':'Ana','APELLIDOS':'Vidal Sanz','EMAIL':'ana.vidal@example.test'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'PLANTA_ID':7,'JARDINERO_ID':1,'ROL':'Riego'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'PLANTA_ID':7,'JARDINERO_ID':2,'ROL':'Tratamiento'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'PLANTA_ID':8,'JARDINERO_ID':1,'ROL':'Coordinación'}\"",
-        "path": "",
-        "note": "Terminal de tu proyecto Serverless, en la carpeta que contiene serverless.yml. Ejecuta las altas una sola vez; DuplicateItem indica que ese dato ya existe. No borres ni sobrescribas tus datos.",
-        "expect": "Dos jardineros y las tres parejas de la ficha, con nombre, apellidos, email y rol.",
-        "focus": "model",
-        "cues": [],
-        "create": null
-      },
-      {
-        "id": "leer-datos",
-        "chapter": 2,
-        "title": "Lee las asignaciones con PartiQL",
-        "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"JARDINEROS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-        "path": "",
-        "note": "",
-        "expect": "Se ven tres vínculos y dos perfiles. En la salida CLI, N indica número y S texto.",
-        "focus": "model",
-        "cues": [],
-        "create": null
-      },
-      {
         "id": "crear-listar-repository",
         "chapter": 3,
         "title": "Prepara el Repository",
@@ -1286,7 +1260,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_JARDINERO } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function crearJardineroRepository(jardinero) {\n  await MODELO_JARDINERO.build(EntityRepository).put(\n    jardinero,\n    { condition: { attr: 'jardineroId', exists: false } }\n  );\n}\n\nexport async function listarJardinerosRepository() {\n  const { Items = [] } = await MODELO_JARDINERO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/jardineros/crear-listar/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los jardineros iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1324,7 +1298,7 @@
         "code": "import { crearJardineroRepository, listarJardinerosRepository } from './repository.mjs';\n\nexport async function crearJardineroService(nombre, apellidos, email) {\n  const jardineroId = Date.now();\n  const jardinero = { jardineroId, nombre, apellidos, email };\n  await crearJardineroRepository(jardinero);\n  return jardinero;\n}\n\nexport function listarJardinerosService() {\n  return listarJardinerosRepository();\n}\n",
         "path": "src/jardineros/crear-listar/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los jardineros iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1356,7 +1330,7 @@
         "code": "import { crearJardineroService, listarJardinerosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, apellidos, email } = JSON.parse(event.body);\n  const jardinero = await crearJardineroService(nombre, apellidos, email);\n  return { statusCode: 201, body: JSON.stringify(jardinero) };\n}\n\nexport async function listarHandler() {\n  const jardineros = await listarJardinerosService();\n  return { statusCode: 200, body: JSON.stringify(jardineros) };\n}\n",
         "path": "src/jardineros/crear-listar/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los jardineros iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1385,10 +1359,10 @@
         "chapter": 3,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1405,20 +1379,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2258,
-            "end": 2271,
+            "start": 2532,
+            "end": 2545,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3513,
-            "end": 3527,
+            "start": 3787,
+            "end": 3801,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 4936,
-            "end": 4948,
+            "start": 5210,
+            "end": 5222,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1432,7 +1406,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1442,31 +1416,12 @@
         "chapter": 3,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"$API_URL/jardineros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"$API_URL/jardineros\"",
+        "code": "curl -i -X POST \"$API_URL/jardineros\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Diego\",\"apellidos\":\"Ruiz López\",\"email\":\"diego.ruiz@example.test\"}'\ncurl -i \"$API_URL/jardineros\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los jardineros iniciales y a Lucía; no crea asignaciones.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 18,
-            "end": 25,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1474,19 +1429,12 @@
         "chapter": 3,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"body\": \"{\\\"nombre\\\": \\\"Lucía\\\", \\\"apellidos\\\": \\\"Navarro Gil\\\", \\\"email\\\": \\\"lucia.navarro@example.test\\\"}\"\n}",
+        "code": "{\n  \"body\": \"{\\\"nombre\\\":\\\"Lucía\\\",\\\"apellidos\\\":\\\"Navarro Gil\\\",\\\"email\\\":\\\"lucia.navarro@example.test\\\"}\"\n}",
         "path": "peticiones/nm-1.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "body",
-            "start": 5,
-            "end": 9,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-1.json\ncode peticiones/nm-1.json"
       },
       {
@@ -1497,7 +1445,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-crearJardinero\" \\\n  --payload fileb://peticiones/nm-1.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los jardineros iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -1517,7 +1465,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PLANTA } from '../../models/vivero-planta.model.mjs';\nimport { MODELO_JARDINERO, MODELO_ASIGNACION } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function buscarPlantaRepository(plantaId) {\n  const { Item } = await MODELO_PLANTA.build(EntityRepository).get(\n    { plantaId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function buscarJardineroRepository(jardineroId) {\n  const { Item } = await MODELO_JARDINERO.build(EntityRepository).get(\n    { jardineroId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function asignarJardineroRepository(plantaId, jardineroId, rol) {\n  const asignacion = { plantaId, jardineroId, rol };\n  await MODELO_ASIGNACION.build(EntityRepository).put(\n    asignacion,\n    { condition: { attr: 'plantaId', exists: false } }\n  );\n  return asignacion;\n}\n",
         "path": "src/asignaciones/asignar-jardinero/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1561,7 +1509,7 @@
         "code": "import { buscarPlantaRepository, buscarJardineroRepository, asignarJardineroRepository } from './repository.mjs';\n\nexport class ReferenciaInexistenteError extends Error {}\n\nexport async function asignarJardineroService(plantaId, jardineroId, rol) {\n  const planta = await buscarPlantaRepository(plantaId);\n  const jardinero = await buscarJardineroRepository(jardineroId);\n  if (!planta || !jardinero) {\n    throw new ReferenciaInexistenteError('No existe la planta o el jardinero');\n  }\n  return asignarJardineroRepository(plantaId, jardineroId, rol);\n}\n",
         "path": "src/asignaciones/asignar-jardinero/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1605,7 +1553,7 @@
         "code": "import { asignarJardineroService, ReferenciaInexistenteError } from './service.mjs';\n\nexport async function handler(event) {\n  const plantaId = Number(event.pathParameters.plantaId);\n  const { jardineroId, rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await asignarJardineroService(plantaId, jardineroId, rol);\n    return { statusCode: 201, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error instanceof ReferenciaInexistenteError) {\n      return { statusCode: 404, body: JSON.stringify({ message: error.message }) };\n    }\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 409, body: JSON.stringify({ message: 'El jardinero ya está asignado a esa planta' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/asignar-jardinero/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1646,10 +1594,10 @@
         "chapter": 4,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1666,20 +1614,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2430,
-            "end": 2443,
+            "start": 2704,
+            "end": 2717,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3685,
-            "end": 3699,
+            "start": 3959,
+            "end": 3973,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 5108,
-            "end": 5120,
+            "start": 5382,
+            "end": 5394,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1693,7 +1641,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1703,31 +1651,12 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"$API_URL/plantas/8/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jardineroId\":2,\"rol\":\"Tratamiento\"}'",
+        "code": "curl -i $API_URL/plantas\ncurl -i -X POST \"$API_URL/plantas/1/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"jardineroId\":1,\"rol\":\"Riego\"}'",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 18,
-            "end": 25,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1735,25 +1664,12 @@
         "chapter": 4,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"8\"\n  },\n  \"body\": \"{\\\"jardineroId\\\": 2, \\\"rol\\\": \\\"Tratamiento\\\"}\"\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"1\"\n  },\n  \"body\": \"{\\\"jardineroId\\\":1,\\\"rol\\\":\\\"Tratamiento\\\"}\"\n}",
         "path": "peticiones/nm-2.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          },
-          {
-            "token": "body",
-            "start": 52,
-            "end": 56,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-2.json\ncode peticiones/nm-2.json"
       },
       {
@@ -1764,7 +1680,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-asignarJardinero\" \\\n  --payload fileb://peticiones/nm-2.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -1784,7 +1700,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorPlantaRepository(plantaId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { partition: plantaId },\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-planta/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La planta 7 devuelve (7,1,Riego) y (7,2,Tratamiento): dos jardineros para una planta.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1816,7 +1732,7 @@
         "code": "import { listarAsignacionesPorPlantaRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorPlantaService(plantaId) {\n  return listarAsignacionesPorPlantaRepository(plantaId);\n}\n",
         "path": "src/asignaciones/listar-por-planta/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La planta 7 devuelve (7,1,Riego) y (7,2,Tratamiento): dos jardineros para una planta.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1842,7 +1758,7 @@
         "code": "import { listarAsignacionesPorPlantaService } from './service.mjs';\n\nexport async function handler(event) {\n  const plantaId = Number(event.pathParameters.plantaId);\n  const asignaciones = await listarAsignacionesPorPlantaService(plantaId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-planta/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La planta 7 devuelve (7,1,Riego) y (7,2,Tratamiento): dos jardineros para una planta.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1877,10 +1793,10 @@
         "chapter": 5,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1897,20 +1813,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2612,
-            "end": 2625,
+            "start": 2886,
+            "end": 2899,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3867,
-            "end": 3881,
+            "start": 4141,
+            "end": 4155,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 5290,
-            "end": 5302,
+            "start": 5564,
+            "end": 5576,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1924,7 +1840,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1934,25 +1850,12 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"$API_URL/plantas/7/asignaciones\"",
+        "code": "curl -i \"$API_URL/plantas/1/asignaciones\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. ",
-        "expect": "La planta 7 devuelve (7,1,Riego) y (7,2,Tratamiento): dos jardineros para una planta.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 17,
-            "end": 24,
-            "note": "Dirección de la API que vas a consultar."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1960,19 +1863,12 @@
         "chapter": 5,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"7\"\n  }\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-3.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-3.json\ncode peticiones/nm-3.json"
       },
       {
@@ -1983,7 +1879,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-listarAsignacionesPorPlanta\" \\\n  --payload fileb://peticiones/nm-3.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "La planta 7 devuelve (7,1,Riego) y (7,2,Tratamiento): dos jardineros para una planta.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2003,7 +1899,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorJardineroRepository(jardineroId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { index: 'PorJardinero', partition: jardineroId }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-jardinero/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El jardinero 1 devuelve las plantas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2041,7 +1937,7 @@
         "code": "import { listarAsignacionesPorJardineroRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorJardineroService(jardineroId) {\n  return listarAsignacionesPorJardineroRepository(jardineroId);\n}\n",
         "path": "src/asignaciones/listar-por-jardinero/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El jardinero 1 devuelve las plantas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2067,7 +1963,7 @@
         "code": "import { listarAsignacionesPorJardineroService } from './service.mjs';\n\nexport async function handler(event) {\n  const jardineroId = Number(event.pathParameters.jardineroId);\n  const asignaciones = await listarAsignacionesPorJardineroService(jardineroId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-jardinero/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El jardinero 1 devuelve las plantas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2102,10 +1998,10 @@
         "chapter": 6,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2122,20 +2018,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2806,
-            "end": 2819,
+            "start": 3080,
+            "end": 3093,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4061,
-            "end": 4075,
+            "start": 4335,
+            "end": 4349,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 2108,
-            "end": 2120,
+            "start": 2382,
+            "end": 2394,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2149,7 +2045,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2159,25 +2055,12 @@
         "chapter": 6,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"$API_URL/jardineros/1/asignaciones\"",
+        "code": "curl -i \"$API_URL/jardineros/1/asignaciones\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. El índice es eventualmente consistente; repite la lectura si acabas de escribir.",
-        "expect": "El jardinero 1 devuelve las plantas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 17,
-            "end": 24,
-            "note": "Dirección de la API que vas a consultar."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2187,17 +2070,10 @@
         "kind": "command",
         "code": "{\n  \"pathParameters\": {\n    \"jardineroId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-4.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-4.json\ncode peticiones/nm-4.json"
       },
       {
@@ -2208,7 +2084,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-listarAsignacionesPorJardinero\" \\\n  --payload fileb://peticiones/nm-4.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "El jardinero 1 devuelve las plantas 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2228,7 +2104,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function modificarRolRepository(plantaId, jardineroId, rol) {\n  const { Attributes } = await MODELO_ASIGNACION.build(EntityRepository).update(\n    { plantaId, jardineroId, rol },\n    {\n      condition: { attr: 'plantaId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}\n",
         "path": "src/asignaciones/modificar-rol/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2272,7 +2148,7 @@
         "code": "import { modificarRolRepository } from './repository.mjs';\n\nexport function modificarRolService(plantaId, jardineroId, rol) {\n  return modificarRolRepository(plantaId, jardineroId, rol);\n}\n",
         "path": "src/asignaciones/modificar-rol/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2310,7 +2186,7 @@
         "code": "import { modificarRolService } from './service.mjs';\n\nexport async function handler(event) {\n  const plantaId = Number(event.pathParameters.plantaId);\n  const jardineroId = Number(event.pathParameters.jardineroId);\n  const { rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await modificarRolService(plantaId, jardineroId, rol);\n    return { statusCode: 200, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 404, body: JSON.stringify({ message: 'No existe la asignación' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/modificar-rol/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2351,10 +2227,10 @@
         "chapter": 7,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2371,20 +2247,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2985,
-            "end": 2998,
+            "start": 3259,
+            "end": 3272,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4240,
-            "end": 4254,
+            "start": 4514,
+            "end": 4528,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 2108,
-            "end": 2120,
+            "start": 2382,
+            "end": 2394,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2398,7 +2274,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2408,31 +2284,12 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"$API_URL/plantas/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": "curl -i -X PATCH \"$API_URL/plantas/1/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 19,
-            "end": 26,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "PATCH",
-            "start": 11,
-            "end": 16,
-            "note": "Modifica únicamente el dato que envías."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2440,25 +2297,12 @@
         "chapter": 7,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"7\",\n    \"jardineroId\": \"1\"\n  },\n  \"body\": \"{\\\"rol\\\": \\\"Jefe de equipo\\\"}\"\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"1\",\n    \"jardineroId\": \"1\"\n  },\n  \"body\": \"{\\\"rol\\\":\\\"Jefe de equipo\\\"}\"\n}",
         "path": "peticiones/nm-5.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          },
-          {
-            "token": "body",
-            "start": 76,
-            "end": 80,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-5.json\ncode peticiones/nm-5.json"
       },
       {
@@ -2469,7 +2313,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-modificarRol\" \\\n  --payload fileb://peticiones/nm-5.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2489,7 +2333,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/jardinero-asignacion.model.mjs';\n\nexport async function eliminarAsignacionRepository(plantaId, jardineroId) {\n  await MODELO_ASIGNACION.build(EntityRepository).delete(\n    { plantaId, jardineroId }\n  );\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las plantas y los jardineros.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2527,7 +2371,7 @@
         "code": "import { eliminarAsignacionRepository } from './repository.mjs';\n\nexport function eliminarAsignacionService(plantaId, jardineroId) {\n  return eliminarAsignacionRepository(plantaId, jardineroId);\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las plantas y los jardineros.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2559,7 +2403,7 @@
         "code": "import { eliminarAsignacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const plantaId = Number(event.pathParameters.plantaId);\n  const jardineroId = Number(event.pathParameters.jardineroId);\n  await eliminarAsignacionService(plantaId, jardineroId);\n  return { statusCode: 204, body: '' };\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las plantas y los jardineros.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2594,10 +2438,10 @@
         "chapter": 8,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n  eliminarAsignacion:\n    handler: src/asignaciones/eliminar-asignacion/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch28\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_VIVEROS: { Ref: TablaViveros }\n    TABLA_PLANTAS: { Ref: TablaPlantas }\n    TABLA_JARDINEROS: { Ref: TablaJardineros }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearVivero:\n    handler: src/viveros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /viveros }\n  listarViveros:\n    handler: src/viveros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /viveros }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPlanta:\n    handler: src/plantas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/plantas' }\n  listarPlantas:\n    handler: src/plantas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/plantas' }\n  eliminarPlanta:\n    handler: src/plantas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}' }\n  modificarAlturaCm:\n    handler: src/plantas/modificar-altura-cm/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}' }\n  trasladarPlanta:\n    handler: src/plantas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/vivero' }\n  consultarVivero:\n    handler: src/viveros/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/viveros/{viveroId}/plantas' }\n  crearJardinero:\n    handler: src/jardineros/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/jardineros' }\n  listarJardineros:\n    handler: src/jardineros/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/jardineros' }\n  asignarJardinero:\n    handler: src/asignaciones/asignar-jardinero/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorPlanta:\n    handler: src/asignaciones/listar-por-planta/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/plantas/{plantaId}/asignaciones' }\n  listarAsignacionesPorJardinero:\n    handler: src/asignaciones/listar-por-jardinero/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/jardineros/{jardineroId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n  eliminarAsignacion:\n    handler: src/asignaciones/eliminar-asignacion/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/plantas/{plantaId}/asignaciones/{jardineroId}' }\n\nresources:\n  Resources:\n    TablaViveros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: VIVEROS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: VIVERO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_VIVERO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: VIVERO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPlantas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PLANTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PLANTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ALTURA_CM (N: número).\n        #   VIVERO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PLANTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: VIVERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PLANTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorVivero\n            # Clave compuesta = partition key + sort key:\n            # (VIVERO_ID, PLANTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: VIVERO_ID\n                KeyType: HASH   # Partition key. Agrupa por Vivero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PLANTAS copiados al índice.\n                - NOMBRE\n                - ALTURA_CM\n\n    TablaJardineros:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: JARDINEROS_${env:TALLER_EQUIPO}\n        # PK: JARDINERO_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: JARDINERO_ID\n            KeyType: HASH  # Partition key: identifica al jardinero.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: PLANTA_ID + JARDINERO_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PLANTA_ID, AttributeType: N }\n          - { AttributeName: JARDINERO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PLANTA_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una planta.\n          - AttributeName: JARDINERO_ID\n            KeyType: RANGE # Sort key: distingue al jardinero dentro de la planta.\n        GlobalSecondaryIndexes:\n          - IndexName: PorJardinero\n            KeySchema:\n              - AttributeName: JARDINERO_ID\n                KeyType: HASH  # Agrupa las asignaciones del jardinero.\n              - AttributeName: PLANTA_ID\n                KeyType: RANGE # Ordena sus plantas por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    JardinerosTableName:\n      Value: { Ref: TablaJardineros }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2614,20 +2458,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 3177,
-            "end": 3190,
+            "start": 3451,
+            "end": 3464,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4432,
-            "end": 4446,
+            "start": 4706,
+            "end": 4720,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorJardinero",
-            "start": 2108,
-            "end": 2120,
+            "start": 2382,
+            "end": 2394,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2641,7 +2485,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2651,31 +2495,12 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"$API_URL/plantas/7/asignaciones/1\"",
+        "code": "curl -i -X DELETE \"$API_URL/plantas/1/asignaciones/1\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las plantas y los jardineros.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 20,
-            "end": 27,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "DELETE",
-            "start": 11,
-            "end": 17,
-            "note": "Elimina el vínculo identificado por la ruta."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2683,19 +2508,12 @@
         "chapter": 8,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"7\",\n    \"jardineroId\": \"1\"\n  }\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"plantaId\": \"1\",\n    \"jardineroId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-6.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-6.json\ncode peticiones/nm-6.json"
       },
       {
@@ -2706,7 +2524,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch28-${TALLER_EQUIPO}-eliminarAsignacion\" \\\n  --payload fileb://peticiones/nm-6.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las plantas y los jardineros.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2723,10 +2541,10 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
+        "code": "curl -i \"$API_URL/plantas/1/asignaciones\"\ncurl -i $API_URL/plantas\ncurl -i $API_URL/jardineros",
         "path": "",
-        "note": "",
-        "expect": "Tras los seis casos quedan (7,2), (8,1) y (8,2). Permanecen plantas y jardineros, y la relación 1:N anterior.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -2739,7 +2557,7 @@
         "code": "",
         "path": "",
         "note": "",
-        "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "model",
         "cues": [],
         "create": null
@@ -3345,5 +3163,167 @@
     "backend": "backend",
     "pilot": false
   },
-  "nestWithoutSeed": true
+  "nestWithoutSeed": true,
+  "apiRevision": 1,
+  "apiPreviousIds": {
+    "nest": [
+      "situacion",
+      "logico",
+      "retomar",
+      "jardinero",
+      "asig-inversas",
+      "planta-inversa",
+      "jardineros-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-jardinero-service",
+      "asignar-jardinero-entry",
+      "asignar-jardinero-registro",
+      "asignar-jardinero-ejecutar",
+      "asignar-jardinero-curl",
+      "listar-por-planta-service",
+      "listar-por-planta-entry",
+      "listar-por-planta-ejecutar",
+      "listar-por-planta-curl",
+      "listar-por-jardinero-service",
+      "listar-por-jardinero-entry",
+      "listar-por-jardinero-ejecutar",
+      "listar-por-jardinero-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "cloud": [
+      "situacion",
+      "logico",
+      "nosql",
+      "retomar",
+      "infra",
+      "table",
+      "entity",
+      "desplegar",
+      "datos",
+      "leer-datos",
+      "crear-listar-repository",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "crear-listar-evento",
+      "crear-listar-invoke",
+      "asignar-jardinero-repository",
+      "asignar-jardinero-service",
+      "asignar-jardinero-entry",
+      "asignar-jardinero-registro",
+      "asignar-jardinero-ejecutar",
+      "asignar-jardinero-curl",
+      "asignar-jardinero-evento",
+      "asignar-jardinero-invoke",
+      "listar-por-planta-repository",
+      "listar-por-planta-service",
+      "listar-por-planta-entry",
+      "listar-por-planta-registro",
+      "listar-por-planta-ejecutar",
+      "listar-por-planta-curl",
+      "listar-por-planta-evento",
+      "listar-por-planta-invoke",
+      "listar-por-jardinero-repository",
+      "listar-por-jardinero-service",
+      "listar-por-jardinero-entry",
+      "listar-por-jardinero-registro",
+      "listar-por-jardinero-ejecutar",
+      "listar-por-jardinero-curl",
+      "listar-por-jardinero-evento",
+      "listar-por-jardinero-invoke",
+      "modificar-rol-repository",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-registro",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "modificar-rol-evento",
+      "modificar-rol-invoke",
+      "eliminar-asignacion-repository",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-registro",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "eliminar-asignacion-evento",
+      "eliminar-asignacion-invoke",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "apiContext": {
+    "id": "CH-28",
+    "title": "Vivero → Planta",
+    "parent": {
+      "entity": "Vivero",
+      "sql": "VIVERO",
+      "table": "VIVEROS",
+      "route": "viveros",
+      "property": "vivero",
+      "input": "viveroId",
+      "variable": "TABLA_VIVEROS",
+      "model": "MODELO_VIVERO",
+      "file": "src/viveros/entities/vivero.entity.ts",
+      "examples": [
+        "Vivero Raíz",
+        "Vivero Hoja"
+      ]
+    },
+    "child": {
+      "entity": "Planta",
+      "sql": "PLANTA",
+      "table": "PLANTAS",
+      "route": "plantas",
+      "property": "planta",
+      "input": "plantaId",
+      "inverse": "plantas",
+      "variable": "TABLA_PLANTAS",
+      "model": "MODELO_PLANTA",
+      "file": "src/plantas/entities/planta.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "alturaCm",
+      "column": "ALTURA_CM",
+      "label": "Altura",
+      "unit": "cm",
+      "initial": 25,
+      "other": 70,
+      "after": 95,
+      "minimum": 71,
+      "create": 26,
+      "unrelated": 120
+    },
+    "foreignKey": "ID_VIVERO",
+    "index": "PorVivero",
+    "modelFile": "src/models/vivero-planta.model.mjs",
+    "createName": "Registro de prueba"
+  },
+  "apiProfile": {
+    "entity": "Jardinero",
+    "route": "jardineros",
+    "input": "jardineroId",
+    "role": "Riego"
+  }
 }

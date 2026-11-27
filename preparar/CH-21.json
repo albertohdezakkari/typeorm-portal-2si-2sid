@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { MuestrasModule } from './muestras/muestras.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    MuestrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { MuestrasModule } from './muestras/muestras.module';\n\nimport { LaboratoriosModule } from './laboratorios/laboratorios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    LaboratoriosModule,\n    MuestrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade MuestrasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás LABORATORIO y MUESTRA, creadas por TypeORM con la FK ID_LABORATORIO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/laboratorios.service.ts",
+            "path": "src/laboratorios/laboratorios.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Laboratorio } from './entities/laboratorio.entity';\n\n@Injectable()\nexport class LaboratoriosService {\n  constructor(\n    @InjectRepository(Laboratorio) private readonly laboratorios: Repository<Laboratorio>\n  ) {}\n\n  crearLaboratorio(nombre: string) {\n    const laboratorio = this.laboratorios.create({ nombre });\n    return this.laboratorios.save(laboratorio);\n  }\n\n  listarLaboratorios() {\n    return this.laboratorios.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/laboratorios.controller.ts",
+            "path": "src/laboratorios/laboratorios.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Azul\"}'\ncurl -i \"http://localhost:3000/laboratorios\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { LaboratoriosService } from './laboratorios.service';\n\n@Controller('laboratorios')\nexport class LaboratoriosController {\n  constructor(private readonly service: LaboratoriosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearLaboratorio(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarLaboratorios();\n  }\n}",
+            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/laboratorios.module.ts",
+            "path": "src/laboratorios/laboratorios.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Laboratorio } from './entities/laboratorio.entity';\nimport { LaboratoriosService } from './laboratorios.service';\nimport { LaboratoriosController } from './laboratorios.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Laboratorio])],\n  providers: [LaboratoriosService],\n  controllers: [LaboratoriosController]\n})\nexport class LaboratoriosModule {}",
+            "create": "mkdir -p src/laboratorios\ncode src/laboratorios/laboratorios.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado LABORATORIO y MUESTRA desde las Entities. AppModule importa MuestrasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar laboratorios antes de crear muestras.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar laboratorios por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Laboratorio } from '../laboratorios/entities/laboratorio.entity';\nimport { Muestra } from '../muestras/entities/muestra.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const laboratorios = db.getRepository(Laboratorio);\n    const muestras = db.getRepository(Muestra);\n\n    const primero = await laboratorios.findOneBy({ nombre: 'Laboratorio Azul' })\n      ?? await laboratorios.save({ nombre: 'Laboratorio Azul' });\n    const segundo = await laboratorios.findOneBy({ nombre: 'Laboratorio Verde' })\n      ?? await laboratorios.save({ nombre: 'Laboratorio Verde' });\n\n    const principal = await muestras.findOneBy({ nombre: 'Muestra M-01' })\n      ?? await muestras.save({ nombre: 'Muestra M-01', cantidadMl: 15, laboratorio: primero });\n    const secundaria = await muestras.findOneBy({ nombre: 'Muestra M-02' })\n      ?? await muestras.save({ nombre: 'Muestra M-02', cantidadMl: 60, laboratorio: segundo });\n    const otra = await muestras.findOneBy({ nombre: 'Muestra M-01 · nuevo' })\n      ?? await muestras.save({ nombre: 'Muestra M-01 · nuevo', cantidadMl: 90, laboratorio: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export LABORATORIO_1_ID=${primero.id}`,\n      `export LABORATORIO_2_ID=${segundo.id}`,\n      `export MUESTRA_1_ID=${principal.id}`,\n      `export MUESTRA_2_ID=${secundaria.id}`,\n      `export MUESTRA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await muestras.find({ relations: { laboratorio: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Laboratorio Azul",
+            "code": "curl -i -X POST \"http://localhost:3000/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Azul\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Muestra principal: %s\\nOtro laboratorio: %s\\n' \"$MUESTRA_1_ID\" \"$LABORATORIO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Laboratorio Verde",
+            "code": "curl -i -X POST \"http://localhost:3000/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Verde\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar laboratorios",
+            "code": "curl -i \"http://localhost:3000/laboratorios\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos laboratorios y tres muestras de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /laboratorios muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Laboratorio Azul",
-          "Muestra M-01 y otra muestra",
-          "Laboratorio Verde",
-          "Muestra M-02"
+          "POST /laboratorios",
+          "Controller / Handler",
+          "Service",
+          "GET /laboratorios"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/muestras\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"cantidadMl\\\":16,\\\"laboratorioId\\\":$LABORATORIO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/muestras\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Muestra M-01",
+            "code": "curl -i -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-01\",\"cantidadMl\":15,\"laboratorioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Muestra M-02",
+            "code": "curl -i -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-02\",\"cantidadMl\":60,\"laboratorioId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Muestra M-01 · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-01 · nuevo\",\"cantidadMl\":90,\"laboratorioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"cantidadMl\":16,\"laboratorioId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/muestras\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro muestras. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/muestras/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/muestras\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/muestras/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/muestras\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la muestra de prueba. Siguen las tres muestras originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar cantidad",
-            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/$MUESTRA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'\ncurl -i http://localhost:3000/muestras",
+            "title": "Cambiar cantidad",
+            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/muestras\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La muestra principal tiene cantidad 75 y conserva su laboratorio.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/$MUESTRA_1_ID/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"laboratorioId\\\":$LABORATORIO_2_ID}\"\ncurl -i http://localhost:3000/muestras",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/muestras/1/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"laboratorioId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/muestras\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La muestra principal pasa al segundo laboratorio y conserva su cantidad 75.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. MUESTRA_1_ID es el ID real de «Muestra M-01»; MUESTRA_2_ID, el de «Muestra M-02». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/muestras/muestras.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/laboratorios/$LABORATORIO_2_ID/muestras?minimo=61\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/laboratorios/2/muestras?minimo=61\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo laboratorio y la muestra principal; el filtro excluye las otras dos muestras.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"MUESTRAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/crear-listar/repository.mjs",
+            "path": "src/laboratorios/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_LABORATORIO } from '../../models/laboratorio-muestra.model.mjs';\n\nexport async function crearLaboratorioRepository(laboratorio) {\n  await MODELO_LABORATORIO.build(EntityRepository).put(\n    laboratorio,\n    { condition: { attr: 'laboratorioId', exists: false } }\n  );\n}\n\nexport async function listarLaboratoriosRepository() {\n  const { Items = [] } = await MODELO_LABORATORIO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/laboratorios/crear-listar\ncode src/laboratorios/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/crear-listar/service.mjs",
+            "path": "src/laboratorios/crear-listar/service.mjs",
+            "code": "import { crearLaboratorioRepository, listarLaboratoriosRepository } from './repository.mjs';\n\nexport async function crearLaboratorioService(nombre) {\n  const laboratorioId = Date.now();\n  const laboratorio = { laboratorioId, nombre };\n  await crearLaboratorioRepository(laboratorio);\n  return laboratorio;\n}\n\nexport function listarLaboratoriosService() {\n  return listarLaboratoriosRepository();\n}",
+            "create": "mkdir -p src/laboratorios/crear-listar\ncode src/laboratorios/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/laboratorios/crear-listar/handler.mjs",
+            "path": "src/laboratorios/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Azul\"}'\ncurl -i \"$API_URL/laboratorios\"\n*/\n// POST /laboratorios con JSON: {\"nombre\":\"Laboratorio Azul\"}\n// GET /laboratorios lista los registros y sus IDs.\nimport { crearLaboratorioService, listarLaboratoriosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const laboratorio = await crearLaboratorioService(nombre);\n  return { statusCode: 201, body: JSON.stringify(laboratorio) };\n}\n\nexport async function listarHandler() {\n  const laboratorios = await listarLaboratoriosService();\n  return { statusCode: 200, body: JSON.stringify(laboratorios) };\n}",
+            "create": "mkdir -p src/laboratorios/crear-listar\ncode src/laboratorios/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen LABORATORIOS_tuEquipo y MUESTRAS_tuEquipo. PK del lado N: MUESTRA_ID; índice: PorLaboratorio. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar laboratorios antes de crear muestras.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar laboratorios por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Laboratorio 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"LABORATORIOS_${TALLER_EQUIPO}\\\" VALUE {'LABORATORIO_ID':1,'NOMBRE':'Laboratorio Azul'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Laboratorio Azul",
+            "code": "curl -i -X POST \"$API_URL/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Azul\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Laboratorio 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"LABORATORIOS_${TALLER_EQUIPO}\\\" VALUE {'LABORATORIO_ID':2,'NOMBRE':'Laboratorio Verde'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Laboratorio Verde",
+            "code": "curl -i -X POST \"$API_URL/laboratorios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Laboratorio Verde\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Muestra 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"MUESTRAS_${TALLER_EQUIPO}\\\" VALUE {'MUESTRA_ID':7,'NOMBRE':'Muestra M-01','CANTIDAD_ML':15,'LABORATORIO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Muestra 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"MUESTRAS_${TALLER_EQUIPO}\\\" VALUE {'MUESTRA_ID':8,'NOMBRE':'Muestra M-02','CANTIDAD_ML':60,'LABORATORIO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Muestra 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"MUESTRAS_${TALLER_EQUIPO}\\\" VALUE {'MUESTRA_ID':9,'NOMBRE':'Muestra M-01 · nuevo','CANTIDAD_ML':90,'LABORATORIO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"LABORATORIOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"MUESTRAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar laboratorios",
+            "code": "curl -i \"$API_URL/laboratorios\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Laboratorio y tres de Muestra, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /laboratorios muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Laboratorio 1",
-          "Muestra 7 y 9",
-          "Laboratorio 2",
-          "Muestra 8"
+          "POST /laboratorios",
+          "Controller / Handler",
+          "Service",
+          "GET /laboratorios"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/muestras/crear-listar/handler.mjs\nnode --check src/muestras/crear-listar/service.mjs\nnode --check src/muestras/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/muestras\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"cantidadMl\":16,\"laboratorioId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).muestraId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/muestras\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Muestra M-01",
+            "code": "curl -i -X POST \"$API_URL/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-01\",\"cantidadMl\":15,\"laboratorioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarMuestras --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Muestra M-02",
+            "code": "curl -i -X POST \"$API_URL/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-02\",\"cantidadMl\":60,\"laboratorioId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Muestra M-01 · nuevo",
+            "code": "curl -i -X POST \"$API_URL/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Muestra M-01 · nuevo\",\"cantidadMl\":90,\"laboratorioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/muestras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"cantidadMl\":16,\"laboratorioId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/muestras\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/muestras/eliminar/handler.mjs\nnode --check src/muestras/eliminar/service.mjs\nnode --check src/muestras/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/muestras/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/muestras\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/muestras/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/muestras\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/muestras/modificar-cantidad-ml/handler.mjs\nnode --check src/muestras/modificar-cantidad-ml/service.mjs\nnode --check src/muestras/modificar-cantidad-ml/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar cantidad",
-            "code": "curl -i -X PATCH \"$API_URL/muestras/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'\ncurl -i \"$API_URL/muestras\"",
+            "title": "Cambiar cantidad",
+            "code": "curl -i -X PATCH \"$API_URL/muestras/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cantidadMl\":75}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/muestras\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · cantidadMl = 75 ml · laboratorioId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n  trasladarMuestra:\n    handler: src/muestras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/laboratorio' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n  trasladarMuestra:\n    handler: src/muestras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/laboratorio' }\n\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/muestras/trasladar/handler.mjs\nnode --check src/muestras/trasladar/service.mjs\nnode --check src/muestras/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/muestras/7/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"laboratorioId\":2}'\ncurl -i \"$API_URL/muestras\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/muestras/1/laboratorio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"laboratorioId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/muestras\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · cantidadMl = 75 ml · laboratorioId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n  trasladarMuestra:\n    handler: src/muestras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/laboratorio' }\n  consultarLaboratorio:\n    handler: src/laboratorios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/laboratorios/{laboratorioId}/muestras' }\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
+            "code": "service: taller-ch21\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_LABORATORIOS: { Ref: TablaLaboratorios }\n    TABLA_MUESTRAS: { Ref: TablaMuestras }\n\n\nfunctions:\n  crearLaboratorio:\n    handler: src/laboratorios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /laboratorios }\n  listarLaboratorios:\n    handler: src/laboratorios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /laboratorios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearMuestra:\n    handler: src/muestras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/muestras' }\n  listarMuestras:\n    handler: src/muestras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/muestras' }\n  eliminarMuestra:\n    handler: src/muestras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/muestras/{muestraId}' }\n  modificarCantidadMl:\n    handler: src/muestras/modificar-cantidad-ml/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}' }\n  trasladarMuestra:\n    handler: src/muestras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/muestras/{muestraId}/laboratorio' }\n  consultarLaboratorio:\n    handler: src/laboratorios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/laboratorios/{laboratorioId}/muestras' }\nresources:\n  Resources:\n    TablaLaboratorios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: LABORATORIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: LABORATORIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_LABORATORIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: LABORATORIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaMuestras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUESTRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUESTRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CANTIDAD_ML (N: número).\n        #   LABORATORIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_MUESTRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: MUESTRA_ID, AttributeType: N }\n          - { AttributeName: LABORATORIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUESTRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en MUESTRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorLaboratorio\n            # Clave compuesta = partition key + sort key:\n            # (LABORATORIO_ID, MUESTRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: LABORATORIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Laboratorio.\n              - AttributeName: MUESTRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de MUESTRAS copiados al índice.\n                - NOMBRE\n                - CANTIDAD_ML",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/laboratorios/consultar/handler.mjs\nnode --check src/laboratorios/consultar/service.mjs\nnode --check src/laboratorios/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/laboratorios/2/muestras?minimo=61\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/laboratorios/2/muestras?minimo=61\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Laboratorio Verde + registro 7 (75 ml). Excluye el 8 (60 ml) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"MUESTRAS_${TALLER_EQUIPO}\\\" WHERE MUESTRA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

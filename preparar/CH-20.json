@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { TrayectosModule } from './trayectos/trayectos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TrayectosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { TrayectosModule } from './trayectos/trayectos.module';\n\nimport { EstacionesModule } from './estaciones/estaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EstacionesModule,\n    TrayectosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade TrayectosModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás ESTACION y TRAYECTO, creadas por TypeORM con la FK ID_ESTACION.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/estaciones.service.ts",
+            "path": "src/estaciones/estaciones.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Estacion } from './entities/estacion.entity';\n\n@Injectable()\nexport class EstacionesService {\n  constructor(\n    @InjectRepository(Estacion) private readonly estaciones: Repository<Estacion>\n  ) {}\n\n  crearEstacion(nombre: string) {\n    const estacion = this.estaciones.create({ nombre });\n    return this.estaciones.save(estacion);\n  }\n\n  listarEstaciones() {\n    return this.estaciones.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/estaciones\ncode src/estaciones/estaciones.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/estaciones.controller.ts",
+            "path": "src/estaciones/estaciones.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Central\"}'\ncurl -i \"http://localhost:3000/estaciones\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EstacionesService } from './estaciones.service';\n\n@Controller('estaciones')\nexport class EstacionesController {\n  constructor(private readonly service: EstacionesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearEstacion(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEstaciones();\n  }\n}",
+            "create": "mkdir -p src/estaciones\ncode src/estaciones/estaciones.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/estaciones.module.ts",
+            "path": "src/estaciones/estaciones.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Estacion } from './entities/estacion.entity';\nimport { EstacionesService } from './estaciones.service';\nimport { EstacionesController } from './estaciones.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Estacion])],\n  providers: [EstacionesService],\n  controllers: [EstacionesController]\n})\nexport class EstacionesModule {}",
+            "create": "mkdir -p src/estaciones\ncode src/estaciones/estaciones.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado ESTACION y TRAYECTO desde las Entities. AppModule importa TrayectosModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar estaciones antes de crear trayectos.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar estaciones por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Estacion } from '../estaciones/entities/estacion.entity';\nimport { Trayecto } from '../trayectos/entities/trayecto.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const estaciones = db.getRepository(Estacion);\n    const trayectos = db.getRepository(Trayecto);\n\n    const primero = await estaciones.findOneBy({ nombre: 'Estación Central' })\n      ?? await estaciones.save({ nombre: 'Estación Central' });\n    const segundo = await estaciones.findOneBy({ nombre: 'Estación Norte' })\n      ?? await estaciones.save({ nombre: 'Estación Norte' });\n\n    const principal = await trayectos.findOneBy({ nombre: 'Ruta del valle' })\n      ?? await trayectos.save({ nombre: 'Ruta del valle', distanciaKm: 35, estacion: primero });\n    const secundaria = await trayectos.findOneBy({ nombre: 'Ruta de la costa' })\n      ?? await trayectos.save({ nombre: 'Ruta de la costa', distanciaKm: 180, estacion: segundo });\n    const otra = await trayectos.findOneBy({ nombre: 'Ruta del valle · nuevo' })\n      ?? await trayectos.save({ nombre: 'Ruta del valle · nuevo', distanciaKm: 250, estacion: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export ESTACION_1_ID=${primero.id}`,\n      `export ESTACION_2_ID=${segundo.id}`,\n      `export TRAYECTO_1_ID=${principal.id}`,\n      `export TRAYECTO_2_ID=${secundaria.id}`,\n      `export TRAYECTO_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await trayectos.find({ relations: { estacion: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Estación Central",
+            "code": "curl -i -X POST \"http://localhost:3000/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Central\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Trayecto principal: %s\\nOtro estacion: %s\\n' \"$TRAYECTO_1_ID\" \"$ESTACION_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Estación Norte",
+            "code": "curl -i -X POST \"http://localhost:3000/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Norte\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar estaciones",
+            "code": "curl -i \"http://localhost:3000/estaciones\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos estaciones y tres trayectos de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /estaciones muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Estación Central",
-          "Ruta del valle y otra trayecto",
-          "Estación Norte",
-          "Ruta de la costa"
+          "POST /estaciones",
+          "Controller / Handler",
+          "Service",
+          "GET /estaciones"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/trayectos/trayectos.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/trayectos\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"distanciaKm\\\":36,\\\"estacionId\\\":$ESTACION_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/trayectos\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ruta del valle",
+            "code": "curl -i -X POST \"http://localhost:3000/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del valle\",\"distanciaKm\":35,\"estacionId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ruta de la costa",
+            "code": "curl -i -X POST \"http://localhost:3000/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta de la costa\",\"distanciaKm\":180,\"estacionId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ruta del valle · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del valle · nuevo\",\"distanciaKm\":250,\"estacionId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"distanciaKm\":36,\"estacionId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/trayectos\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro trayectos. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/trayectos/trayectos.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/trayectos/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/trayectos\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/trayectos/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/trayectos\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente el trayecto de prueba. Siguen las tres trayectos originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/trayectos/trayectos.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar distancia",
-            "code": "curl -i -X PATCH \"http://localhost:3000/trayectos/$TRAYECTO_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"distanciaKm\":215}'\ncurl -i http://localhost:3000/trayectos",
+            "title": "Cambiar distancia",
+            "code": "curl -i -X PATCH \"http://localhost:3000/trayectos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"distanciaKm\":215}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/trayectos\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "El trayecto principal tiene distancia 215 y conserva su estacion.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/trayectos/trayectos.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/trayectos/$TRAYECTO_1_ID/estacion\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"estacionId\\\":$ESTACION_2_ID}\"\ncurl -i http://localhost:3000/trayectos",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/trayectos/1/estacion\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"estacionId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/trayectos\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "El trayecto principal pasa al segundo estacion y conserva su distancia 215.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. TRAYECTO_1_ID es el ID real de «Ruta del valle»; TRAYECTO_2_ID, el de «Ruta de la costa». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/trayectos/trayectos.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/estaciones/$ESTACION_2_ID/trayectos?minimo=181\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/estaciones/2/trayectos?minimo=181\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo estacion y el trayecto principal; el filtro excluye las otras dos trayectos.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"TRAYECTOS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/crear-listar/repository.mjs",
+            "path": "src/estaciones/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ESTACION } from '../../models/estacion-trayecto.model.mjs';\n\nexport async function crearEstacionRepository(estacion) {\n  await MODELO_ESTACION.build(EntityRepository).put(\n    estacion,\n    { condition: { attr: 'estacionId', exists: false } }\n  );\n}\n\nexport async function listarEstacionesRepository() {\n  const { Items = [] } = await MODELO_ESTACION.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/estaciones/crear-listar\ncode src/estaciones/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/crear-listar/service.mjs",
+            "path": "src/estaciones/crear-listar/service.mjs",
+            "code": "import { crearEstacionRepository, listarEstacionesRepository } from './repository.mjs';\n\nexport async function crearEstacionService(nombre) {\n  const estacionId = Date.now();\n  const estacion = { estacionId, nombre };\n  await crearEstacionRepository(estacion);\n  return estacion;\n}\n\nexport function listarEstacionesService() {\n  return listarEstacionesRepository();\n}",
+            "create": "mkdir -p src/estaciones/crear-listar\ncode src/estaciones/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/estaciones/crear-listar/handler.mjs",
+            "path": "src/estaciones/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Central\"}'\ncurl -i \"$API_URL/estaciones\"\n*/\n// POST /estaciones con JSON: {\"nombre\":\"Estación Central\"}\n// GET /estaciones lista los registros y sus IDs.\nimport { crearEstacionService, listarEstacionesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const estacion = await crearEstacionService(nombre);\n  return { statusCode: 201, body: JSON.stringify(estacion) };\n}\n\nexport async function listarHandler() {\n  const estaciones = await listarEstacionesService();\n  return { statusCode: 200, body: JSON.stringify(estaciones) };\n}",
+            "create": "mkdir -p src/estaciones/crear-listar\ncode src/estaciones/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen ESTACIONES_tuEquipo y TRAYECTOS_tuEquipo. PK del lado N: TRAYECTO_ID; índice: PorEstacion. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar estaciones antes de crear trayectos.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar estaciones por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Estacion 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ESTACIONES_${TALLER_EQUIPO}\\\" VALUE {'ESTACION_ID':1,'NOMBRE':'Estación Central'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Estación Central",
+            "code": "curl -i -X POST \"$API_URL/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Central\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Estacion 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ESTACIONES_${TALLER_EQUIPO}\\\" VALUE {'ESTACION_ID':2,'NOMBRE':'Estación Norte'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Estación Norte",
+            "code": "curl -i -X POST \"$API_URL/estaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estación Norte\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Trayecto 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"TRAYECTOS_${TALLER_EQUIPO}\\\" VALUE {'TRAYECTO_ID':7,'NOMBRE':'Ruta del valle','DISTANCIA_KM':35,'ESTACION_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Trayecto 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"TRAYECTOS_${TALLER_EQUIPO}\\\" VALUE {'TRAYECTO_ID':8,'NOMBRE':'Ruta de la costa','DISTANCIA_KM':180,'ESTACION_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Trayecto 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"TRAYECTOS_${TALLER_EQUIPO}\\\" VALUE {'TRAYECTO_ID':9,'NOMBRE':'Ruta del valle · nuevo','DISTANCIA_KM':250,'ESTACION_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ESTACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"TRAYECTOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar estaciones",
+            "code": "curl -i \"$API_URL/estaciones\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Estacion y tres de Trayecto, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /estaciones muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Estacion 1",
-          "Trayecto 7 y 9",
-          "Estacion 2",
-          "Trayecto 8"
+          "POST /estaciones",
+          "Controller / Handler",
+          "Service",
+          "GET /estaciones"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/trayectos/crear-listar/handler.mjs\nnode --check src/trayectos/crear-listar/service.mjs\nnode --check src/trayectos/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/trayectos\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"distanciaKm\":36,\"estacionId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).trayectoId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/trayectos\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ruta del valle",
+            "code": "curl -i -X POST \"$API_URL/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del valle\",\"distanciaKm\":35,\"estacionId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarTrayectos --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Ruta de la costa",
+            "code": "curl -i -X POST \"$API_URL/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta de la costa\",\"distanciaKm\":180,\"estacionId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ruta del valle · nuevo",
+            "code": "curl -i -X POST \"$API_URL/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del valle · nuevo\",\"distanciaKm\":250,\"estacionId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/trayectos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"distanciaKm\":36,\"estacionId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/trayectos\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/trayectos/eliminar/handler.mjs\nnode --check src/trayectos/eliminar/service.mjs\nnode --check src/trayectos/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/trayectos/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/trayectos\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/trayectos/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/trayectos\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/trayectos/modificar-distancia-km/handler.mjs\nnode --check src/trayectos/modificar-distancia-km/service.mjs\nnode --check src/trayectos/modificar-distancia-km/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar distancia",
-            "code": "curl -i -X PATCH \"$API_URL/trayectos/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"distanciaKm\":215}'\ncurl -i \"$API_URL/trayectos\"",
+            "title": "Cambiar distancia",
+            "code": "curl -i -X PATCH \"$API_URL/trayectos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"distanciaKm\":215}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/trayectos\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · distanciaKm = 215 km · estacionId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n  trasladarTrayecto:\n    handler: src/trayectos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/estacion' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n  trasladarTrayecto:\n    handler: src/trayectos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/estacion' }\n\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/trayectos/trasladar/handler.mjs\nnode --check src/trayectos/trasladar/service.mjs\nnode --check src/trayectos/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/trayectos/7/estacion\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"estacionId\":2}'\ncurl -i \"$API_URL/trayectos\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/trayectos/1/estacion\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"estacionId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/trayectos\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · distanciaKm = 215 km · estacionId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n  trasladarTrayecto:\n    handler: src/trayectos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/estacion' }\n  consultarEstacion:\n    handler: src/estaciones/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/estaciones/{estacionId}/trayectos' }\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
+            "code": "service: taller-ch20\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESTACIONES: { Ref: TablaEstaciones }\n    TABLA_TRAYECTOS: { Ref: TablaTrayectos }\n\n\nfunctions:\n  crearEstacion:\n    handler: src/estaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /estaciones }\n  listarEstaciones:\n    handler: src/estaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /estaciones }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearTrayecto:\n    handler: src/trayectos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/trayectos' }\n  listarTrayectos:\n    handler: src/trayectos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/trayectos' }\n  eliminarTrayecto:\n    handler: src/trayectos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/trayectos/{trayectoId}' }\n  modificarDistanciaKm:\n    handler: src/trayectos/modificar-distancia-km/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}' }\n  trasladarTrayecto:\n    handler: src/trayectos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/trayectos/{trayectoId}/estacion' }\n  consultarEstacion:\n    handler: src/estaciones/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/estaciones/{estacionId}/trayectos' }\nresources:\n  Resources:\n    TablaEstaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESTACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESTACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESTACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESTACION_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaTrayectos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TRAYECTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TRAYECTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DISTANCIA_KM (N: número).\n        #   ESTACION_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_TRAYECTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: TRAYECTO_ID, AttributeType: N }\n          - { AttributeName: ESTACION_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TRAYECTO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en TRAYECTOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEstacion\n            # Clave compuesta = partition key + sort key:\n            # (ESTACION_ID, TRAYECTO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESTACION_ID\n                KeyType: HASH   # Partition key. Agrupa por Estacion.\n              - AttributeName: TRAYECTO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de TRAYECTOS copiados al índice.\n                - NOMBRE\n                - DISTANCIA_KM",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/estaciones/consultar/handler.mjs\nnode --check src/estaciones/consultar/service.mjs\nnode --check src/estaciones/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/estaciones/2/trayectos?minimo=181\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/estaciones/2/trayectos?minimo=181\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Estación Norte + registro 7 (215 km). Excluye el 8 (180 km) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"TRAYECTOS_${TALLER_EQUIPO}\\\" WHERE TRAYECTO_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

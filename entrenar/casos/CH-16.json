@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Tienda",
+        "path": "src/tiendas/tiendas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Tienda } from './entities/tienda.entity';\n\n@Injectable()\nexport class TiendasService {\n  constructor(\n    @InjectRepository(Tienda) private readonly tiendas: Repository<Tienda>\n  ) {}\n\n  crearTienda(nombre: string) {\n    const tienda = this.tiendas.create({ nombre });\n    return this.tiendas.save(tienda);\n  }\n\n  listarTiendas() {\n    return this.tiendas.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.tiendas.save(tienda);",
+            "title": "Service · Tienda",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Tienda",
+        "path": "src/tiendas/tiendas.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Esquina\"}'\ncurl -i \"http://localhost:3000/tiendas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { TiendasService } from './tiendas.service';\n\n@Controller('tiendas')\nexport class TiendasController {\n  constructor(private readonly service: TiendasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearTienda(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarTiendas();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Tienda",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Tienda",
+        "path": "src/tiendas/tiendas.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Tienda } from './entities/tienda.entity';\nimport { TiendasService } from './tiendas.service';\nimport { TiendasController } from './tiendas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Tienda])],\n  providers: [TiendasService],\n  controllers: [TiendasController]\n})\nexport class TiendasModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Tienda",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ArticulosModule } from './articulos/articulos.module';\n\nimport { TiendasModule } from './tiendas/tiendas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TiendasModule,\n    ArticulosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar tiendas",
+        "path": "Peticiones · tiendas",
+        "code": "curl -i -X POST \"http://localhost:3000/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Esquina\"}'\n\ncurl -i -X POST \"http://localhost:3000/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Centro\"}'\n\ncurl -i \"http://localhost:3000/tiendas\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/tiendas\" \\",
+            "title": "Crear y listar tiendas",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/articulos/articulos.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /articulos\n{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}\n\n201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/articulos\"\n\ncurl -i -X POST \"http://localhost:3000/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cuaderno azul\",\"stock\":12,\"tiendaId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estuche verde\",\"stock\":60,\"tiendaId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cuaderno azul · nuevo\",\"stock\":84,\"tiendaId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}'\n\ncurl -i \"http://localhost:3000/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /articulos/10\n\n204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/articulos/4\"\n\ncurl -i \"http://localhost:3000/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /articulos/7\n{\"stock\":72}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/articulos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"stock\":72}'\n\ncurl -i \"http://localhost:3000/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /articulos/7/tienda\n{\"tiendaId\":2}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/articulos/1/tienda\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tiendaId\":2}'\n\ncurl -i \"http://localhost:3000/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /tiendas/2/articulos?minimo=61\n\n200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/tiendas/2/articulos?minimo=61\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearArticulo:\n    handler: src/articulos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /articulos }\n  listarArticulos:\n    handler: src/articulos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /articulos }\n  eliminarArticulo:\n    handler: src/articulos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /articulos/{articuloId} }\n  modificarStock:\n    handler: src/articulos/modificar-stock/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId} }\n  trasladarArticulo:\n    handler: src/articulos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId}/tienda }\n  consultarTienda:\n    handler: src/tiendas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /tiendas/{tiendaId}/articulos }",
+        "code": "functions:\n  crearTienda:\n    handler: src/tiendas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /tiendas }\n  listarTiendas:\n    handler: src/tiendas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /tiendas }\n  crearArticulo:\n    handler: src/articulos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /articulos }\n  listarArticulos:\n    handler: src/articulos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /articulos }\n  eliminarArticulo:\n    handler: src/articulos/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /articulos/{articuloId} }\n  modificarStock:\n    handler: src/articulos/modificar-stock/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId} }\n  trasladarArticulo:\n    handler: src/articulos/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /articulos/{articuloId}/tienda }\n  consultarTienda:\n    handler: src/tiendas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /tiendas/{tiendaId}/articulos }",
         "cues": [
           {
             "text": "src/articulos/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Tienda",
+        "path": "src/tiendas/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_TIENDA } from '../../models/tienda-articulo.model.mjs';\n\nexport async function crearTiendaRepository(tienda) {\n  await MODELO_TIENDA.build(EntityRepository).put(\n    tienda,\n    { condition: { attr: 'tiendaId', exists: false } }\n  );\n}\n\nexport async function listarTiendasRepository() {\n  const { Items = [] } = await MODELO_TIENDA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Tienda",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Tienda",
+        "path": "src/tiendas/crear-listar/service.mjs",
+        "code": "import { crearTiendaRepository, listarTiendasRepository } from './repository.mjs';\n\nexport async function crearTiendaService(nombre) {\n  const tiendaId = Date.now();\n  const tienda = { tiendaId, nombre };\n  await crearTiendaRepository(tienda);\n  return tienda;\n}\n\nexport function listarTiendasService() {\n  return listarTiendasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Tienda",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Tienda",
+        "path": "src/tiendas/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Esquina\"}'\ncurl -i \"$API_URL/tiendas\"\n*/\n// POST /tiendas con JSON: {\"nombre\":\"Tienda Esquina\"}\n// GET /tiendas lista los registros y sus IDs.\nimport { crearTiendaService, listarTiendasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const tienda = await crearTiendaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(tienda) };\n}\n\nexport async function listarHandler() {\n  const tiendas = await listarTiendasService();\n  return { statusCode: 200, body: JSON.stringify(tiendas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Tienda",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch16\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TIENDAS: { Ref: TablaTiendas }\n    TABLA_ARTICULOS: { Ref: TablaArticulos }\n\n\nfunctions:\n  crearTienda:\n    handler: src/tiendas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /tiendas }\n  listarTiendas:\n    handler: src/tiendas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /tiendas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTiendas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TIENDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TIENDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TIENDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TIENDA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaArticulos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ARTICULOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ARTICULO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   STOCK (N: número).\n        #   TIENDA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ARTICULO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ARTICULO_ID, AttributeType: N }\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ARTICULO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ARTICULOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTienda\n            # Clave compuesta = partition key + sort key:\n            # (TIENDA_ID, ARTICULO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TIENDA_ID\n                KeyType: HASH   # Partition key. Agrupa por Tienda.\n              - AttributeName: ARTICULO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ARTICULOS copiados al índice.\n                - NOMBRE\n                - STOCK",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar tiendas",
+        "path": "Peticiones · tiendas",
+        "code": "curl -i -X POST \"$API_URL/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Esquina\"}'\n\ncurl -i -X POST \"$API_URL/tiendas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Tienda Centro\"}'\n\ncurl -i \"$API_URL/tiendas\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/tiendas\" \\",
+            "title": "Crear y listar tiendas",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /articulos\n{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}\n\n201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /articulos → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/articulos\"\n\ncurl -i -X POST \"$API_URL/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cuaderno azul\",\"stock\":12,\"tiendaId\":1}'\n\ncurl -i -X POST \"$API_URL/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Estuche verde\",\"stock\":60,\"tiendaId\":2}'\n\ncurl -i -X POST \"$API_URL/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cuaderno azul · nuevo\",\"stock\":84,\"tiendaId\":1}'\n\ncurl -i -X POST \"$API_URL/articulos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"stock\":13,\"tiendaId\":2}'\n\ncurl -i \"$API_URL/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /articulos/10\n\n204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /articulos → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/articulos/4\"\n\ncurl -i \"$API_URL/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /articulos/7\n{\"stock\":72}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/articulos/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"stock\":72}'\n\ncurl -i \"$API_URL/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /articulos/7/tienda\n{\"tiendaId\":2}\n\n200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · stock = 72 unidades · tiendaId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/articulos/1/tienda\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tiendaId\":2}'\n\ncurl -i \"$API_URL/articulos\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /tiendas/2/articulos?minimo=61\n\n200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Tienda Centro + registro 7 (72 unidades). Excluye el 8 (60 unidades) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/tiendas/2/articulos?minimo=61\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ArticulosModule } from './articulos/articulos.module';\n\nimport { TiendasModule } from './tiendas/tiendas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TiendasModule,\n    ArticulosModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch16\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TIENDAS: { Ref: TablaTiendas }\n    TABLA_ARTICULOS: { Ref: TablaArticulos }\n\n\nfunctions:\n  crearTienda:\n    handler: src/tiendas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /tiendas }\n  listarTiendas:\n    handler: src/tiendas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /tiendas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTiendas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TIENDAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TIENDA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TIENDA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TIENDA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaArticulos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ARTICULOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ARTICULO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   STOCK (N: número).\n        #   TIENDA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ARTICULO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ARTICULO_ID, AttributeType: N }\n          - { AttributeName: TIENDA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ARTICULO_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ARTICULOS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTienda\n            # Clave compuesta = partition key + sort key:\n            # (TIENDA_ID, ARTICULO_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TIENDA_ID\n                KeyType: HASH   # Partition key. Agrupa por Tienda.\n              - AttributeName: ARTICULO_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ARTICULOS copiados al índice.\n                - NOMBRE\n                - STOCK",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

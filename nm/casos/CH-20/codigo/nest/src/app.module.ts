@@ -7,6 +7,8 @@ import { TrayectosModule } from './trayectos/trayectos.module';
 import { ConductoresModule } from './conductores/conductores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { EstacionesModule } from './estaciones/estaciones.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    EstacionesModule,
     TrayectosModule,
     ConductoresModule,
     AsignacionesModule

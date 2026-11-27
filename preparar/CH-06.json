@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    SesionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\n\nimport { GimnasiosModule } from './gimnasios/gimnasios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GimnasiosModule,\n    SesionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade SesionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás GIMNASIO y SESION, creadas por TypeORM con la FK ID_GIMNASIO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/gimnasios.service.ts",
+            "path": "src/gimnasios/gimnasios.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Gimnasio } from './entities/gimnasio.entity';\n\n@Injectable()\nexport class GimnasiosService {\n  constructor(\n    @InjectRepository(Gimnasio) private readonly gimnasios: Repository<Gimnasio>\n  ) {}\n\n  crearGimnasio(nombre: string) {\n    const gimnasio = this.gimnasios.create({ nombre });\n    return this.gimnasios.save(gimnasio);\n  }\n\n  listarGimnasios() {\n    return this.gimnasios.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/gimnasios.controller.ts",
+            "path": "src/gimnasios/gimnasios.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Norte\"}'\ncurl -i \"http://localhost:3000/gimnasios\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { GimnasiosService } from './gimnasios.service';\n\n@Controller('gimnasios')\nexport class GimnasiosController {\n  constructor(private readonly service: GimnasiosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearGimnasio(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarGimnasios();\n  }\n}",
+            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/gimnasios.module.ts",
+            "path": "src/gimnasios/gimnasios.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Gimnasio } from './entities/gimnasio.entity';\nimport { GimnasiosService } from './gimnasios.service';\nimport { GimnasiosController } from './gimnasios.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Gimnasio])],\n  providers: [GimnasiosService],\n  controllers: [GimnasiosController]\n})\nexport class GimnasiosModule {}",
+            "create": "mkdir -p src/gimnasios\ncode src/gimnasios/gimnasios.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado GIMNASIO y SESION desde las Entities. AppModule importa SesionesModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar gimnasios antes de crear sesiones.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar gimnasios por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Gimnasio } from '../gimnasios/entities/gimnasio.entity';\nimport { Sesion } from '../sesiones/entities/sesion.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const gimnasios = db.getRepository(Gimnasio);\n    const sesiones = db.getRepository(Sesion);\n\n    const primero = await gimnasios.findOneBy({ nombre: 'Gimnasio Norte' })\n      ?? await gimnasios.save({ nombre: 'Gimnasio Norte' });\n    const segundo = await gimnasios.findOneBy({ nombre: 'Gimnasio Centro' })\n      ?? await gimnasios.save({ nombre: 'Gimnasio Centro' });\n\n    const principal = await sesiones.findOneBy({ nombre: 'Pilates inicial' })\n      ?? await sesiones.save({ nombre: 'Pilates inicial', plazas: 10, gimnasio: primero });\n    const secundaria = await sesiones.findOneBy({ nombre: 'Entrenamiento funcional' })\n      ?? await sesiones.save({ nombre: 'Entrenamiento funcional', plazas: 24, gimnasio: segundo });\n    const otra = await sesiones.findOneBy({ nombre: 'Pilates inicial · nuevo' })\n      ?? await sesiones.save({ nombre: 'Pilates inicial · nuevo', plazas: 44, gimnasio: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export GIMNASIO_1_ID=${primero.id}`,\n      `export GIMNASIO_2_ID=${segundo.id}`,\n      `export SESION_1_ID=${principal.id}`,\n      `export SESION_2_ID=${secundaria.id}`,\n      `export SESION_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await sesiones.find({ relations: { gimnasio: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Gimnasio Norte",
+            "code": "curl -i -X POST \"http://localhost:3000/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Norte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Sesion principal: %s\\nOtro gimnasio: %s\\n' \"$SESION_1_ID\" \"$GIMNASIO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Gimnasio Centro",
+            "code": "curl -i -X POST \"http://localhost:3000/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Centro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar gimnasios",
+            "code": "curl -i \"http://localhost:3000/gimnasios\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos gimnasios y tres sesiones de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /gimnasios muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Gimnasio Norte",
-          "Pilates inicial y otra sesion",
-          "Gimnasio Centro",
-          "Entrenamiento funcional"
+          "POST /gimnasios",
+          "Controller / Handler",
+          "Service",
+          "GET /gimnasios"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/sesiones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"plazas\\\":11,\\\"gimnasioId\\\":$GIMNASIO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/sesiones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Pilates inicial",
+            "code": "curl -i -X POST \"http://localhost:3000/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pilates inicial\",\"plazas\":10,\"gimnasioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Entrenamiento funcional",
+            "code": "curl -i -X POST \"http://localhost:3000/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Entrenamiento funcional\",\"plazas\":24,\"gimnasioId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Pilates inicial · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pilates inicial · nuevo\",\"plazas\":44,\"gimnasioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/sesiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro sesiones. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/sesiones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/sesiones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/sesiones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/sesiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la sesion de prueba. Siguen las tres sesiones originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar plazas",
-            "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/$SESION_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":34}'\ncurl -i http://localhost:3000/sesiones",
+            "title": "Cambiar plazas",
+            "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":34}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/sesiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La sesion principal tiene plazas 34 y conserva su gimnasio.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/$SESION_1_ID/gimnasio\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"gimnasioId\\\":$GIMNASIO_2_ID}\"\ncurl -i http://localhost:3000/sesiones",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/1/gimnasio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"gimnasioId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/sesiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La sesion principal pasa al segundo gimnasio y conserva su plazas 34.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. SESION_1_ID es el ID real de «Pilates inicial»; SESION_2_ID, el de «Entrenamiento funcional». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/sesiones/sesiones.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/gimnasios/$GIMNASIO_2_ID/sesiones?minimo=25\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/gimnasios/2/sesiones?minimo=25\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo gimnasio y la sesion principal; el filtro excluye las otras dos sesiones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"SESIONES_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/crear-listar/repository.mjs",
+            "path": "src/gimnasios/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_GIMNASIO } from '../../models/gimnasio-sesion.model.mjs';\n\nexport async function crearGimnasioRepository(gimnasio) {\n  await MODELO_GIMNASIO.build(EntityRepository).put(\n    gimnasio,\n    { condition: { attr: 'gimnasioId', exists: false } }\n  );\n}\n\nexport async function listarGimnasiosRepository() {\n  const { Items = [] } = await MODELO_GIMNASIO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/gimnasios/crear-listar\ncode src/gimnasios/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/crear-listar/service.mjs",
+            "path": "src/gimnasios/crear-listar/service.mjs",
+            "code": "import { crearGimnasioRepository, listarGimnasiosRepository } from './repository.mjs';\n\nexport async function crearGimnasioService(nombre) {\n  const gimnasioId = Date.now();\n  const gimnasio = { gimnasioId, nombre };\n  await crearGimnasioRepository(gimnasio);\n  return gimnasio;\n}\n\nexport function listarGimnasiosService() {\n  return listarGimnasiosRepository();\n}",
+            "create": "mkdir -p src/gimnasios/crear-listar\ncode src/gimnasios/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/gimnasios/crear-listar/handler.mjs",
+            "path": "src/gimnasios/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Norte\"}'\ncurl -i \"$API_URL/gimnasios\"\n*/\n// POST /gimnasios con JSON: {\"nombre\":\"Gimnasio Norte\"}\n// GET /gimnasios lista los registros y sus IDs.\nimport { crearGimnasioService, listarGimnasiosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const gimnasio = await crearGimnasioService(nombre);\n  return { statusCode: 201, body: JSON.stringify(gimnasio) };\n}\n\nexport async function listarHandler() {\n  const gimnasios = await listarGimnasiosService();\n  return { statusCode: 200, body: JSON.stringify(gimnasios) };\n}",
+            "create": "mkdir -p src/gimnasios/crear-listar\ncode src/gimnasios/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen GIMNASIOS_tuEquipo y SESIONES_tuEquipo. PK del lado N: SESION_ID; índice: PorGimnasio. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar gimnasios antes de crear sesiones.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar gimnasios por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Gimnasio 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"GIMNASIOS_${TALLER_EQUIPO}\\\" VALUE {'GIMNASIO_ID':1,'NOMBRE':'Gimnasio Norte'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Gimnasio Norte",
+            "code": "curl -i -X POST \"$API_URL/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Norte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Gimnasio 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"GIMNASIOS_${TALLER_EQUIPO}\\\" VALUE {'GIMNASIO_ID':2,'NOMBRE':'Gimnasio Centro'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Gimnasio Centro",
+            "code": "curl -i -X POST \"$API_URL/gimnasios\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Gimnasio Centro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Sesion 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"SESIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':7,'NOMBRE':'Pilates inicial','PLAZAS':10,'GIMNASIO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Sesion 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"SESIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':8,'NOMBRE':'Entrenamiento funcional','PLAZAS':24,'GIMNASIO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Sesion 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"SESIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':9,'NOMBRE':'Pilates inicial · nuevo','PLAZAS':44,'GIMNASIO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"GIMNASIOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"SESIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar gimnasios",
+            "code": "curl -i \"$API_URL/gimnasios\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Gimnasio y tres de Sesion, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /gimnasios muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Gimnasio 1",
-          "Sesion 7 y 9",
-          "Gimnasio 2",
-          "Sesion 8"
+          "POST /gimnasios",
+          "Controller / Handler",
+          "Service",
+          "GET /gimnasios"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/sesiones/crear-listar/handler.mjs\nnode --check src/sesiones/crear-listar/service.mjs\nnode --check src/sesiones/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/sesiones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).sesionId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/sesiones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Pilates inicial",
+            "code": "curl -i -X POST \"$API_URL/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pilates inicial\",\"plazas\":10,\"gimnasioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarSesiones --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Entrenamiento funcional",
+            "code": "curl -i -X POST \"$API_URL/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Entrenamiento funcional\",\"plazas\":24,\"gimnasioId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Pilates inicial · nuevo",
+            "code": "curl -i -X POST \"$API_URL/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pilates inicial · nuevo\",\"plazas\":44,\"gimnasioId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/sesiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"plazas\":11,\"gimnasioId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/sesiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/sesiones/eliminar/handler.mjs\nnode --check src/sesiones/eliminar/service.mjs\nnode --check src/sesiones/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/sesiones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/sesiones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/sesiones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/sesiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/sesiones/modificar-plazas/handler.mjs\nnode --check src/sesiones/modificar-plazas/service.mjs\nnode --check src/sesiones/modificar-plazas/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar plazas",
-            "code": "curl -i -X PATCH \"$API_URL/sesiones/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":34}'\ncurl -i \"$API_URL/sesiones\"",
+            "title": "Cambiar plazas",
+            "code": "curl -i -X PATCH \"$API_URL/sesiones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"plazas\":34}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/sesiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · plazas = 34 personas · gimnasioId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/sesiones/trasladar/handler.mjs\nnode --check src/sesiones/trasladar/service.mjs\nnode --check src/sesiones/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/sesiones/7/gimnasio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"gimnasioId\":2}'\ncurl -i \"$API_URL/sesiones\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/sesiones/1/gimnasio\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"gimnasioId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/sesiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · plazas = 34 personas · gimnasioId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
+            "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/gimnasios/consultar/handler.mjs\nnode --check src/gimnasios/consultar/service.mjs\nnode --check src/gimnasios/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/gimnasios/2/sesiones?minimo=25\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/gimnasios/2/sesiones?minimo=25\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Gimnasio Centro + registro 7 (34 personas). Excluye el 8 (24 personas) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"SESIONES_${TALLER_EQUIPO}\\\" WHERE SESION_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

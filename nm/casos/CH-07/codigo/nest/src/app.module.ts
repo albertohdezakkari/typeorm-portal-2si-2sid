@@ -7,6 +7,8 @@ import { ExcursionesModule } from './excursiones/excursiones.module';
 import { GuiasModule } from './guias/guias.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { AgenciasModule } from './agencias/agencias.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    AgenciasModule,
     ExcursionesModule,
     GuiasModule,
     AsignacionesModule

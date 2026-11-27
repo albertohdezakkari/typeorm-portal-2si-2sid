@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PistasModule } from './pistas/pistas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PistasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PistasModule } from './pistas/pistas.module';\n\nimport { ComplejosModule } from './complejos/complejos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ComplejosModule,\n    PistasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade PistasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás COMPLEJO y PISTA, creadas por TypeORM con la FK ID_COMPLEJO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/complejos.service.ts",
+            "path": "src/complejos/complejos.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Complejo } from './entities/complejo.entity';\n\n@Injectable()\nexport class ComplejosService {\n  constructor(\n    @InjectRepository(Complejo) private readonly complejos: Repository<Complejo>\n  ) {}\n\n  crearComplejo(nombre: string) {\n    const complejo = this.complejos.create({ nombre });\n    return this.complejos.save(complejo);\n  }\n\n  listarComplejos() {\n    return this.complejos.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/complejos\ncode src/complejos/complejos.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/complejos.controller.ts",
+            "path": "src/complejos/complejos.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo Municipal\"}'\ncurl -i \"http://localhost:3000/complejos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ComplejosService } from './complejos.service';\n\n@Controller('complejos')\nexport class ComplejosController {\n  constructor(private readonly service: ComplejosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearComplejo(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarComplejos();\n  }\n}",
+            "create": "mkdir -p src/complejos\ncode src/complejos/complejos.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/complejos.module.ts",
+            "path": "src/complejos/complejos.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Complejo } from './entities/complejo.entity';\nimport { ComplejosService } from './complejos.service';\nimport { ComplejosController } from './complejos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Complejo])],\n  providers: [ComplejosService],\n  controllers: [ComplejosController]\n})\nexport class ComplejosModule {}",
+            "create": "mkdir -p src/complejos\ncode src/complejos/complejos.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado COMPLEJO y PISTA desde las Entities. AppModule importa PistasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar complejos antes de crear pistas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar complejos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Complejo } from '../complejos/entities/complejo.entity';\nimport { Pista } from '../pistas/entities/pista.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const complejos = db.getRepository(Complejo);\n    const pistas = db.getRepository(Pista);\n\n    const primero = await complejos.findOneBy({ nombre: 'Complejo Municipal' })\n      ?? await complejos.save({ nombre: 'Complejo Municipal' });\n    const segundo = await complejos.findOneBy({ nombre: 'Complejo del Barrio' })\n      ?? await complejos.save({ nombre: 'Complejo del Barrio' });\n\n    const principal = await pistas.findOneBy({ nombre: 'Pista cubierta' })\n      ?? await pistas.save({ nombre: 'Pista cubierta', superficieM2: 120, complejo: primero });\n    const secundaria = await pistas.findOneBy({ nombre: 'Pista exterior' })\n      ?? await pistas.save({ nombre: 'Pista exterior', superficieM2: 300, complejo: segundo });\n    const otra = await pistas.findOneBy({ nombre: 'Pista cubierta · nuevo' })\n      ?? await pistas.save({ nombre: 'Pista cubierta · nuevo', superficieM2: 540, complejo: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export COMPLEJO_1_ID=${primero.id}`,\n      `export COMPLEJO_2_ID=${segundo.id}`,\n      `export PISTA_1_ID=${principal.id}`,\n      `export PISTA_2_ID=${secundaria.id}`,\n      `export PISTA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await pistas.find({ relations: { complejo: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Complejo Municipal",
+            "code": "curl -i -X POST \"http://localhost:3000/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo Municipal\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Pista principal: %s\\nOtro complejo: %s\\n' \"$PISTA_1_ID\" \"$COMPLEJO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Complejo del Barrio",
+            "code": "curl -i -X POST \"http://localhost:3000/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo del Barrio\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar complejos",
+            "code": "curl -i \"http://localhost:3000/complejos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos complejos y tres pistas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /complejos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Complejo Municipal",
-          "Pista cubierta y otra pista",
-          "Complejo del Barrio",
-          "Pista exterior"
+          "POST /complejos",
+          "Controller / Handler",
+          "Service",
+          "GET /complejos"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/pistas/pistas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/pistas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"superficieM2\\\":121,\\\"complejoId\\\":$COMPLEJO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/pistas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Pista cubierta",
+            "code": "curl -i -X POST \"http://localhost:3000/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista cubierta\",\"superficieM2\":120,\"complejoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Pista exterior",
+            "code": "curl -i -X POST \"http://localhost:3000/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista exterior\",\"superficieM2\":300,\"complejoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Pista cubierta · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista cubierta · nuevo\",\"superficieM2\":540,\"complejoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/pistas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro pistas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/pistas/pistas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/pistas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/pistas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/pistas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/pistas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la pista de prueba. Siguen las tres pistas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/pistas/pistas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar superficie",
-            "code": "curl -i -X PATCH \"http://localhost:3000/pistas/$PISTA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":420}'\ncurl -i http://localhost:3000/pistas",
+            "title": "Cambiar superficie",
+            "code": "curl -i -X PATCH \"http://localhost:3000/pistas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":420}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/pistas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La pista principal tiene superficie 420 y conserva su complejo.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/pistas/pistas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/pistas/$PISTA_1_ID/complejo\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"complejoId\\\":$COMPLEJO_2_ID}\"\ncurl -i http://localhost:3000/pistas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/pistas/1/complejo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"complejoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/pistas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La pista principal pasa al segundo complejo y conserva su superficie 420.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PISTA_1_ID es el ID real de «Pista cubierta»; PISTA_2_ID, el de «Pista exterior». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/pistas/pistas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/complejos/$COMPLEJO_2_ID/pistas?minimo=301\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/complejos/2/pistas?minimo=301\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo complejo y la pista principal; el filtro excluye las otras dos pistas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"PISTAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/crear-listar/repository.mjs",
+            "path": "src/complejos/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_COMPLEJO } from '../../models/complejo-pista.model.mjs';\n\nexport async function crearComplejoRepository(complejo) {\n  await MODELO_COMPLEJO.build(EntityRepository).put(\n    complejo,\n    { condition: { attr: 'complejoId', exists: false } }\n  );\n}\n\nexport async function listarComplejosRepository() {\n  const { Items = [] } = await MODELO_COMPLEJO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/complejos/crear-listar\ncode src/complejos/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/crear-listar/service.mjs",
+            "path": "src/complejos/crear-listar/service.mjs",
+            "code": "import { crearComplejoRepository, listarComplejosRepository } from './repository.mjs';\n\nexport async function crearComplejoService(nombre) {\n  const complejoId = Date.now();\n  const complejo = { complejoId, nombre };\n  await crearComplejoRepository(complejo);\n  return complejo;\n}\n\nexport function listarComplejosService() {\n  return listarComplejosRepository();\n}",
+            "create": "mkdir -p src/complejos/crear-listar\ncode src/complejos/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/complejos/crear-listar/handler.mjs",
+            "path": "src/complejos/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo Municipal\"}'\ncurl -i \"$API_URL/complejos\"\n*/\n// POST /complejos con JSON: {\"nombre\":\"Complejo Municipal\"}\n// GET /complejos lista los registros y sus IDs.\nimport { crearComplejoService, listarComplejosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const complejo = await crearComplejoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(complejo) };\n}\n\nexport async function listarHandler() {\n  const complejos = await listarComplejosService();\n  return { statusCode: 200, body: JSON.stringify(complejos) };\n}",
+            "create": "mkdir -p src/complejos/crear-listar\ncode src/complejos/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen COMPLEJOS_tuEquipo y PISTAS_tuEquipo. PK del lado N: PISTA_ID; índice: PorComplejo. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar complejos antes de crear pistas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar complejos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Complejo 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COMPLEJOS_${TALLER_EQUIPO}\\\" VALUE {'COMPLEJO_ID':1,'NOMBRE':'Complejo Municipal'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Complejo Municipal",
+            "code": "curl -i -X POST \"$API_URL/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo Municipal\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Complejo 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"COMPLEJOS_${TALLER_EQUIPO}\\\" VALUE {'COMPLEJO_ID':2,'NOMBRE':'Complejo del Barrio'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Complejo del Barrio",
+            "code": "curl -i -X POST \"$API_URL/complejos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Complejo del Barrio\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Pista 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PISTAS_${TALLER_EQUIPO}\\\" VALUE {'PISTA_ID':7,'NOMBRE':'Pista cubierta','SUPERFICIE_M2':120,'COMPLEJO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Pista 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PISTAS_${TALLER_EQUIPO}\\\" VALUE {'PISTA_ID':8,'NOMBRE':'Pista exterior','SUPERFICIE_M2':300,'COMPLEJO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Pista 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PISTAS_${TALLER_EQUIPO}\\\" VALUE {'PISTA_ID':9,'NOMBRE':'Pista cubierta · nuevo','SUPERFICIE_M2':540,'COMPLEJO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"COMPLEJOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PISTAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar complejos",
+            "code": "curl -i \"$API_URL/complejos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Complejo y tres de Pista, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /complejos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Complejo 1",
-          "Pista 7 y 9",
-          "Complejo 2",
-          "Pista 8"
+          "POST /complejos",
+          "Controller / Handler",
+          "Service",
+          "GET /complejos"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/pistas/crear-listar/handler.mjs\nnode --check src/pistas/crear-listar/service.mjs\nnode --check src/pistas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/pistas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).pistaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/pistas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Pista cubierta",
+            "code": "curl -i -X POST \"$API_URL/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista cubierta\",\"superficieM2\":120,\"complejoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarPistas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Pista exterior",
+            "code": "curl -i -X POST \"$API_URL/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista exterior\",\"superficieM2\":300,\"complejoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Pista cubierta · nuevo",
+            "code": "curl -i -X POST \"$API_URL/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Pista cubierta · nuevo\",\"superficieM2\":540,\"complejoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/pistas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"superficieM2\":121,\"complejoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/pistas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/pistas/eliminar/handler.mjs\nnode --check src/pistas/eliminar/service.mjs\nnode --check src/pistas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/pistas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/pistas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/pistas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/pistas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/pistas/modificar-superficie-m2/handler.mjs\nnode --check src/pistas/modificar-superficie-m2/service.mjs\nnode --check src/pistas/modificar-superficie-m2/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar superficie",
-            "code": "curl -i -X PATCH \"$API_URL/pistas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":420}'\ncurl -i \"$API_URL/pistas\"",
+            "title": "Cambiar superficie",
+            "code": "curl -i -X PATCH \"$API_URL/pistas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":420}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/pistas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · superficieM2 = 420 m² · complejoId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n  trasladarPista:\n    handler: src/pistas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/complejo' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n  trasladarPista:\n    handler: src/pistas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/complejo' }\n\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/pistas/trasladar/handler.mjs\nnode --check src/pistas/trasladar/service.mjs\nnode --check src/pistas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/pistas/7/complejo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"complejoId\":2}'\ncurl -i \"$API_URL/pistas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/pistas/1/complejo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"complejoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/pistas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · superficieM2 = 420 m² · complejoId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n  trasladarPista:\n    handler: src/pistas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/complejo' }\n  consultarComplejo:\n    handler: src/complejos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/complejos/{complejoId}/pistas' }\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch24\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_COMPLEJOS: { Ref: TablaComplejos }\n    TABLA_PISTAS: { Ref: TablaPistas }\n\n\nfunctions:\n  crearComplejo:\n    handler: src/complejos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /complejos }\n  listarComplejos:\n    handler: src/complejos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /complejos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPista:\n    handler: src/pistas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/pistas' }\n  listarPistas:\n    handler: src/pistas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/pistas' }\n  eliminarPista:\n    handler: src/pistas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/pistas/{pistaId}' }\n  modificarSuperficieM2:\n    handler: src/pistas/modificar-superficie-m2/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}' }\n  trasladarPista:\n    handler: src/pistas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/pistas/{pistaId}/complejo' }\n  consultarComplejo:\n    handler: src/complejos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/complejos/{complejoId}/pistas' }\nresources:\n  Resources:\n    TablaComplejos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COMPLEJOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COMPLEJO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_COMPLEJO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COMPLEJO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPistas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PISTAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PISTA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   COMPLEJO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PISTA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PISTA_ID, AttributeType: N }\n          - { AttributeName: COMPLEJO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PISTA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PISTAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorComplejo\n            # Clave compuesta = partition key + sort key:\n            # (COMPLEJO_ID, PISTA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: COMPLEJO_ID\n                KeyType: HASH   # Partition key. Agrupa por Complejo.\n              - AttributeName: PISTA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PISTAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/complejos/consultar/handler.mjs\nnode --check src/complejos/consultar/service.mjs\nnode --check src/complejos/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/complejos/2/pistas?minimo=301\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/complejos/2/pistas?minimo=301\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Complejo del Barrio + registro 7 (420 m²). Excluye el 8 (300 m²) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PISTAS_${TALLER_EQUIPO}\\\" WHERE PISTA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

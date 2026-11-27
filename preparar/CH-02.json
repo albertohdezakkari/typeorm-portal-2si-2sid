@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ParcelasModule } from './parcelas/parcelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ParcelasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ParcelasModule } from './parcelas/parcelas.module';\n\nimport { HuertosModule } from './huertos/huertos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    HuertosModule,\n    ParcelasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ParcelasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás HUERTO y PARCELA, creadas por TypeORM con la FK ID_HUERTO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/huertos.service.ts",
+            "path": "src/huertos/huertos.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Huerto } from './entities/huerto.entity';\n\n@Injectable()\nexport class HuertosService {\n  constructor(\n    @InjectRepository(Huerto) private readonly huertos: Repository<Huerto>\n  ) {}\n\n  crearHuerto(nombre: string) {\n    const huerto = this.huertos.create({ nombre });\n    return this.huertos.save(huerto);\n  }\n\n  listarHuertos() {\n    return this.huertos.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/huertos\ncode src/huertos/huertos.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/huertos.controller.ts",
+            "path": "src/huertos/huertos.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Río\"}'\ncurl -i \"http://localhost:3000/huertos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { HuertosService } from './huertos.service';\n\n@Controller('huertos')\nexport class HuertosController {\n  constructor(private readonly service: HuertosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearHuerto(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarHuertos();\n  }\n}",
+            "create": "mkdir -p src/huertos\ncode src/huertos/huertos.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/huertos.module.ts",
+            "path": "src/huertos/huertos.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Huerto } from './entities/huerto.entity';\nimport { HuertosService } from './huertos.service';\nimport { HuertosController } from './huertos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Huerto])],\n  providers: [HuertosService],\n  controllers: [HuertosController]\n})\nexport class HuertosModule {}",
+            "create": "mkdir -p src/huertos\ncode src/huertos/huertos.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado HUERTO y PARCELA desde las Entities. AppModule importa ParcelasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar huertos antes de crear parcelas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar huertos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Huerto } from '../huertos/entities/huerto.entity';\nimport { Parcela } from '../parcelas/entities/parcela.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const huertos = db.getRepository(Huerto);\n    const parcelas = db.getRepository(Parcela);\n\n    const primero = await huertos.findOneBy({ nombre: 'Huerto del Río' })\n      ?? await huertos.save({ nombre: 'Huerto del Río' });\n    const segundo = await huertos.findOneBy({ nombre: 'Huerto del Parque' })\n      ?? await huertos.save({ nombre: 'Huerto del Parque' });\n\n    const principal = await parcelas.findOneBy({ nombre: 'Parcela A' })\n      ?? await parcelas.save({ nombre: 'Parcela A', superficieM2: 20, huerto: primero });\n    const secundaria = await parcelas.findOneBy({ nombre: 'Parcela B' })\n      ?? await parcelas.save({ nombre: 'Parcela B', superficieM2: 45, huerto: segundo });\n    const otra = await parcelas.findOneBy({ nombre: 'Parcela C' })\n      ?? await parcelas.save({ nombre: 'Parcela C', superficieM2: 80, huerto: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export HUERTO_1_ID=${primero.id}`,\n      `export HUERTO_2_ID=${segundo.id}`,\n      `export PARCELA_1_ID=${principal.id}`,\n      `export PARCELA_2_ID=${secundaria.id}`,\n      `export PARCELA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await parcelas.find({ relations: { huerto: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Huerto del Río",
+            "code": "curl -i -X POST \"http://localhost:3000/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Río\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Parcela principal: %s\\nOtro huerto: %s\\n' \"$PARCELA_1_ID\" \"$HUERTO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Huerto del Parque",
+            "code": "curl -i -X POST \"http://localhost:3000/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Parque\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar huertos",
+            "code": "curl -i \"http://localhost:3000/huertos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos huertos y tres parcelas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /huertos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Huerto del Río",
-          "Parcela A y otra parcela",
-          "Huerto del Parque",
-          "Parcela B"
+          "POST /huertos",
+          "Controller / Handler",
+          "Service",
+          "GET /huertos"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/parcelas/parcelas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/parcelas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Parcela de prueba\\\",\\\"superficieM2\\\":32,\\\"huertoId\\\":$HUERTO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/parcelas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Parcela A",
+            "code": "curl -i -X POST \"http://localhost:3000/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela A\",\"superficieM2\":20,\"huertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Parcela B",
+            "code": "curl -i -X POST \"http://localhost:3000/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela B\",\"superficieM2\":45,\"huertoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Parcela C",
+            "code": "curl -i -X POST \"http://localhost:3000/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela C\",\"superficieM2\":80,\"huertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/parcelas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro parcelas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/parcelas/parcelas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/parcelas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/parcelas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/parcelas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/parcelas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la parcela de prueba. Siguen las tres parcelas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/parcelas/parcelas.service.ts",
@@ -680,12 +722,19 @@
           {
             "kind": "command",
             "title": "Cambiar superficie",
-            "code": "curl -i -X PATCH \"http://localhost:3000/parcelas/$PARCELA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":65}'\ncurl -i http://localhost:3000/parcelas",
+            "code": "curl -i -X PATCH \"http://localhost:3000/parcelas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":65}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/parcelas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La parcela principal tiene superficie 65 y conserva su huerto.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/parcelas/parcelas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Trasladar de huerto",
-            "code": "curl -i -X PATCH \"http://localhost:3000/parcelas/$PARCELA_1_ID/huerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"huertoId\\\":$HUERTO_2_ID}\"\ncurl -i http://localhost:3000/parcelas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/parcelas/1/huerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"huertoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/parcelas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La parcela principal pasa al segundo huerto y conserva su superficie 65.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PARCELA_1_ID es el ID real de «Parcela A»; PARCELA_2_ID, el de «Parcela B». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/parcelas/parcelas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Leer un huerto",
-            "code": "curl -i \"http://localhost:3000/huertos/$HUERTO_2_ID/parcelas?minimo=60\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/huertos/2/parcelas?minimo=60\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo huerto y la parcela principal; el filtro excluye las otras dos parcelas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"PARCELAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/crear-listar/repository.mjs",
+            "path": "src/huertos/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_HUERTO } from '../../models/huerto-parcela.model.mjs';\n\nexport async function crearHuertoRepository(huerto) {\n  await MODELO_HUERTO.build(EntityRepository).put(\n    huerto,\n    { condition: { attr: 'huertoId', exists: false } }\n  );\n}\n\nexport async function listarHuertosRepository() {\n  const { Items = [] } = await MODELO_HUERTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/huertos/crear-listar\ncode src/huertos/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/crear-listar/service.mjs",
+            "path": "src/huertos/crear-listar/service.mjs",
+            "code": "import { crearHuertoRepository, listarHuertosRepository } from './repository.mjs';\n\nexport async function crearHuertoService(nombre) {\n  const huertoId = Date.now();\n  const huerto = { huertoId, nombre };\n  await crearHuertoRepository(huerto);\n  return huerto;\n}\n\nexport function listarHuertosService() {\n  return listarHuertosRepository();\n}",
+            "create": "mkdir -p src/huertos/crear-listar\ncode src/huertos/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/huertos/crear-listar/handler.mjs",
+            "path": "src/huertos/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Río\"}'\ncurl -i \"$API_URL/huertos\"\n*/\n// POST /huertos con JSON: {\"nombre\":\"Huerto del Río\"}\n// GET /huertos lista los registros y sus IDs.\nimport { crearHuertoService, listarHuertosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const huerto = await crearHuertoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(huerto) };\n}\n\nexport async function listarHandler() {\n  const huertos = await listarHuertosService();\n  return { statusCode: 200, body: JSON.stringify(huertos) };\n}",
+            "create": "mkdir -p src/huertos/crear-listar\ncode src/huertos/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen HUERTOS_tuEquipo y PARCELAS_tuEquipo. PK del lado N: PARCELA_ID; índice: PorHuerto. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar huertos antes de crear parcelas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar huertos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Huerto 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"HUERTOS_${TALLER_EQUIPO}\\\" VALUE {'HUERTO_ID':1,'NOMBRE':'Huerto del Río'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Huerto del Río",
+            "code": "curl -i -X POST \"$API_URL/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Río\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Huerto 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"HUERTOS_${TALLER_EQUIPO}\\\" VALUE {'HUERTO_ID':2,'NOMBRE':'Huerto del Parque'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Huerto del Parque",
+            "code": "curl -i -X POST \"$API_URL/huertos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Huerto del Parque\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Parcela 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PARCELAS_${TALLER_EQUIPO}\\\" VALUE {'PARCELA_ID':7,'NOMBRE':'Parcela A','SUPERFICIE_M2':20,'HUERTO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Parcela 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PARCELAS_${TALLER_EQUIPO}\\\" VALUE {'PARCELA_ID':8,'NOMBRE':'Parcela B','SUPERFICIE_M2':45,'HUERTO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Parcela 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PARCELAS_${TALLER_EQUIPO}\\\" VALUE {'PARCELA_ID':9,'NOMBRE':'Parcela C','SUPERFICIE_M2':80,'HUERTO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"HUERTOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PARCELAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar huertos",
+            "code": "curl -i \"$API_URL/huertos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Huerto y tres de Parcela, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /huertos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Huerto 1",
-          "Parcela 7 y 9",
-          "Huerto 2",
-          "Parcela 8"
+          "POST /huertos",
+          "Controller / Handler",
+          "Service",
+          "GET /huertos"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/parcelas/crear-listar/handler.mjs\nnode --check src/parcelas/crear-listar/service.mjs\nnode --check src/parcelas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/parcelas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).parcelaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/parcelas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Parcela A",
+            "code": "curl -i -X POST \"$API_URL/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela A\",\"superficieM2\":20,\"huertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarParcelas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Parcela B",
+            "code": "curl -i -X POST \"$API_URL/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela B\",\"superficieM2\":45,\"huertoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Parcela C",
+            "code": "curl -i -X POST \"$API_URL/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela C\",\"superficieM2\":80,\"huertoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/parcelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parcela de prueba\",\"superficieM2\":32,\"huertoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/parcelas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/parcelas/eliminar/handler.mjs\nnode --check src/parcelas/eliminar/service.mjs\nnode --check src/parcelas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/parcelas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/parcelas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/parcelas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/parcelas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/parcelas/modificar-superficie/handler.mjs\nnode --check src/parcelas/modificar-superficie/service.mjs\nnode --check src/parcelas/modificar-superficie/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
             "title": "Cambiar superficie",
-            "code": "curl -i -X PATCH \"$API_URL/parcelas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":65}'\ncurl -i \"$API_URL/parcelas\"",
+            "code": "curl -i -X PATCH \"$API_URL/parcelas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"superficieM2\":65}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/parcelas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Parcela 7 · superficie 65 m² · continúa en huerto 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n  trasladarParcela:\n    handler: src/parcelas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/huerto' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n  trasladarParcela:\n    handler: src/parcelas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/huerto' }\n\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/parcelas/trasladar/handler.mjs\nnode --check src/parcelas/trasladar/service.mjs\nnode --check src/parcelas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Trasladar de huerto",
-            "code": "curl -i -X PATCH \"$API_URL/parcelas/7/huerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"huertoId\":2}'\ncurl -i \"$API_URL/parcelas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/parcelas/1/huerto\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"huertoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/parcelas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Parcela 7 · 65 m² · pasa del huerto 1 al 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n  trasladarParcela:\n    handler: src/parcelas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/huerto' }\n  consultarHuerto:\n    handler: src/huertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/huertos/{huertoId}/parcelas' }\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
+            "code": "service: taller-ch02\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_HUERTOS: { Ref: TablaHuertos }\n    TABLA_PARCELAS: { Ref: TablaParcelas }\n\n\nfunctions:\n  crearHuerto:\n    handler: src/huertos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /huertos }\n  listarHuertos:\n    handler: src/huertos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /huertos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearParcela:\n    handler: src/parcelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/parcelas' }\n  listarParcelas:\n    handler: src/parcelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/parcelas' }\n  eliminarParcela:\n    handler: src/parcelas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/parcelas/{parcelaId}' }\n  modificarSuperficie:\n    handler: src/parcelas/modificar-superficie/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}' }\n  trasladarParcela:\n    handler: src/parcelas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/parcelas/{parcelaId}/huerto' }\n  consultarHuerto:\n    handler: src/huertos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/huertos/{huertoId}/parcelas' }\nresources:\n  Resources:\n    TablaHuertos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: HUERTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: HUERTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_HUERTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: HUERTO_ID\n            KeyType: HASH  # Partition key del huerto.\n\n    TablaParcelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARCELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARCELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   SUPERFICIE_M2 (N: número).\n        #   HUERTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PARCELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PARCELA_ID, AttributeType: N }\n          - { AttributeName: HUERTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARCELA_ID\n            KeyType: HASH  # Partition key de la parcela.\n\n        # GSI: segunda forma de buscar en PARCELAS.\n        # Global: reúne parcelas de toda la tabla por huerto.\n        GlobalSecondaryIndexes:\n          - IndexName: PorHuerto\n            # Clave compuesta = partition key + sort key:\n            # (HUERTO_ID, PARCELA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: HUERTO_ID\n                KeyType: HASH   # Partition key. Agrupa por huerto.\n              - AttributeName: PARCELA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PARCELAS copiados al índice.\n                - NOMBRE\n                - SUPERFICIE_M2",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/huertos/consultar/handler.mjs\nnode --check src/huertos/consultar/service.mjs\nnode --check src/huertos/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Leer un huerto",
-            "code": "curl -i -X GET \"$API_URL/huertos/2/parcelas?minimo=60\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/huertos/2/parcelas?minimo=60\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Huerto del Parque + Parcela 7 (65 m²). No incluye 8 (45 m²) ni 9 (otro huerto).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PARCELAS_${TALLER_EQUIPO}\\\" WHERE PARCELA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

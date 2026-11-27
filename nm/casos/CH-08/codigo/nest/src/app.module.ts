@@ -7,6 +7,8 @@ import { ProductosModule } from './productos/productos.module';
 import { PanaderosModule } from './panaderos/panaderos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { PanaderiasModule } from './panaderias/panaderias.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    PanaderiasModule,
     ProductosModule,
     PanaderosModule,
     AsignacionesModule

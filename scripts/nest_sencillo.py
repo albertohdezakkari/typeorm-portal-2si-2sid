@@ -77,6 +77,8 @@ def main():
     import runpy
     for path in sorted((ROOT/'entrenar/casos').glob('CH-*.json')):
         data=json.loads(path.read_text());apply_training(data)
+        from version_estudio import training as version_actual
+        version_actual(data)
         path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     runpy.run_path(str(ROOT/'scripts/generar-preparacion.py'),run_name='__main__')
     runpy.run_path(str(ROOT/'scripts/generar-nm.py'),run_name='__main__')

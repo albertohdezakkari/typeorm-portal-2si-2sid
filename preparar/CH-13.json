@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyeccionesModule } from './proyecciones/proyecciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ProyeccionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ProyeccionesModule } from './proyecciones/proyecciones.module';\n\nimport { CinesModule } from './cines/cines.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    CinesModule,\n    ProyeccionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ProyeccionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás CINE y PROYECCION, creadas por TypeORM con la FK ID_CINE.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/cines.service.ts",
+            "path": "src/cines/cines.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Cine } from './entities/cine.entity';\n\n@Injectable()\nexport class CinesService {\n  constructor(\n    @InjectRepository(Cine) private readonly cines: Repository<Cine>\n  ) {}\n\n  crearCine(nombre: string) {\n    const cine = this.cines.create({ nombre });\n    return this.cines.save(cine);\n  }\n\n  listarCines() {\n    return this.cines.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/cines\ncode src/cines/cines.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/cines.controller.ts",
+            "path": "src/cines/cines.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine Alameda\"}'\ncurl -i \"http://localhost:3000/cines\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { CinesService } from './cines.service';\n\n@Controller('cines')\nexport class CinesController {\n  constructor(private readonly service: CinesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearCine(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarCines();\n  }\n}",
+            "create": "mkdir -p src/cines\ncode src/cines/cines.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/cines.module.ts",
+            "path": "src/cines/cines.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Cine } from './entities/cine.entity';\nimport { CinesService } from './cines.service';\nimport { CinesController } from './cines.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Cine])],\n  providers: [CinesService],\n  controllers: [CinesController]\n})\nexport class CinesModule {}",
+            "create": "mkdir -p src/cines\ncode src/cines/cines.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado CINE y PROYECCION desde las Entities. AppModule importa ProyeccionesModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar cines antes de crear proyecciones.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar cines por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Cine } from '../cines/entities/cine.entity';\nimport { Proyeccion } from '../proyecciones/entities/proyeccion.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const cines = db.getRepository(Cine);\n    const proyecciones = db.getRepository(Proyeccion);\n\n    const primero = await cines.findOneBy({ nombre: 'Cine Alameda' })\n      ?? await cines.save({ nombre: 'Cine Alameda' });\n    const segundo = await cines.findOneBy({ nombre: 'Cine del Parque' })\n      ?? await cines.save({ nombre: 'Cine del Parque' });\n\n    const principal = await proyecciones.findOneBy({ pelicula: 'Viaje al norte' })\n      ?? await proyecciones.save({ pelicula: 'Viaje al norte', duracionMinutos: 90, cine: primero });\n    const secundaria = await proyecciones.findOneBy({ pelicula: 'La última estación' })\n      ?? await proyecciones.save({ pelicula: 'La última estación', duracionMinutos: 125, cine: segundo });\n    const otra = await proyecciones.findOneBy({ pelicula: 'Viaje al norte · nuevo' })\n      ?? await proyecciones.save({ pelicula: 'Viaje al norte · nuevo', duracionMinutos: 305, cine: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export CINE_1_ID=${primero.id}`,\n      `export CINE_2_ID=${segundo.id}`,\n      `export PROYECCION_1_ID=${principal.id}`,\n      `export PROYECCION_2_ID=${secundaria.id}`,\n      `export PROYECCION_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await proyecciones.find({ relations: { cine: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Cine Alameda",
+            "code": "curl -i -X POST \"http://localhost:3000/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine Alameda\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Proyeccion principal: %s\\nOtro cine: %s\\n' \"$PROYECCION_1_ID\" \"$CINE_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Cine del Parque",
+            "code": "curl -i -X POST \"http://localhost:3000/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine del Parque\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar cines",
+            "code": "curl -i \"http://localhost:3000/cines\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos cines y tres proyecciones de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /cines muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Cine Alameda",
-          "Viaje al norte y otra proyeccion",
-          "Cine del Parque",
-          "La última estación"
+          "POST /cines",
+          "Controller / Handler",
+          "Service",
+          "GET /cines"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/proyecciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"pelicula\\\":\\\"Registro de prueba\\\",\\\"duracionMinutos\\\":91,\\\"cineId\\\":$CINE_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/proyecciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Viaje al norte",
+            "code": "curl -i -X POST \"http://localhost:3000/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Viaje al norte\",\"duracionMinutos\":90,\"cineId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir La última estación",
+            "code": "curl -i -X POST \"http://localhost:3000/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"La última estación\",\"duracionMinutos\":125,\"cineId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Viaje al norte · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Viaje al norte · nuevo\",\"duracionMinutos\":305,\"cineId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/proyecciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro proyecciones. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/proyecciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/proyecciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/proyecciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/proyecciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la proyeccion de prueba. Siguen las tres proyecciones originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar duración",
-            "code": "curl -i -X PATCH \"http://localhost:3000/proyecciones/$PROYECCION_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionMinutos\":215}'\ncurl -i http://localhost:3000/proyecciones",
+            "title": "Cambiar duración",
+            "code": "curl -i -X PATCH \"http://localhost:3000/proyecciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionMinutos\":215}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/proyecciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La proyeccion principal tiene duración 215 y conserva su cine.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/proyecciones/$PROYECCION_1_ID/cine\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"cineId\\\":$CINE_2_ID}\"\ncurl -i http://localhost:3000/proyecciones",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/proyecciones/1/cine\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cineId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/proyecciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La proyeccion principal pasa al segundo cine y conserva su duración 215.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PROYECCION_1_ID es el ID real de «Viaje al norte»; PROYECCION_2_ID, el de «La última estación». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/proyecciones/proyecciones.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/cines/$CINE_2_ID/proyecciones?minimo=126\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/cines/2/proyecciones?minimo=126\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo cine y la proyeccion principal; el filtro excluye las otras dos proyecciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"PROYECCIONES_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/crear-listar/repository.mjs",
+            "path": "src/cines/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_CINE } from '../../models/cine-proyeccion.model.mjs';\n\nexport async function crearCineRepository(cine) {\n  await MODELO_CINE.build(EntityRepository).put(\n    cine,\n    { condition: { attr: 'cineId', exists: false } }\n  );\n}\n\nexport async function listarCinesRepository() {\n  const { Items = [] } = await MODELO_CINE.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/cines/crear-listar\ncode src/cines/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/crear-listar/service.mjs",
+            "path": "src/cines/crear-listar/service.mjs",
+            "code": "import { crearCineRepository, listarCinesRepository } from './repository.mjs';\n\nexport async function crearCineService(nombre) {\n  const cineId = Date.now();\n  const cine = { cineId, nombre };\n  await crearCineRepository(cine);\n  return cine;\n}\n\nexport function listarCinesService() {\n  return listarCinesRepository();\n}",
+            "create": "mkdir -p src/cines/crear-listar\ncode src/cines/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/cines/crear-listar/handler.mjs",
+            "path": "src/cines/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine Alameda\"}'\ncurl -i \"$API_URL/cines\"\n*/\n// POST /cines con JSON: {\"nombre\":\"Cine Alameda\"}\n// GET /cines lista los registros y sus IDs.\nimport { crearCineService, listarCinesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const cine = await crearCineService(nombre);\n  return { statusCode: 201, body: JSON.stringify(cine) };\n}\n\nexport async function listarHandler() {\n  const cines = await listarCinesService();\n  return { statusCode: 200, body: JSON.stringify(cines) };\n}",
+            "create": "mkdir -p src/cines/crear-listar\ncode src/cines/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen CINES_tuEquipo y PROYECCIONES_tuEquipo. PK del lado N: PROYECCION_ID; índice: PorCine. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar cines antes de crear proyecciones.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar cines por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Cine 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"CINES_${TALLER_EQUIPO}\\\" VALUE {'CINE_ID':1,'NOMBRE':'Cine Alameda'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Cine Alameda",
+            "code": "curl -i -X POST \"$API_URL/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine Alameda\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cine 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"CINES_${TALLER_EQUIPO}\\\" VALUE {'CINE_ID':2,'NOMBRE':'Cine del Parque'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Cine del Parque",
+            "code": "curl -i -X POST \"$API_URL/cines\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cine del Parque\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Proyeccion 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PROYECCIONES_${TALLER_EQUIPO}\\\" VALUE {'PROYECCION_ID':7,'PELICULA':'Viaje al norte','DURACION_MINUTOS':90,'CINE_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Proyeccion 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PROYECCIONES_${TALLER_EQUIPO}\\\" VALUE {'PROYECCION_ID':8,'PELICULA':'La última estación','DURACION_MINUTOS':125,'CINE_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Proyeccion 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PROYECCIONES_${TALLER_EQUIPO}\\\" VALUE {'PROYECCION_ID':9,'PELICULA':'Viaje al norte · nuevo','DURACION_MINUTOS':305,'CINE_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"CINES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PROYECCIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar cines",
+            "code": "curl -i \"$API_URL/cines\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Cine y tres de Proyeccion, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /cines muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Cine 1",
-          "Proyeccion 7 y 9",
-          "Cine 2",
-          "Proyeccion 8"
+          "POST /cines",
+          "Controller / Handler",
+          "Service",
+          "GET /cines"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/proyecciones/crear-listar/handler.mjs\nnode --check src/proyecciones/crear-listar/service.mjs\nnode --check src/proyecciones/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/proyecciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).proyeccionId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/proyecciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Viaje al norte",
+            "code": "curl -i -X POST \"$API_URL/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Viaje al norte\",\"duracionMinutos\":90,\"cineId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarProyecciones --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir La última estación",
+            "code": "curl -i -X POST \"$API_URL/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"La última estación\",\"duracionMinutos\":125,\"cineId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Viaje al norte · nuevo",
+            "code": "curl -i -X POST \"$API_URL/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Viaje al norte · nuevo\",\"duracionMinutos\":305,\"cineId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/proyecciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"pelicula\":\"Registro de prueba\",\"duracionMinutos\":91,\"cineId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/proyecciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/proyecciones/eliminar/handler.mjs\nnode --check src/proyecciones/eliminar/service.mjs\nnode --check src/proyecciones/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/proyecciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/proyecciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/proyecciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/proyecciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/proyecciones/modificar-duracion-minutos/handler.mjs\nnode --check src/proyecciones/modificar-duracion-minutos/service.mjs\nnode --check src/proyecciones/modificar-duracion-minutos/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar duración",
-            "code": "curl -i -X PATCH \"$API_URL/proyecciones/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionMinutos\":215}'\ncurl -i \"$API_URL/proyecciones\"",
+            "title": "Cambiar duración",
+            "code": "curl -i -X PATCH \"$API_URL/proyecciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionMinutos\":215}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/proyecciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · duracionMinutos = 215 min · cineId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n  trasladarProyeccion:\n    handler: src/proyecciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/cine' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n  trasladarProyeccion:\n    handler: src/proyecciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/cine' }\n\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/proyecciones/trasladar/handler.mjs\nnode --check src/proyecciones/trasladar/service.mjs\nnode --check src/proyecciones/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/proyecciones/7/cine\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cineId\":2}'\ncurl -i \"$API_URL/proyecciones\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/proyecciones/1/cine\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"cineId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/proyecciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · duracionMinutos = 215 min · cineId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n  trasladarProyeccion:\n    handler: src/proyecciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/cine' }\n  consultarCine:\n    handler: src/cines/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/cines/{cineId}/proyecciones' }\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
+            "code": "service: taller-ch13\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_CINES: { Ref: TablaCines }\n    TABLA_PROYECCIONES: { Ref: TablaProyecciones }\n\n\nfunctions:\n  crearCine:\n    handler: src/cines/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cines }\n  listarCines:\n    handler: src/cines/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cines }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearProyeccion:\n    handler: src/proyecciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/proyecciones' }\n  listarProyecciones:\n    handler: src/proyecciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/proyecciones' }\n  eliminarProyeccion:\n    handler: src/proyecciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/proyecciones/{proyeccionId}' }\n  modificarDuracionMinutos:\n    handler: src/proyecciones/modificar-duracion-minutos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}' }\n  trasladarProyeccion:\n    handler: src/proyecciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/proyecciones/{proyeccionId}/cine' }\n  consultarCine:\n    handler: src/cines/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/cines/{cineId}/proyecciones' }\nresources:\n  Resources:\n    TablaCines:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: CINES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: CINE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_CINE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: CINE_ID\n            KeyType: HASH  # Partition key del cine.\n\n    TablaProyecciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PROYECCIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PROYECCION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   PELICULA (S: texto).\n        #   DURACION_MINUTOS (N: número).\n        #   CINE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PROYECCION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PROYECCION_ID, AttributeType: N }\n          - { AttributeName: CINE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PROYECCION_ID\n            KeyType: HASH  # Partition key de la proyeccion.\n\n        # GSI: segunda forma de buscar en PROYECCIONES.\n        # Global: reúne proyecciones de toda la tabla por cine.\n        GlobalSecondaryIndexes:\n          - IndexName: PorCine\n            # Clave compuesta = partition key + sort key:\n            # (CINE_ID, PROYECCION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: CINE_ID\n                KeyType: HASH   # Partition key. Agrupa por cine.\n              - AttributeName: PROYECCION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PROYECCIONES copiados al índice.\n                - PELICULA\n                - DURACION_MINUTOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/cines/consultar/handler.mjs\nnode --check src/cines/consultar/service.mjs\nnode --check src/cines/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/cines/2/proyecciones?minimo=126\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/cines/2/proyecciones?minimo=126\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Cine del Parque + registro 7 (215 min). Excluye el 8 (125 min) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PROYECCIONES_${TALLER_EQUIPO}\\\" WHERE PROYECCION_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

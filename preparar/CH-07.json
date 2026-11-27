@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ExcursionesModule } from './excursiones/excursiones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ExcursionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ExcursionesModule } from './excursiones/excursiones.module';\n\nimport { AgenciasModule } from './agencias/agencias.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AgenciasModule,\n    ExcursionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ExcursionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás AGENCIA y EXCURSION, creadas por TypeORM con la FK ID_AGENCIA.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/agencias.service.ts",
+            "path": "src/agencias/agencias.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Agencia } from './entities/agencia.entity';\n\n@Injectable()\nexport class AgenciasService {\n  constructor(\n    @InjectRepository(Agencia) private readonly agencias: Repository<Agencia>\n  ) {}\n\n  crearAgencia(nombre: string) {\n    const agencia = this.agencias.create({ nombre });\n    return this.agencias.save(agencia);\n  }\n\n  listarAgencias() {\n    return this.agencias.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/agencias\ncode src/agencias/agencias.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/agencias.controller.ts",
+            "path": "src/agencias/agencias.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Horizonte\"}'\ncurl -i \"http://localhost:3000/agencias\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AgenciasService } from './agencias.service';\n\n@Controller('agencias')\nexport class AgenciasController {\n  constructor(private readonly service: AgenciasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearAgencia(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAgencias();\n  }\n}",
+            "create": "mkdir -p src/agencias\ncode src/agencias/agencias.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/agencias.module.ts",
+            "path": "src/agencias/agencias.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Agencia } from './entities/agencia.entity';\nimport { AgenciasService } from './agencias.service';\nimport { AgenciasController } from './agencias.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Agencia])],\n  providers: [AgenciasService],\n  controllers: [AgenciasController]\n})\nexport class AgenciasModule {}",
+            "create": "mkdir -p src/agencias\ncode src/agencias/agencias.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado AGENCIA y EXCURSION desde las Entities. AppModule importa ExcursionesModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar agencias antes de crear excursiones.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar agencias por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Agencia } from '../agencias/entities/agencia.entity';\nimport { Excursion } from '../excursiones/entities/excursion.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const agencias = db.getRepository(Agencia);\n    const excursiones = db.getRepository(Excursion);\n\n    const primero = await agencias.findOneBy({ nombre: 'Agencia Horizonte' })\n      ?? await agencias.save({ nombre: 'Agencia Horizonte' });\n    const segundo = await agencias.findOneBy({ nombre: 'Agencia Camino' })\n      ?? await agencias.save({ nombre: 'Agencia Camino' });\n\n    const principal = await excursiones.findOneBy({ nombre: 'Ruta del bosque' })\n      ?? await excursiones.save({ nombre: 'Ruta del bosque', duracionHoras: 2, agencia: primero });\n    const secundaria = await excursiones.findOneBy({ nombre: 'Visita al castillo' })\n      ?? await excursiones.save({ nombre: 'Visita al castillo', duracionHoras: 6, agencia: segundo });\n    const otra = await excursiones.findOneBy({ nombre: 'Ruta del bosque · nuevo' })\n      ?? await excursiones.save({ nombre: 'Ruta del bosque · nuevo', duracionHoras: 10, agencia: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export AGENCIA_1_ID=${primero.id}`,\n      `export AGENCIA_2_ID=${segundo.id}`,\n      `export EXCURSION_1_ID=${principal.id}`,\n      `export EXCURSION_2_ID=${secundaria.id}`,\n      `export EXCURSION_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await excursiones.find({ relations: { agencia: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Agencia Horizonte",
+            "code": "curl -i -X POST \"http://localhost:3000/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Horizonte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Excursion principal: %s\\nOtro agencia: %s\\n' \"$EXCURSION_1_ID\" \"$AGENCIA_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Agencia Camino",
+            "code": "curl -i -X POST \"http://localhost:3000/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Camino\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar agencias",
+            "code": "curl -i \"http://localhost:3000/agencias\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos agencias y tres excursiones de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /agencias muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Agencia Horizonte",
-          "Ruta del bosque y otra excursion",
-          "Agencia Camino",
-          "Visita al castillo"
+          "POST /agencias",
+          "Controller / Handler",
+          "Service",
+          "GET /agencias"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/excursiones/excursiones.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/excursiones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"duracionHoras\\\":3,\\\"agenciaId\\\":$AGENCIA_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/excursiones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ruta del bosque",
+            "code": "curl -i -X POST \"http://localhost:3000/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del bosque\",\"duracionHoras\":2,\"agenciaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Visita al castillo",
+            "code": "curl -i -X POST \"http://localhost:3000/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Visita al castillo\",\"duracionHoras\":6,\"agenciaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ruta del bosque · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del bosque · nuevo\",\"duracionHoras\":10,\"agenciaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/excursiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro excursiones. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/excursiones/excursiones.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/excursiones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/excursiones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/excursiones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/excursiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la excursion de prueba. Siguen las tres excursiones originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/excursiones/excursiones.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar duración",
-            "code": "curl -i -X PATCH \"http://localhost:3000/excursiones/$EXCURSION_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionHoras\":8}'\ncurl -i http://localhost:3000/excursiones",
+            "title": "Cambiar duración",
+            "code": "curl -i -X PATCH \"http://localhost:3000/excursiones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionHoras\":8}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/excursiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La excursion principal tiene duración 8 y conserva su agencia.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/excursiones/excursiones.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/excursiones/$EXCURSION_1_ID/agencia\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"agenciaId\\\":$AGENCIA_2_ID}\"\ncurl -i http://localhost:3000/excursiones",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/excursiones/1/agencia\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"agenciaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/excursiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La excursion principal pasa al segundo agencia y conserva su duración 8.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. EXCURSION_1_ID es el ID real de «Ruta del bosque»; EXCURSION_2_ID, el de «Visita al castillo». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/excursiones/excursiones.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/agencias/$AGENCIA_2_ID/excursiones?minimo=7\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/agencias/2/excursiones?minimo=7\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo agencia y la excursion principal; el filtro excluye las otras dos excursiones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"EXCURSIONES_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/crear-listar/repository.mjs",
+            "path": "src/agencias/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AGENCIA } from '../../models/agencia-excursion.model.mjs';\n\nexport async function crearAgenciaRepository(agencia) {\n  await MODELO_AGENCIA.build(EntityRepository).put(\n    agencia,\n    { condition: { attr: 'agenciaId', exists: false } }\n  );\n}\n\nexport async function listarAgenciasRepository() {\n  const { Items = [] } = await MODELO_AGENCIA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/agencias/crear-listar\ncode src/agencias/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/crear-listar/service.mjs",
+            "path": "src/agencias/crear-listar/service.mjs",
+            "code": "import { crearAgenciaRepository, listarAgenciasRepository } from './repository.mjs';\n\nexport async function crearAgenciaService(nombre) {\n  const agenciaId = Date.now();\n  const agencia = { agenciaId, nombre };\n  await crearAgenciaRepository(agencia);\n  return agencia;\n}\n\nexport function listarAgenciasService() {\n  return listarAgenciasRepository();\n}",
+            "create": "mkdir -p src/agencias/crear-listar\ncode src/agencias/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/agencias/crear-listar/handler.mjs",
+            "path": "src/agencias/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Horizonte\"}'\ncurl -i \"$API_URL/agencias\"\n*/\n// POST /agencias con JSON: {\"nombre\":\"Agencia Horizonte\"}\n// GET /agencias lista los registros y sus IDs.\nimport { crearAgenciaService, listarAgenciasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const agencia = await crearAgenciaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(agencia) };\n}\n\nexport async function listarHandler() {\n  const agencias = await listarAgenciasService();\n  return { statusCode: 200, body: JSON.stringify(agencias) };\n}",
+            "create": "mkdir -p src/agencias/crear-listar\ncode src/agencias/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen AGENCIAS_tuEquipo y EXCURSIONES_tuEquipo. PK del lado N: EXCURSION_ID; índice: PorAgencia. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar agencias antes de crear excursiones.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar agencias por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Agencia 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AGENCIAS_${TALLER_EQUIPO}\\\" VALUE {'AGENCIA_ID':1,'NOMBRE':'Agencia Horizonte'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Agencia Horizonte",
+            "code": "curl -i -X POST \"$API_URL/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Horizonte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Agencia 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AGENCIAS_${TALLER_EQUIPO}\\\" VALUE {'AGENCIA_ID':2,'NOMBRE':'Agencia Camino'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Agencia Camino",
+            "code": "curl -i -X POST \"$API_URL/agencias\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Agencia Camino\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Excursion 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EXCURSIONES_${TALLER_EQUIPO}\\\" VALUE {'EXCURSION_ID':7,'NOMBRE':'Ruta del bosque','DURACION_HORAS':2,'AGENCIA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Excursion 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EXCURSIONES_${TALLER_EQUIPO}\\\" VALUE {'EXCURSION_ID':8,'NOMBRE':'Visita al castillo','DURACION_HORAS':6,'AGENCIA_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Excursion 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"EXCURSIONES_${TALLER_EQUIPO}\\\" VALUE {'EXCURSION_ID':9,'NOMBRE':'Ruta del bosque · nuevo','DURACION_HORAS':10,'AGENCIA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"AGENCIAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"EXCURSIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar agencias",
+            "code": "curl -i \"$API_URL/agencias\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Agencia y tres de Excursion, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /agencias muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Agencia 1",
-          "Excursion 7 y 9",
-          "Agencia 2",
-          "Excursion 8"
+          "POST /agencias",
+          "Controller / Handler",
+          "Service",
+          "GET /agencias"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/excursiones/crear-listar/handler.mjs\nnode --check src/excursiones/crear-listar/service.mjs\nnode --check src/excursiones/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/excursiones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).excursionId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/excursiones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ruta del bosque",
+            "code": "curl -i -X POST \"$API_URL/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del bosque\",\"duracionHoras\":2,\"agenciaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarExcursiones --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Visita al castillo",
+            "code": "curl -i -X POST \"$API_URL/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Visita al castillo\",\"duracionHoras\":6,\"agenciaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ruta del bosque · nuevo",
+            "code": "curl -i -X POST \"$API_URL/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ruta del bosque · nuevo\",\"duracionHoras\":10,\"agenciaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/excursiones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"duracionHoras\":3,\"agenciaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/excursiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/excursiones/eliminar/handler.mjs\nnode --check src/excursiones/eliminar/service.mjs\nnode --check src/excursiones/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/excursiones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/excursiones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/excursiones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/excursiones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/excursiones/modificar-duracion-horas/handler.mjs\nnode --check src/excursiones/modificar-duracion-horas/service.mjs\nnode --check src/excursiones/modificar-duracion-horas/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar duración",
-            "code": "curl -i -X PATCH \"$API_URL/excursiones/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionHoras\":8}'\ncurl -i \"$API_URL/excursiones\"",
+            "title": "Cambiar duración",
+            "code": "curl -i -X PATCH \"$API_URL/excursiones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"duracionHoras\":8}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/excursiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · duracionHoras = 8 h · agenciaId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n  trasladarExcursion:\n    handler: src/excursiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/agencia' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n  trasladarExcursion:\n    handler: src/excursiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/agencia' }\n\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/excursiones/trasladar/handler.mjs\nnode --check src/excursiones/trasladar/service.mjs\nnode --check src/excursiones/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/excursiones/7/agencia\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"agenciaId\":2}'\ncurl -i \"$API_URL/excursiones\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/excursiones/1/agencia\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"agenciaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/excursiones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · duracionHoras = 8 h · agenciaId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n  trasladarExcursion:\n    handler: src/excursiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/agencia' }\n  consultarAgencia:\n    handler: src/agencias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/agencias/{agenciaId}/excursiones' }\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
+            "code": "service: taller-ch07\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AGENCIAS: { Ref: TablaAgencias }\n    TABLA_EXCURSIONES: { Ref: TablaExcursiones }\n\n\nfunctions:\n  crearAgencia:\n    handler: src/agencias/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /agencias }\n  listarAgencias:\n    handler: src/agencias/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /agencias }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearExcursion:\n    handler: src/excursiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/excursiones' }\n  listarExcursiones:\n    handler: src/excursiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/excursiones' }\n  eliminarExcursion:\n    handler: src/excursiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/excursiones/{excursionId}' }\n  modificarDuracionHoras:\n    handler: src/excursiones/modificar-duracion-horas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}' }\n  trasladarExcursion:\n    handler: src/excursiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/excursiones/{excursionId}/agencia' }\n  consultarAgencia:\n    handler: src/agencias/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/agencias/{agenciaId}/excursiones' }\nresources:\n  Resources:\n    TablaAgencias:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AGENCIAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AGENCIA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AGENCIA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AGENCIA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaExcursiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: EXCURSIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: EXCURSION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   DURACION_HORAS (N: número).\n        #   AGENCIA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_EXCURSION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: EXCURSION_ID, AttributeType: N }\n          - { AttributeName: AGENCIA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: EXCURSION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en EXCURSIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAgencia\n            # Clave compuesta = partition key + sort key:\n            # (AGENCIA_ID, EXCURSION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AGENCIA_ID\n                KeyType: HASH   # Partition key. Agrupa por Agencia.\n              - AttributeName: EXCURSION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de EXCURSIONES copiados al índice.\n                - NOMBRE\n                - DURACION_HORAS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/agencias/consultar/handler.mjs\nnode --check src/agencias/consultar/service.mjs\nnode --check src/agencias/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/agencias/2/excursiones?minimo=7\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/agencias/2/excursiones?minimo=7\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Agencia Camino + registro 7 (8 h). Excluye el 8 (6 h) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"EXCURSIONES_${TALLER_EQUIPO}\\\" WHERE EXCURSION_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

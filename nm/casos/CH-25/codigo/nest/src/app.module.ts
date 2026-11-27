@@ -7,6 +7,8 @@ import { ProgramasModule } from './programas/programas.module';
 import { LocutoresModule } from './locutores/locutores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { EmisorasModule } from './emisoras/emisoras.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    EmisorasModule,
     ProgramasModule,
     LocutoresModule,
     AsignacionesModule

@@ -7,6 +7,8 @@ import { ZonasModule } from './zonas/zonas.module';
 import { JardinerosModule } from './jardineros/jardineros.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { ParquesModule } from './parques/parques.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    ParquesModule,
     ZonasModule,
     JardinerosModule,
     AsignacionesModule

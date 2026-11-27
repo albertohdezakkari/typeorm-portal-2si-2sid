@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Taller",
+        "path": "src/talleres/talleres.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Taller } from './entities/taller.entity';\n\n@Injectable()\nexport class TalleresService {\n  constructor(\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearTaller(nombre: string) {\n    const taller = this.talleres.create({ nombre });\n    return this.talleres.save(taller);\n  }\n\n  listarTalleres() {\n    return this.talleres.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.talleres.save(taller);",
+            "title": "Service · Taller",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Taller",
+        "path": "src/talleres/talleres.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\ncurl -i \"http://localhost:3000/talleres\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { TalleresService } from './talleres.service';\n\n@Controller('talleres')\nexport class TalleresController {\n  constructor(private readonly service: TalleresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearTaller(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarTalleres();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Taller",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Taller",
+        "path": "src/talleres/talleres.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './entities/taller.entity';\nimport { TalleresService } from './talleres.service';\nimport { TalleresController } from './talleres.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller])],\n  providers: [TalleresService],\n  controllers: [TalleresController]\n})\nexport class TalleresModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Taller",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar talleres",
+        "path": "Peticiones · talleres",
+        "code": "curl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\n\ncurl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller del Barrio\"}'\n\ncurl -i \"http://localhost:3000/talleres\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/talleres\" \\",
+            "title": "Crear y listar talleres",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/reparaciones/reparaciones.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /reparaciones\n{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}\n\n201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/reparaciones\"\n\ncurl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos\",\"costeCentimos\":2500,\"tallerId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cambio de cadena\",\"costeCentimos\":7000,\"tallerId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos · nuevo\",\"costeCentimos\":12000,\"tallerId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}'\n\ncurl -i \"http://localhost:3000/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /reparaciones/10\n\n204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/reparaciones/4\"\n\ncurl -i \"http://localhost:3000/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /reparaciones/7\n{\"costeCentimos\":9500}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'\n\ncurl -i \"http://localhost:3000/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /reparaciones/7/taller\n{\"tallerId\":2}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/1/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tallerId\":2}'\n\ncurl -i \"http://localhost:3000/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /talleres/2/reparaciones?minimo=7001\n\n200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/talleres/2/reparaciones?minimo=7001\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /reparaciones }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /reparaciones }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /reparaciones/{reparacionId} }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId} }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId}/taller }\n  consultarTaller:\n    handler: src/talleres/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /talleres/{tallerId}/reparaciones }",
+        "code": "functions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /reparaciones }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /reparaciones }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /reparaciones/{reparacionId} }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId} }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /reparaciones/{reparacionId}/taller }\n  consultarTaller:\n    handler: src/talleres/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /talleres/{tallerId}/reparaciones }",
         "cues": [
           {
             "text": "src/reparaciones/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Taller",
+        "path": "src/talleres/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_TALLER } from '../../models/taller-reparacion.model.mjs';\n\nexport async function crearTallerRepository(taller) {\n  await MODELO_TALLER.build(EntityRepository).put(\n    taller,\n    { condition: { attr: 'tallerId', exists: false } }\n  );\n}\n\nexport async function listarTalleresRepository() {\n  const { Items = [] } = await MODELO_TALLER.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Taller",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Taller",
+        "path": "src/talleres/crear-listar/service.mjs",
+        "code": "import { crearTallerRepository, listarTalleresRepository } from './repository.mjs';\n\nexport async function crearTallerService(nombre) {\n  const tallerId = Date.now();\n  const taller = { tallerId, nombre };\n  await crearTallerRepository(taller);\n  return taller;\n}\n\nexport function listarTalleresService() {\n  return listarTalleresRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Taller",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Taller",
+        "path": "src/talleres/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\ncurl -i \"$API_URL/talleres\"\n*/\n// POST /talleres con JSON: {\"nombre\":\"Taller Norte\"}\n// GET /talleres lista los registros y sus IDs.\nimport { crearTallerService, listarTalleresService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const taller = await crearTallerService(nombre);\n  return { statusCode: 201, body: JSON.stringify(taller) };\n}\n\nexport async function listarHandler() {\n  const talleres = await listarTalleresService();\n  return { statusCode: 200, body: JSON.stringify(talleres) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Taller",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar talleres",
+        "path": "Peticiones · talleres",
+        "code": "curl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\n\ncurl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller del Barrio\"}'\n\ncurl -i \"$API_URL/talleres\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/talleres\" \\",
+            "title": "Crear y listar talleres",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /reparaciones\n{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}\n\n201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /reparaciones → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/reparaciones\"\n\ncurl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos\",\"costeCentimos\":2500,\"tallerId\":1}'\n\ncurl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cambio de cadena\",\"costeCentimos\":7000,\"tallerId\":2}'\n\ncurl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos · nuevo\",\"costeCentimos\":12000,\"tallerId\":1}'\n\ncurl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}'\n\ncurl -i \"$API_URL/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /reparaciones/10\n\n204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /reparaciones → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/reparaciones/4\"\n\ncurl -i \"$API_URL/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /reparaciones/7\n{\"costeCentimos\":9500}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/reparaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'\n\ncurl -i \"$API_URL/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /reparaciones/7/taller\n{\"tallerId\":2}\n\n200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/reparaciones/1/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tallerId\":2}'\n\ncurl -i \"$API_URL/reparaciones\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /talleres/2/reparaciones?minimo=7001\n\n200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/talleres/2/reparaciones?minimo=7001\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

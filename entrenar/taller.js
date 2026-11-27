@@ -1,3 +1,4 @@
+import { montarPeticiones } from '../peticiones.js?v=altas-api-1';
 export function montarTaller(data, {estadoInicial=null, guardar=()=>{}}={}) {
 
 const root=document.getElementById('pdf-taller'),D=data,C=D.context,P=C.parent,N=C.child,M=C.metric;
@@ -21,6 +22,13 @@ function restore(p){
   if(migration&&p.track==='nest'){p.index=migration.positions[p.index]??0;p.frame=0;p.mode='observe';p.full=false;}
   else if(p.track==='nest'&&p.index>=4){const chapter=D.legacyNestChapters?.[p.index]??0;p.index=chapter===0?4:Math.max(0,D.steps.nest.findIndex(s=>s.chapter===chapter));p.frame=0;p.mode='observe';p.full=false;}
  }
+ if(D.apiRevision&&p.apiRevision!==D.apiRevision){
+  p=structuredClone(p);
+  const remap=k=>{const [t,n]=String(k).split(':'),m=D.apiMigration?.[t];return m&&Object.hasOwn(m.retained,n)?t+':'+m.retained[n]:null;};
+  p.answers=Object.fromEntries(Object.entries(p.answers||{}).map(([k,v])=>[remap(k),v]).filter(([k])=>k));
+  p.solved=(p.solved||[]).map(remap).filter(Boolean);p.observed=(p.observed||[]).map(remap).filter(Boolean);
+  p.index=D.apiMigration?.[p.track]?.positions[p.index]??p.index;p.frame=0;p.mode='observe';p.full=true;
+ }
  track=p.track==='cloud'?'cloud':'nest';index=Number.isInteger(p.index)?Math.max(0,Math.min(p.index,D.steps[track].length-1)):0;
  const revised=new Set((p.preparationRevision??0)!==(D.preparationRevision??0)?D.revisedSteps||[]:[]);
  if((p.entityAccessRevision??0)!==(D.entityAccessRevision??0))for(const k of D.entityAccessSteps||[])revised.add(k);
@@ -35,7 +43,7 @@ function restore(p){
  if(revised.has(key())){mode='observe';frame=0;full=false;}
 }
 restore(estadoInicial);
-const persist=()=>guardar({version:5,caseId:C.id,...(simpleNest?{nestSimpleRevision:D.nestSimpleRevision}:{}),preparationRevision:D.preparationRevision??0,entityAccessRevision:D.entityAccessRevision??0,track,index,frame,mode,full,solved:[...solved],observed:[...observed],answers:structuredClone(answers)});
+const persist=()=>guardar({version:5,caseId:C.id,apiRevision:D.apiRevision??0,...(simpleNest?{nestSimpleRevision:D.nestSimpleRevision}:{}),preparationRevision:D.preparationRevision??0,entityAccessRevision:D.entityAccessRevision??0,track,index,frame,mode,full,solved:[...solved],observed:[...observed],answers:structuredClone(answers)});
 function stop(){playing=false;clearTimeout(timer);timer=null;root.querySelectorAll('.p-fly').forEach(x=>x.remove());cancelDrag();}
 function feedback(text,kind=''){ $('[data-feedback]').textContent=text;$('[data-feedback]').dataset.kind=kind;if(D.projectBase&&kind==='error'&&$('[data-guide-instruction]'))$('[data-guide-instruction]').textContent=text; }
 const isRelation=()=>stage().path==='Modelo entidad–relación';
@@ -171,9 +179,11 @@ function nestDiagram(){
 }
 function nestUse(){return `<div class="p-model-use"><span class="p-model-label">${simpleNest?'EL SERVICE UTILIZA LAS ENTITIES':'ESTE REPOSITORY UTILIZA LAS ENTITIES'}</span><code>${stage().chapter===5?'@InjectRepository('+esc(P.entity)+') → Repository&lt;'+esc(P.entity)+'&gt;<br>':''}@InjectRepository(${esc(N.entity)}) → Repository&lt;${esc(N.entity)}&gt;</code><button type="button" class="p-btn cursor-interaction" data-entity-review>Revisar Entities y relación ↗</button></div>`;}
 function renderScene(){
-const s=stage(),cue=s.cues[frame],c=s.chapter,after=(s.name==='Repository'||(simpleNest&&track==='nest'&&s.name==='Service')||s.scene==='result')&&(readingMode||solved.has(key())||(mode==='observe'&&frame===s.cues.length-1)),isCloud=track==='cloud';
+const s=stage(),cue=s.cues[frame]||{title:'Lee el archivo completo',note:'Guarda el archivo y prueba la API.',text:''},c=s.chapter,after=(s.name==='Repository'||(simpleNest&&track==='nest'&&s.name==='Service')||s.scene==='result')&&(readingMode||solved.has(key())||(mode==='observe'&&frame===s.cues.length-1)),isCloud=track==='cloud';
 let html='';
-if(isRelation()){
+if(s.scene==='parent-api'){
+ html=`<div class="p-transport">POST /${esc(P.route)} · GET /${esc(P.route)}</div><div class="p-flow"><div class="p-layer">${track==='nest'?'Controller':'Handler'}</div><div class="p-layer">Service</div><div class="p-layer">${track==='nest'?'Entity / TypeORM':'Repository / Entity'}</div></div><div class="p-db">${esc(P.sql)}</div><p>Crea primero ${esc(P.entity)}. Su ID se utiliza después en ${esc(N.entity)}.${esc(P.property)}.</p>`;
+}else if(isRelation()){
  html=`<div class="p-er-example"><div class="p-er-example-head">La misma relación, con datos</div><div class="p-er-owner"><div><b>${esc(P.examples[0])}</b><small>${esc(P.sql)}</small></div><span class="p-er-id">ID = 1</span></div><div class="p-er-fan" aria-hidden="true"></div><div class="p-er-children">${D.fixtures.filter(p=>p.parent===1).map(p=>`<div class="p-er-child" data-lit="${frame===1}"><b>${esc(p.name)}</b><small>PK · ID = ${p.id}</small><span class="p-er-fk-value">${mode==='build'?'FK':esc(C.foreignKey)} = 1</span></div>`).join('')}</div><p class="p-er-example-note">Dos IDs distintos, <b>7 y 9</b>. La misma referencia al <b>ID 1 de ${esc(P.entity)}</b>.</p></div>`;
 }else if(!isCloud&&s.scene.startsWith('nest-')){
  html=nestDiagram();
@@ -199,6 +209,7 @@ const review=$('[data-model-review]');if(review)review.onclick=()=>{modelReturn=
 const back=$('[data-model-return]');if(back)back.onclick=()=>{const target=modelReturn;modelReturn=null;go(target);};
 $$('[data-nest-step]').forEach(b=>b.onclick=()=>go(+b.dataset.nestStep));
 const entities=$('[data-entity-review]');if(entities)entities.onclick=()=>{entityReturn=index;go(1);};
+if(readingMode)$('[data-cue]').hidden=!s.cues.length;
 if(readingMode)$('[data-cue]').innerHTML=`<div class="reading-notes"><h3>Cómo leer este archivo</h3>${s.cues.map(c=>`<section><b>${esc(c.title)}</b><code>${esc(c.text)}</code><p>${esc(c.note)}</p></section>`).join('')}</div>`;
 const entityBack=$('[data-entity-return]');if(entityBack)entityBack.onclick=()=>{const target=entityReturn;entityReturn=null;go(target);};
 }
@@ -285,6 +296,7 @@ function updateGuidance(){
   $('[data-guide-instruction]').textContent=s.scene==='result'?'Ejecuta las comprobaciones en tu terminal. Después continúa con el siguiente caso.':'Lee el archivo completo y las notas. Copia el contenido en el archivo indicado y guárdalo antes de continuar.';
   const returning=Boolean($('[data-entity-return],[data-model-return]'));
   primary.textContent=returning?'Volver al caso':index===list.length-1?(observed.has(key())?'Recorrido revisado':'Marcar como revisado'):'Continuar: '+list[index+1].name;
+  if(s.apiStage&&s.path.startsWith('Peticiones'))$('[data-guide-instruction]').textContent=(track==='nest'?'En Terminal 1, ejecuta npm run start:dev y déjalo abierto. Prueba los curl en Terminal 2.':'Guarda los archivos, ejecuta npm run package y npm run deploy. Después prueba los curl con tu API_URL.')+' Cada POST devuelve un ID: úsalo en la siguiente petición.';
   primary.disabled=!returning&&index===list.length-1&&observed.has(key());
   $('[data-guide-back]').disabled=index===0;$('[data-copy-file]').textContent='Copiar contenido completo';return;
  }
@@ -317,7 +329,7 @@ function renderPractice(){
   const connection=phases.find(x=>x.id==='conexion');
   const additions=track==='nest'?(connection?.blocks.filter(b=>b.path==='src/salud.controller.ts'||b.kind==='instruction')||[]):[];
   const url=track==='cloud'?phases.find(x=>x.id==='desplegar')?.blocks.filter(b=>b.title==='Obtén la URL del stack')||[]:[];
-  blocks=[...additions,...phase.blocks.filter(b=>b.kind!=='file'||!studied.has(b.path)),...url,...phases.find(x=>x.id==='datos').blocks];
+  blocks=[...additions,...phase.blocks.filter(b=>b.kind!=='file'||!studied.has(b.path)),...url];
  }else{
   // Los archivos de las capas se estudian arriba. El YAML acumulativo permite desplegar cada caso.
   blocks=phase.blocks.filter(b=>b.kind!=='file'||b.path==='serverless.yml');
@@ -332,14 +344,14 @@ function renderPractice(){
   const inner=instructions+create+code+(explanation?`<p>${esc(explanation)}</p>`:'');
   return b.kind==='file'?`<details class="p-practice-block"${readingMode?' open':''}><summary>${esc(b.path)}</summary>${inner}</details>`:`<section class="p-practice-block"><h3>${esc(b.title)}</h3>${inner}</section>`;
  }).join('');
- host.innerHTML=`<header><span class="p-label">EN TU PROYECTO · ${track==='nest'?'NEST + TYPEORM':'SERVERLESS + TOOLBOX'}</span><h2>${models?'Aplica el modelo y prepara los datos':'Prueba este caso desde tu terminal'}</h2><p>${models?'Continúa en el backend que ya preparaste siguiendo su README. Los archivos de las Entities y las capas están arriba; aquí tienes su conexión con la aplicación y los datos de ejemplo.':track==='nest'?'Guarda los archivos del caso y mantén Nest abierto en Terminal 1. Ejecuta las pruebas en Terminal 2, dentro de backend. Sigue los casos en orden; conserva el ID devuelto al crear.':'Guarda los archivos del caso. Usa la sesión AWS y API_URL de tu proyecto; estos comandos se ejecutan en su terminal. Sigue los casos en orden y conserva el ID devuelto al crear.'}</p></header>${content}<div class="p-practice-expect"><strong>Qué debes comprobar</strong><p>${esc(models?phases.find(x=>x.id==='datos').expect:phase.expect)}</p><small>El cuaderno explica y copia los comandos. Las peticiones se ejecutan en tu terminal y las respuestas las devuelve tu backend.</small></div>`;
+ host.innerHTML=`<header><span class="p-label">EN TU PROYECTO · ${track==='nest'?'NEST + TYPEORM':'SERVERLESS + TOOLBOX'}</span><h2>${models?'Conecta las APIs y prueba las altas':'Prueba este caso desde tu terminal'}</h2><p>${models?'Continúa en el backend que ya preparaste siguiendo su README. Los archivos de las Entities y las capas están arriba; aquí tienes su conexión con la aplicación. Cada alta se hace mediante POST y se comprueba con GET.':track==='nest'?'Guarda los archivos del caso y mantén Nest abierto en Terminal 1. Ejecuta las pruebas en Terminal 2, dentro de backend. Sigue los casos en orden; conserva el ID devuelto al crear.':'Guarda los archivos del caso. Usa la sesión AWS y API_URL de tu proyecto; estos comandos se ejecutan en su terminal. Sigue los casos en orden y conserva el ID devuelto al crear.'}</p></header>${content}<div class="p-practice-expect"><strong>Qué debes comprobar</strong><p>${esc(phase.expect)}</p><small>El cuaderno explica y copia los comandos. Las peticiones se ejecutan en tu terminal y las respuestas las devuelve tu backend.</small></div>`;
  host.querySelectorAll('[data-practice-copy]').forEach(button=>button.onclick=async()=>{
   try{await navigator.clipboard.writeText(copies[Number(button.dataset.practiceCopy)]);button.textContent='Copiado';}
   catch{button.textContent='Selecciona el código';}
  });
 }
 
-function render(){if(readingMode){stop();mode="observe";full=true;}renderNav();renderCode();renderScene();controls();renderPractice();}
+function render(){if(readingMode){stop();mode="observe";full=true;}renderNav();renderCode();renderScene();controls();renderPractice();if(D.apiRevision){let lab=$('[data-api-lab]');if(!lab){lab=document.createElement('section');lab.dataset.apiLab='';$('.p-bottom').before(lab);}montarPeticiones(lab,C,{track});}}
 function go(i){stop();const mapWasOpen=D.projectBase&&$('.p-guide-map').open;index=i;frame=0;mode='observe';full=false;selected=null;render();feedback('Observa este archivo y después completa sus piezas.');persist();if(mapWasOpen)$('[data-guide-primary]').focus({preventScroll:true});}
 function fly(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=$('[data-cue] code'),b=isRelation()?$(`[data-er-focus="${frame}"]`):$('[data-code] .p-line[data-active=true]');if(!a||!b)return;const r=root.getBoundingClientRect(),ar=a.getBoundingClientRect(),br=b.getBoundingClientRect(),el=document.createElement('span');el.className='p-fly';el.textContent=stage().cues[frame].text;el.style.left=(ar.left-r.left)+'px';el.style.top=(ar.top-r.top)+'px';root.appendChild(el);const animation=el.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${br.left-ar.left+(isRelation()?0:32)}px,${br.top-ar.top}px)`,opacity:.25}],{duration:850,easing:'cubic-bezier(.4,0,.2,1)'});animation.onfinish=()=>el.remove();}
 function playTick(){render();fly();timer=setTimeout(()=>{if(!playing)return;if(frame<stage().cues.length-1){frame++;playTick();}else{observed.add(key());stop();controls();feedback('Ya has visto el archivo. Pulsa «Ahora lo monto yo».','good');persist();}},2400);}

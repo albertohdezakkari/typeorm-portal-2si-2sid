@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AulasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { AulasModule } from './aulas/aulas.module';\n\nimport { EscuelasModule } from './escuelas/escuelas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    EscuelasModule,\n    AulasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade AulasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás ESCUELA y AULA, creadas por TypeORM con la FK ID_ESCUELA.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/escuelas.service.ts",
+            "path": "src/escuelas/escuelas.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Escuela } from './entities/escuela.entity';\n\n@Injectable()\nexport class EscuelasService {\n  constructor(\n    @InjectRepository(Escuela) private readonly escuelas: Repository<Escuela>\n  ) {}\n\n  crearEscuela(nombre: string) {\n    const escuela = this.escuelas.create({ nombre });\n    return this.escuelas.save(escuela);\n  }\n\n  listarEscuelas() {\n    return this.escuelas.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/escuelas.controller.ts",
+            "path": "src/escuelas/escuelas.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Puente\"}'\ncurl -i \"http://localhost:3000/escuelas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { EscuelasService } from './escuelas.service';\n\n@Controller('escuelas')\nexport class EscuelasController {\n  constructor(private readonly service: EscuelasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearEscuela(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarEscuelas();\n  }\n}",
+            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/escuelas.module.ts",
+            "path": "src/escuelas/escuelas.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Escuela } from './entities/escuela.entity';\nimport { EscuelasService } from './escuelas.service';\nimport { EscuelasController } from './escuelas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Escuela])],\n  providers: [EscuelasService],\n  controllers: [EscuelasController]\n})\nexport class EscuelasModule {}",
+            "create": "mkdir -p src/escuelas\ncode src/escuelas/escuelas.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado ESCUELA y AULA desde las Entities. AppModule importa AulasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar escuelas antes de crear aulas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar escuelas por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Escuela } from '../escuelas/entities/escuela.entity';\nimport { Aula } from '../aulas/entities/aula.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const escuelas = db.getRepository(Escuela);\n    const aulas = db.getRepository(Aula);\n\n    const primero = await escuelas.findOneBy({ nombre: 'Escuela Puente' })\n      ?? await escuelas.save({ nombre: 'Escuela Puente' });\n    const segundo = await escuelas.findOneBy({ nombre: 'Escuela Encuentro' })\n      ?? await escuelas.save({ nombre: 'Escuela Encuentro' });\n\n    const principal = await aulas.findOneBy({ nombre: 'Aula Olmo' })\n      ?? await aulas.save({ nombre: 'Aula Olmo', capacidad: 12, escuela: primero });\n    const secundaria = await aulas.findOneBy({ nombre: 'Aula Pino' })\n      ?? await aulas.save({ nombre: 'Aula Pino', capacidad: 30, escuela: segundo });\n    const otra = await aulas.findOneBy({ nombre: 'Aula Olmo · nuevo' })\n      ?? await aulas.save({ nombre: 'Aula Olmo · nuevo', capacidad: 54, escuela: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export ESCUELA_1_ID=${primero.id}`,\n      `export ESCUELA_2_ID=${segundo.id}`,\n      `export AULA_1_ID=${principal.id}`,\n      `export AULA_2_ID=${secundaria.id}`,\n      `export AULA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await aulas.find({ relations: { escuela: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Escuela Puente",
+            "code": "curl -i -X POST \"http://localhost:3000/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Puente\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Aula principal: %s\\nOtro escuela: %s\\n' \"$AULA_1_ID\" \"$ESCUELA_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Escuela Encuentro",
+            "code": "curl -i -X POST \"http://localhost:3000/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Encuentro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar escuelas",
+            "code": "curl -i \"http://localhost:3000/escuelas\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos escuelas y tres aulas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /escuelas muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Escuela Puente",
-          "Aula Olmo y otra aula",
-          "Escuela Encuentro",
-          "Aula Pino"
+          "POST /escuelas",
+          "Controller / Handler",
+          "Service",
+          "GET /escuelas"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/aulas/aulas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/aulas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"capacidad\\\":13,\\\"escuelaId\\\":$ESCUELA_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/aulas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Aula Olmo",
+            "code": "curl -i -X POST \"http://localhost:3000/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Olmo\",\"capacidad\":12,\"escuelaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Aula Pino",
+            "code": "curl -i -X POST \"http://localhost:3000/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Pino\",\"capacidad\":30,\"escuelaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Aula Olmo · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Olmo · nuevo\",\"capacidad\":54,\"escuelaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":13,\"escuelaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/aulas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro aulas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/aulas/aulas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/aulas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/aulas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/aulas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/aulas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la aula de prueba. Siguen las tres aulas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/aulas/aulas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar capacidad",
-            "code": "curl -i -X PATCH \"http://localhost:3000/aulas/$AULA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":42}'\ncurl -i http://localhost:3000/aulas",
+            "title": "Cambiar capacidad",
+            "code": "curl -i -X PATCH \"http://localhost:3000/aulas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":42}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/aulas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La aula principal tiene capacidad 42 y conserva su escuela.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/aulas/aulas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/aulas/$AULA_1_ID/escuela\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"escuelaId\\\":$ESCUELA_2_ID}\"\ncurl -i http://localhost:3000/aulas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/aulas/1/escuela\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"escuelaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/aulas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La aula principal pasa al segundo escuela y conserva su capacidad 42.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. AULA_1_ID es el ID real de «Aula Olmo»; AULA_2_ID, el de «Aula Pino». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/aulas/aulas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/escuelas/$ESCUELA_2_ID/aulas?minimo=31\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/escuelas/2/aulas?minimo=31\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo escuela y la aula principal; el filtro excluye las otras dos aulas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"AULAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/crear-listar/repository.mjs",
+            "path": "src/escuelas/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ESCUELA } from '../../models/escuela-aula.model.mjs';\n\nexport async function crearEscuelaRepository(escuela) {\n  await MODELO_ESCUELA.build(EntityRepository).put(\n    escuela,\n    { condition: { attr: 'escuelaId', exists: false } }\n  );\n}\n\nexport async function listarEscuelasRepository() {\n  const { Items = [] } = await MODELO_ESCUELA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/escuelas/crear-listar\ncode src/escuelas/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/crear-listar/service.mjs",
+            "path": "src/escuelas/crear-listar/service.mjs",
+            "code": "import { crearEscuelaRepository, listarEscuelasRepository } from './repository.mjs';\n\nexport async function crearEscuelaService(nombre) {\n  const escuelaId = Date.now();\n  const escuela = { escuelaId, nombre };\n  await crearEscuelaRepository(escuela);\n  return escuela;\n}\n\nexport function listarEscuelasService() {\n  return listarEscuelasRepository();\n}",
+            "create": "mkdir -p src/escuelas/crear-listar\ncode src/escuelas/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/escuelas/crear-listar/handler.mjs",
+            "path": "src/escuelas/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Puente\"}'\ncurl -i \"$API_URL/escuelas\"\n*/\n// POST /escuelas con JSON: {\"nombre\":\"Escuela Puente\"}\n// GET /escuelas lista los registros y sus IDs.\nimport { crearEscuelaService, listarEscuelasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const escuela = await crearEscuelaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(escuela) };\n}\n\nexport async function listarHandler() {\n  const escuelas = await listarEscuelasService();\n  return { statusCode: 200, body: JSON.stringify(escuelas) };\n}",
+            "create": "mkdir -p src/escuelas/crear-listar\ncode src/escuelas/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen ESCUELAS_tuEquipo y AULAS_tuEquipo. PK del lado N: AULA_ID; índice: PorEscuela. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar escuelas antes de crear aulas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar escuelas por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Escuela 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ESCUELAS_${TALLER_EQUIPO}\\\" VALUE {'ESCUELA_ID':1,'NOMBRE':'Escuela Puente'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Escuela Puente",
+            "code": "curl -i -X POST \"$API_URL/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Puente\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Escuela 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ESCUELAS_${TALLER_EQUIPO}\\\" VALUE {'ESCUELA_ID':2,'NOMBRE':'Escuela Encuentro'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Escuela Encuentro",
+            "code": "curl -i -X POST \"$API_URL/escuelas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Escuela Encuentro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Aula 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AULAS_${TALLER_EQUIPO}\\\" VALUE {'AULA_ID':7,'NOMBRE':'Aula Olmo','CAPACIDAD':12,'ESCUELA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Aula 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AULAS_${TALLER_EQUIPO}\\\" VALUE {'AULA_ID':8,'NOMBRE':'Aula Pino','CAPACIDAD':30,'ESCUELA_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Aula 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"AULAS_${TALLER_EQUIPO}\\\" VALUE {'AULA_ID':9,'NOMBRE':'Aula Olmo · nuevo','CAPACIDAD':54,'ESCUELA_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ESCUELAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"AULAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar escuelas",
+            "code": "curl -i \"$API_URL/escuelas\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Escuela y tres de Aula, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /escuelas muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Escuela 1",
-          "Aula 7 y 9",
-          "Escuela 2",
-          "Aula 8"
+          "POST /escuelas",
+          "Controller / Handler",
+          "Service",
+          "GET /escuelas"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/aulas/crear-listar/handler.mjs\nnode --check src/aulas/crear-listar/service.mjs\nnode --check src/aulas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/aulas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":13,\"escuelaId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).aulaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/aulas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Aula Olmo",
+            "code": "curl -i -X POST \"$API_URL/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Olmo\",\"capacidad\":12,\"escuelaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarAulas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Aula Pino",
+            "code": "curl -i -X POST \"$API_URL/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Pino\",\"capacidad\":30,\"escuelaId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Aula Olmo · nuevo",
+            "code": "curl -i -X POST \"$API_URL/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Aula Olmo · nuevo\",\"capacidad\":54,\"escuelaId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/aulas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":13,\"escuelaId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/aulas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/aulas/eliminar/handler.mjs\nnode --check src/aulas/eliminar/service.mjs\nnode --check src/aulas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/aulas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/aulas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/aulas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/aulas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/aulas/modificar-capacidad/handler.mjs\nnode --check src/aulas/modificar-capacidad/service.mjs\nnode --check src/aulas/modificar-capacidad/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar capacidad",
-            "code": "curl -i -X PATCH \"$API_URL/aulas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":42}'\ncurl -i \"$API_URL/aulas\"",
+            "title": "Cambiar capacidad",
+            "code": "curl -i -X PATCH \"$API_URL/aulas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":42}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/aulas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · capacidad = 42 plazas · escuelaId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n  trasladarAula:\n    handler: src/aulas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}/escuela' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n  trasladarAula:\n    handler: src/aulas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}/escuela' }\n\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/aulas/trasladar/handler.mjs\nnode --check src/aulas/trasladar/service.mjs\nnode --check src/aulas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/aulas/7/escuela\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"escuelaId\":2}'\ncurl -i \"$API_URL/aulas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/aulas/1/escuela\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"escuelaId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/aulas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · capacidad = 42 plazas · escuelaId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n  trasladarAula:\n    handler: src/aulas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}/escuela' }\n  consultarEscuela:\n    handler: src/escuelas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/escuelas/{escuelaId}/aulas' }\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch26\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_ESCUELAS: { Ref: TablaEscuelas }\n    TABLA_AULAS: { Ref: TablaAulas }\n\n\nfunctions:\n  crearEscuela:\n    handler: src/escuelas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /escuelas }\n  listarEscuelas:\n    handler: src/escuelas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /escuelas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearAula:\n    handler: src/aulas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/aulas' }\n  listarAulas:\n    handler: src/aulas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/aulas' }\n  eliminarAula:\n    handler: src/aulas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/aulas/{aulaId}' }\n  modificarCapacidad:\n    handler: src/aulas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}' }\n  trasladarAula:\n    handler: src/aulas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/aulas/{aulaId}/escuela' }\n  consultarEscuela:\n    handler: src/escuelas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/escuelas/{escuelaId}/aulas' }\nresources:\n  Resources:\n    TablaEscuelas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ESCUELAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ESCUELA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_ESCUELA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ESCUELA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaAulas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AULAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AULA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   ESCUELA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_AULA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: AULA_ID, AttributeType: N }\n          - { AttributeName: ESCUELA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AULA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en AULAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorEscuela\n            # Clave compuesta = partition key + sort key:\n            # (ESCUELA_ID, AULA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: ESCUELA_ID\n                KeyType: HASH   # Partition key. Agrupa por Escuela.\n              - AttributeName: AULA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de AULAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/escuelas/consultar/handler.mjs\nnode --check src/escuelas/consultar/service.mjs\nnode --check src/escuelas/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/escuelas/2/aulas?minimo=31\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/escuelas/2/aulas?minimo=31\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Escuela Encuentro + registro 7 (42 plazas). Excluye el 8 (30 plazas) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"AULAS_${TALLER_EQUIPO}\\\" WHERE AULA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

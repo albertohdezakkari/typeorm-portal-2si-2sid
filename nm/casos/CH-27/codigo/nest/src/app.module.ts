@@ -7,6 +7,8 @@ import { PlazasModule } from './plazas/plazas.module';
 import { TecnicosModule } from './tecnicos/tecnicos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { UrbanizacionesModule } from './urbanizaciones/urbanizaciones.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    UrbanizacionesModule,
     PlazasModule,
     TecnicosModule,
     AsignacionesModule

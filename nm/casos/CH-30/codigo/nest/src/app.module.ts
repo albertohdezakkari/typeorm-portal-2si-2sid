@@ -7,6 +7,8 @@ import { FuncionesModule } from './funciones/funciones.module';
 import { InterpretesModule } from './interpretes/interpretes.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { TeatrosModule } from './teatros/teatros.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    TeatrosModule,
     FuncionesModule,
     InterpretesModule,
     AsignacionesModule

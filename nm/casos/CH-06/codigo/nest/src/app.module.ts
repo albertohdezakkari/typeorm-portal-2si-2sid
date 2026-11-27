@@ -7,6 +7,8 @@ import { SesionesModule } from './sesiones/sesiones.module';
 import { InstructoresModule } from './instructores/instructores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { GimnasiosModule } from './gimnasios/gimnasios.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    GimnasiosModule,
     SesionesModule,
     InstructoresModule,
     AsignacionesModule

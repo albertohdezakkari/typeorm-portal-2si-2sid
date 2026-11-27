@@ -7,6 +7,8 @@ import { ProyeccionesModule } from './proyecciones/proyecciones.module';
 import { TecnicosModule } from './tecnicos/tecnicos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { CinesModule } from './cines/cines.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    CinesModule,
     ProyeccionesModule,
     TecnicosModule,
     AsignacionesModule

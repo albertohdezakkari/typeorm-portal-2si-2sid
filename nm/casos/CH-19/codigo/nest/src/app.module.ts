@@ -7,6 +7,8 @@ import { EmbarcacionesModule } from './embarcaciones/embarcaciones.module';
 import { TripulantesModule } from './tripulantes/tripulantes.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { PuertosModule } from './puertos/puertos.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    PuertosModule,
     EmbarcacionesModule,
     TripulantesModule,
     AsignacionesModule

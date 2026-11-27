@@ -1,7 +1,3 @@
-# Museo → Pieza · ampliación N:M
+# Museo → Pieza · API del proyecto
 
-Continúa tu backend 1:N ya preparado con el README de [la base docente](https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01#readme). Conserva su configuración, las Entities y los casos anteriores.
-
-Trabaja dentro de backend. TypeORM crea las tablas con synchronize: true; no hay SQL de creación manual. Añade las dos Entities y los módulos indicados en el cuaderno; después sus Services y Controllers. Las altas N:M se prueban mediante POST, con los IDs reales devueltos por tu API, sin precarga ni fichero de IDs adicional.
-
-Para arrancar: npm run start:dev. Las llamadas curl se ejecutan en otra terminal.
+Continúa tu backend preparado siguiendo el README de la base docente. Crea las Entities, sus módulos, Services y Controllers. Todas las altas 1:N y N:M se hacen mediante POST y los listados mediante GET. Conserva los IDs devueltos; no hay scripts de carga ni ficheros de IDs. Mantén npm run start:dev abierto y ejecuta cada curl en otra terminal.

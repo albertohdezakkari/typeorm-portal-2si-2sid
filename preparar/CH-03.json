@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PiezasModule } from './piezas/piezas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    PiezasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { PiezasModule } from './piezas/piezas.module';\n\nimport { MuseosModule } from './museos/museos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    MuseosModule,\n    PiezasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade PiezasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás MUSEO y PIEZA, creadas por TypeORM con la FK ID_MUSEO.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/museos.service.ts",
+            "path": "src/museos/museos.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Museo } from './entities/museo.entity';\n\n@Injectable()\nexport class MuseosService {\n  constructor(\n    @InjectRepository(Museo) private readonly museos: Repository<Museo>\n  ) {}\n\n  crearMuseo(nombre: string) {\n    const museo = this.museos.create({ nombre });\n    return this.museos.save(museo);\n  }\n\n  listarMuseos() {\n    return this.museos.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/museos\ncode src/museos/museos.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/museos.controller.ts",
+            "path": "src/museos/museos.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Barrio\"}'\ncurl -i \"http://localhost:3000/museos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { MuseosService } from './museos.service';\n\n@Controller('museos')\nexport class MuseosController {\n  constructor(private readonly service: MuseosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearMuseo(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarMuseos();\n  }\n}",
+            "create": "mkdir -p src/museos\ncode src/museos/museos.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/museos.module.ts",
+            "path": "src/museos/museos.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Museo } from './entities/museo.entity';\nimport { MuseosService } from './museos.service';\nimport { MuseosController } from './museos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Museo])],\n  providers: [MuseosService],\n  controllers: [MuseosController]\n})\nexport class MuseosModule {}",
+            "create": "mkdir -p src/museos\ncode src/museos/museos.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado MUSEO y PIEZA desde las Entities. AppModule importa PiezasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar museos antes de crear piezas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar museos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Museo } from '../museos/entities/museo.entity';\nimport { Pieza } from '../piezas/entities/pieza.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const museos = db.getRepository(Museo);\n    const piezas = db.getRepository(Pieza);\n\n    const primero = await museos.findOneBy({ nombre: 'Museo del Barrio' })\n      ?? await museos.save({ nombre: 'Museo del Barrio' });\n    const segundo = await museos.findOneBy({ nombre: 'Museo del Centro' })\n      ?? await museos.save({ nombre: 'Museo del Centro' });\n\n    const principal = await piezas.findOneBy({ nombre: 'Vasija azul' })\n      ?? await piezas.save({ nombre: 'Vasija azul', antiguedadAnios: 30, museo: primero });\n    const secundaria = await piezas.findOneBy({ nombre: 'Reloj de pared' })\n      ?? await piezas.save({ nombre: 'Reloj de pared', antiguedadAnios: 120, museo: segundo });\n    const otra = await piezas.findOneBy({ nombre: 'Vasija azul · nuevo' })\n      ?? await piezas.save({ nombre: 'Vasija azul · nuevo', antiguedadAnios: 180, museo: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export MUSEO_1_ID=${primero.id}`,\n      `export MUSEO_2_ID=${segundo.id}`,\n      `export PIEZA_1_ID=${principal.id}`,\n      `export PIEZA_2_ID=${secundaria.id}`,\n      `export PIEZA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await piezas.find({ relations: { museo: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Museo del Barrio",
+            "code": "curl -i -X POST \"http://localhost:3000/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Barrio\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Pieza principal: %s\\nOtro museo: %s\\n' \"$PIEZA_1_ID\" \"$MUSEO_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Museo del Centro",
+            "code": "curl -i -X POST \"http://localhost:3000/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Centro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar museos",
+            "code": "curl -i \"http://localhost:3000/museos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos museos y tres piezas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /museos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Museo del Barrio",
-          "Vasija azul y otra pieza",
-          "Museo del Centro",
-          "Reloj de pared"
+          "POST /museos",
+          "Controller / Handler",
+          "Service",
+          "GET /museos"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/piezas/piezas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/piezas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"antiguedadAnios\\\":31,\\\"museoId\\\":$MUSEO_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/piezas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Vasija azul",
+            "code": "curl -i -X POST \"http://localhost:3000/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vasija azul\",\"antiguedadAnios\":30,\"museoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Reloj de pared",
+            "code": "curl -i -X POST \"http://localhost:3000/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Reloj de pared\",\"antiguedadAnios\":120,\"museoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Vasija azul · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vasija azul · nuevo\",\"antiguedadAnios\":180,\"museoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"antiguedadAnios\":31,\"museoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/piezas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro piezas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/piezas/piezas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/piezas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/piezas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/piezas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/piezas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la pieza de prueba. Siguen las tres piezas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/piezas/piezas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar antigüedad",
-            "code": "curl -i -X PATCH \"http://localhost:3000/piezas/$PIEZA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"antiguedadAnios\":150}'\ncurl -i http://localhost:3000/piezas",
+            "title": "Cambiar antigüedad",
+            "code": "curl -i -X PATCH \"http://localhost:3000/piezas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"antiguedadAnios\":150}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/piezas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La pieza principal tiene antigüedad 150 y conserva su museo.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/piezas/piezas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/piezas/$PIEZA_1_ID/museo\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"museoId\\\":$MUSEO_2_ID}\"\ncurl -i http://localhost:3000/piezas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/piezas/1/museo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"museoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/piezas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La pieza principal pasa al segundo museo y conserva su antigüedad 150.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. PIEZA_1_ID es el ID real de «Vasija azul»; PIEZA_2_ID, el de «Reloj de pared». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/piezas/piezas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/museos/$MUSEO_2_ID/piezas?minimo=121\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/museos/2/piezas?minimo=121\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo museo y la pieza principal; el filtro excluye las otras dos piezas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"PIEZAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/crear-listar/repository.mjs",
+            "path": "src/museos/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_MUSEO } from '../../models/museo-pieza.model.mjs';\n\nexport async function crearMuseoRepository(museo) {\n  await MODELO_MUSEO.build(EntityRepository).put(\n    museo,\n    { condition: { attr: 'museoId', exists: false } }\n  );\n}\n\nexport async function listarMuseosRepository() {\n  const { Items = [] } = await MODELO_MUSEO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/museos/crear-listar\ncode src/museos/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/crear-listar/service.mjs",
+            "path": "src/museos/crear-listar/service.mjs",
+            "code": "import { crearMuseoRepository, listarMuseosRepository } from './repository.mjs';\n\nexport async function crearMuseoService(nombre) {\n  const museoId = Date.now();\n  const museo = { museoId, nombre };\n  await crearMuseoRepository(museo);\n  return museo;\n}\n\nexport function listarMuseosService() {\n  return listarMuseosRepository();\n}",
+            "create": "mkdir -p src/museos/crear-listar\ncode src/museos/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/museos/crear-listar/handler.mjs",
+            "path": "src/museos/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Barrio\"}'\ncurl -i \"$API_URL/museos\"\n*/\n// POST /museos con JSON: {\"nombre\":\"Museo del Barrio\"}\n// GET /museos lista los registros y sus IDs.\nimport { crearMuseoService, listarMuseosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const museo = await crearMuseoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(museo) };\n}\n\nexport async function listarHandler() {\n  const museos = await listarMuseosService();\n  return { statusCode: 200, body: JSON.stringify(museos) };\n}",
+            "create": "mkdir -p src/museos/crear-listar\ncode src/museos/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen MUSEOS_tuEquipo y PIEZAS_tuEquipo. PK del lado N: PIEZA_ID; índice: PorMuseo. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar museos antes de crear piezas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar museos por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Museo 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"MUSEOS_${TALLER_EQUIPO}\\\" VALUE {'MUSEO_ID':1,'NOMBRE':'Museo del Barrio'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Museo del Barrio",
+            "code": "curl -i -X POST \"$API_URL/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Barrio\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Museo 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"MUSEOS_${TALLER_EQUIPO}\\\" VALUE {'MUSEO_ID':2,'NOMBRE':'Museo del Centro'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Museo del Centro",
+            "code": "curl -i -X POST \"$API_URL/museos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Museo del Centro\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Pieza 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PIEZAS_${TALLER_EQUIPO}\\\" VALUE {'PIEZA_ID':7,'NOMBRE':'Vasija azul','ANTIGUEDAD_ANIOS':30,'MUSEO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Pieza 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PIEZAS_${TALLER_EQUIPO}\\\" VALUE {'PIEZA_ID':8,'NOMBRE':'Reloj de pared','ANTIGUEDAD_ANIOS':120,'MUSEO_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Pieza 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PIEZAS_${TALLER_EQUIPO}\\\" VALUE {'PIEZA_ID':9,'NOMBRE':'Vasija azul · nuevo','ANTIGUEDAD_ANIOS':180,'MUSEO_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"MUSEOS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PIEZAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar museos",
+            "code": "curl -i \"$API_URL/museos\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Museo y tres de Pieza, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /museos muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Museo 1",
-          "Pieza 7 y 9",
-          "Museo 2",
-          "Pieza 8"
+          "POST /museos",
+          "Controller / Handler",
+          "Service",
+          "GET /museos"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/piezas/crear-listar/handler.mjs\nnode --check src/piezas/crear-listar/service.mjs\nnode --check src/piezas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/piezas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"antiguedadAnios\":31,\"museoId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).piezaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/piezas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Vasija azul",
+            "code": "curl -i -X POST \"$API_URL/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vasija azul\",\"antiguedadAnios\":30,\"museoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarPiezas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Reloj de pared",
+            "code": "curl -i -X POST \"$API_URL/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Reloj de pared\",\"antiguedadAnios\":120,\"museoId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Vasija azul · nuevo",
+            "code": "curl -i -X POST \"$API_URL/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Vasija azul · nuevo\",\"antiguedadAnios\":180,\"museoId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/piezas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"antiguedadAnios\":31,\"museoId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/piezas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/piezas/eliminar/handler.mjs\nnode --check src/piezas/eliminar/service.mjs\nnode --check src/piezas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/piezas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/piezas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/piezas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/piezas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/piezas/modificar-antiguedad-anios/handler.mjs\nnode --check src/piezas/modificar-antiguedad-anios/service.mjs\nnode --check src/piezas/modificar-antiguedad-anios/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar antigüedad",
-            "code": "curl -i -X PATCH \"$API_URL/piezas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"antiguedadAnios\":150}'\ncurl -i \"$API_URL/piezas\"",
+            "title": "Cambiar antigüedad",
+            "code": "curl -i -X PATCH \"$API_URL/piezas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"antiguedadAnios\":150}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/piezas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · antiguedadAnios = 150 años · museoId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n  trasladarPieza:\n    handler: src/piezas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}/museo' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n  trasladarPieza:\n    handler: src/piezas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}/museo' }\n\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/piezas/trasladar/handler.mjs\nnode --check src/piezas/trasladar/service.mjs\nnode --check src/piezas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/piezas/7/museo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"museoId\":2}'\ncurl -i \"$API_URL/piezas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/piezas/1/museo\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"museoId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/piezas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · antiguedadAnios = 150 años · museoId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n  trasladarPieza:\n    handler: src/piezas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}/museo' }\n  consultarMuseo:\n    handler: src/museos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/museos/{museoId}/piezas' }\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
+            "code": "service: taller-ch03\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_MUSEOS: { Ref: TablaMuseos }\n    TABLA_PIEZAS: { Ref: TablaPiezas }\n\n\nfunctions:\n  crearMuseo:\n    handler: src/museos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /museos }\n  listarMuseos:\n    handler: src/museos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /museos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearPieza:\n    handler: src/piezas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/piezas' }\n  listarPiezas:\n    handler: src/piezas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/piezas' }\n  eliminarPieza:\n    handler: src/piezas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/piezas/{piezaId}' }\n  modificarAntiguedadAnios:\n    handler: src/piezas/modificar-antiguedad-anios/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}' }\n  trasladarPieza:\n    handler: src/piezas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/piezas/{piezaId}/museo' }\n  consultarMuseo:\n    handler: src/museos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/museos/{museoId}/piezas' }\nresources:\n  Resources:\n    TablaMuseos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: MUSEOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: MUSEO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_MUSEO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: MUSEO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaPiezas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PIEZAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PIEZA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   ANTIGUEDAD_ANIOS (N: número).\n        #   MUSEO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_PIEZA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: PIEZA_ID, AttributeType: N }\n          - { AttributeName: MUSEO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PIEZA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en PIEZAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorMuseo\n            # Clave compuesta = partition key + sort key:\n            # (MUSEO_ID, PIEZA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: MUSEO_ID\n                KeyType: HASH   # Partition key. Agrupa por Museo.\n              - AttributeName: PIEZA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de PIEZAS copiados al índice.\n                - NOMBRE\n                - ANTIGUEDAD_ANIOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/museos/consultar/handler.mjs\nnode --check src/museos/consultar/service.mjs\nnode --check src/museos/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/museos/2/piezas?minimo=121\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/museos/2/piezas?minimo=121\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Museo del Centro + registro 7 (150 años). Excluye el 8 (120 años) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PIEZAS_${TALLER_EQUIPO}\\\" WHERE PIEZA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

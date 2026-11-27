@@ -7,6 +7,8 @@ import { PistasModule } from './pistas/pistas.module';
 import { EntrenadoresModule } from './entrenadores/entrenadores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { ComplejosModule } from './complejos/complejos.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    ComplejosModule,
     PistasModule,
     EntrenadoresModule,
     AsignacionesModule

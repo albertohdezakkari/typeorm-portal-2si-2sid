@@ -7,6 +7,8 @@ import { HabitacionesModule } from './habitaciones/habitaciones.module';
 import { EnfermerosModule } from './enfermeros/enfermeros.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { HospitalesModule } from './hospitales/hospitales.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    HospitalesModule,
     HabitacionesModule,
     EnfermerosModule,
     AsignacionesModule

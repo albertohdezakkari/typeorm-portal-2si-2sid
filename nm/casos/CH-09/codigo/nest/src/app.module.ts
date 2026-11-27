@@ -7,6 +7,8 @@ import { ReparacionesModule } from './reparaciones/reparaciones.module';
 import { MecanicosModule } from './mecanicos/mecanicos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { TalleresModule } from './talleres/talleres.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    TalleresModule,
     ReparacionesModule,
     MecanicosModule,
     AsignacionesModule

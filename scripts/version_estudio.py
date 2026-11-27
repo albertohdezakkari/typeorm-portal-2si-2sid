@@ -1,8 +1,8 @@
 """Extiende la versión validada de Arturo conservando el dominio de cada ficha.
 
 Las transformaciones del piloto siguen siendo la plantilla de código. Solo se
-especializan sus identificadores en una pasada; no se traducen las Entities ni
-los casos existentes a partir de otro dominio. Cloud y los PDF se conservan.
+especializan sus identificadores en una pasada. api_sin_precarga añade las APIs
+de ambos extremos y retira los seeds. Los PDF históricos se conservan.
 """
 from copy import deepcopy
 from functools import lru_cache
@@ -52,7 +52,9 @@ def adapters(case_id):
 def training(data):
     case_id=data['context']['id'];old=deepcopy(data)
     adapters(case_id)['training'](data)
-    if case_id=='CH-22':return data
+    if case_id=='CH-22':
+        from api_sin_precarga import training as api_training
+        return api_training(data)
     data['source']['label']=case_id+' · Nest + TypeORM'
     if 'legacyNestChapters' in old:data['legacyNestChapters']=old['legacyNestChapters']
     # El índice se conserva y solo se renuevan las respuestas de archivos cambiados.
@@ -63,17 +65,22 @@ def training(data):
             j,current=candidates[0] if candidates else (0,data['steps']['nest'][0]);positions.append(j)
             if previous['code']==current['code'] and previous['cues']==current['cues']:retained.append('nest:'+str(i))
         data['nestMigration']={'fromRevision':old.get('nestSimpleRevision',0),'positions':positions,'retained':retained}
-    return data
+    from api_sin_precarga import training as api_training
+    return api_training(data)
 
 
 def preparation(data,train):
     adapters(data['caseId'])['preparation'](data,train)
-    return data
+    from api_sin_precarga import preparation as api_preparation
+    return api_preparation(data,train)
 
 
-def nm(data,files):
+def nm(data,files,cloud=None):
     case_id=data['caseId'];adapters(case_id)['nm'](data,files)
-    if case_id=='CH-22':return
+    if case_id=='CH-22':
+        from api_sin_precarga import nm as api_nm
+        api_nm(data,files,cloud)
+        return
     # Los curl nuevos no presuponen una precarga; revisar sus marcas antiguas.
     changed={s['id']for s in data['tracks']['nest']if s['id'].endswith('-curl')}|{'datos','cargar','persistencia'}
     for revision,retained in data.get('nestRetainedByRevision',{}).items():
@@ -81,32 +88,38 @@ def nm(data,files):
     c=data.get('context') or json.loads((ROOT/f'entrenar/casos/{case_id}.json').read_text())['context'];n=c['child'];p=c['parent']
     files['src/'+n['route']+'/'+n['route']+'.service.ts']=next(s['code']for s in json.loads((ROOT/f'entrenar/casos/{case_id}.json').read_text())['steps']['nest']if s['chapter']==5 and s['name']=='Service')+'\n'
     files['README.md']='# '+c['title']+' · ampliación N:M\n\nContinúa tu backend 1:N ya preparado con el README de [la base docente](https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01#readme). Conserva su configuración, las Entities y los casos anteriores.\n\nTrabaja dentro de backend. TypeORM crea las tablas con synchronize: true; no hay SQL de creación manual. Añade las dos Entities y los módulos indicados en el cuaderno; después sus Services y Controllers. Las altas N:M se prueban mediante POST, con los IDs reales devueltos por tu API, sin precarga ni fichero de IDs adicional.\n\nPara arrancar: npm run start:dev. Las llamadas curl se ejecutan en otra terminal.\n'
+    from api_sin_precarga import nm as api_nm
+    api_nm(data,files,cloud)
 
 
 def write_runtime(case_id):
     if case_id=='CH-22':return
     data=json.loads((ROOT/f'entrenar/casos/{case_id}.json').read_text());c=data['context'];m=c['metric']
     runtime=substitute((ROOT/'nm/taller.js').read_text(),adapters(case_id)['_mapping'])
+    runtime=runtime.replace("from '../peticiones.js","from '../../../peticiones.js")
     runtime=runtime.replace("['DATO','NOMBRE'],['DATO','"+m['column']+"']","['DATO','"+c['text']['column']+"'],['DATO','"+m['column']+"']")
     runtime=runtime.replace("['ID','PK'],['NOMBRE',''],['"+m['column']+"','']","['ID','PK'],['"+c['text']['column']+"',''],['"+m['column']+"','']")
     folder=ROOT/f'nm/casos/{case_id}';(folder/'taller.js').write_text(runtime)
     title=json.loads((folder/(case_id+'.json')).read_text())['title']
-    (folder/'index.html').write_text(f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=estudio-todos-1"><link rel="stylesheet" href="../../../lectura.css?v=estudio-todos-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=estudio-todos-1"></script></body></html>\n')
+    (folder/'index.html').write_text(f'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{case_id} · {title} · N:M</title><link rel="stylesheet" href="../../taller.css?v=altas-api-1"><link rel="stylesheet" href="../../../lectura.css?v=altas-api-1"></head><body><main id="nm-root"><p role="status">Preparando tu ampliación N:M…</p></main><script type="module" src="taller.js?v=altas-api-1"></script></body></html>\n')
     (folder/'README.md').write_text('# '+case_id+' · '+title+'\n\nEn el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo. Prepara el proyecto base siguiendo detenidamente su README y continúa en Entrenar con mis fichas.\n\nPrimero completa la relación 1:N de '+c['title']+'. Después amplía el mismo backend con '+CONFIG[case_id][0]+' y Asignacion. En Nest se crean las dos Entities, sus módulos, Services y Controllers; las altas se hacen mediante la API, con sus IDs reales, sin otra precarga. Serverless conserva sus tablas, Table + Entity y las operaciones desde el modelo.\n\nLee y copia los archivos completos en orden. Los menús permanecen abiertos, el selector de tecnología está a la derecha y puedes alternar Nest + TypeORM / Serverless + Toolbox. Las comprobaciones se ejecutan en tu terminal. El cuaderno guarda el avance en este navegador.\n')
 
 
 def main():
     for case_id in CONFIG:
-        if case_id=='CH-22':continue  # El piloto validado es inmutable.
         path=ROOT/f'entrenar/casos/{case_id}.json';train=json.loads(path.read_text());training(train);path.write_text(json.dumps(train,ensure_ascii=False,indent=2)+'\n')
         path=ROOT/f'preparar/{case_id}.json';prep=json.loads(path.read_text());preparation(prep,train);path.write_text(json.dumps(prep,ensure_ascii=False,indent=2)+'\n')
-        folder=ROOT/f'nm/casos/{case_id}';path=folder/(case_id+'.json');data=json.loads(path.read_text());dest=folder/'codigo/nest'
-        files={str(p.relative_to(dest)):p.read_text()for p in dest.rglob('*')if p.is_file()};nm(data,files)
-        for stale in ['src/taller.module.ts','src/datos/cargar-datos-nm.ts']:
+        folder=ROOT/'nm' if case_id=='CH-22' else ROOT/f'nm/casos/{case_id}';path=folder/(case_id+'.json');data=json.loads(path.read_text());dest=folder/'codigo/nest'
+        files={str(p.relative_to(dest)):p.read_text()for p in dest.rglob('*')if p.is_file()};cloud_dir=folder/'codigo/cloud';cloud={str(p.relative_to(cloud_dir)):p.read_text()for p in cloud_dir.rglob('*')if p.is_file()};nm(data,files,cloud)
+        for stale in ['src/taller.module.ts','src/datos/cargar-datos-nm.ts','src/datos/cargar-datos.ts']:
             target=dest/stale
             if stale not in files and target.exists():target.unlink()
         for name,code in files.items():
             target=dest/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(code)
+        for stale in cloud_dir.rglob('*cargar-datos*'):
+            if stale.is_file():stale.unlink()
+        for name,code in cloud.items():
+            target=cloud_dir/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_text(code)
         path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
         write_runtime(case_id)
         print(case_id,train['context']['title'],len(train['steps']['nest']),len(data['tracks']['nest']))

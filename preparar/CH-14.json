@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ZonasModule } from './zonas/zonas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ZonasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ZonasModule } from './zonas/zonas.module';\n\nimport { ParquesModule } from './parques/parques.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ParquesModule,\n    ZonasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ZonasModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás PARQUE y ZONA, creadas por TypeORM con la FK ID_PARQUE.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/parques.service.ts",
+            "path": "src/parques/parques.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Parque } from './entities/parque.entity';\n\n@Injectable()\nexport class ParquesService {\n  constructor(\n    @InjectRepository(Parque) private readonly parques: Repository<Parque>\n  ) {}\n\n  crearParque(nombre: string) {\n    const parque = this.parques.create({ nombre });\n    return this.parques.save(parque);\n  }\n\n  listarParques() {\n    return this.parques.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/parques\ncode src/parques/parques.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/parques.controller.ts",
+            "path": "src/parques/parques.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Agua\"}'\ncurl -i \"http://localhost:3000/parques\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { ParquesService } from './parques.service';\n\n@Controller('parques')\nexport class ParquesController {\n  constructor(private readonly service: ParquesService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearParque(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarParques();\n  }\n}",
+            "create": "mkdir -p src/parques\ncode src/parques/parques.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/parques.module.ts",
+            "path": "src/parques/parques.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Parque } from './entities/parque.entity';\nimport { ParquesService } from './parques.service';\nimport { ParquesController } from './parques.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Parque])],\n  providers: [ParquesService],\n  controllers: [ParquesController]\n})\nexport class ParquesModule {}",
+            "create": "mkdir -p src/parques\ncode src/parques/parques.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado PARQUE y ZONA desde las Entities. AppModule importa ZonasModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar parques antes de crear zonas.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar parques por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Parque } from '../parques/entities/parque.entity';\nimport { Zona } from '../zonas/entities/zona.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const parques = db.getRepository(Parque);\n    const zonas = db.getRepository(Zona);\n\n    const primero = await parques.findOneBy({ nombre: 'Parque del Agua' })\n      ?? await parques.save({ nombre: 'Parque del Agua' });\n    const segundo = await parques.findOneBy({ nombre: 'Parque del Este' })\n      ?? await parques.save({ nombre: 'Parque del Este' });\n\n    const principal = await zonas.findOneBy({ nombre: 'Zona de juegos' })\n      ?? await zonas.save({ nombre: 'Zona de juegos', capacidad: 30, parque: primero });\n    const secundaria = await zonas.findOneBy({ nombre: 'Zona de picnic' })\n      ?? await zonas.save({ nombre: 'Zona de picnic', capacidad: 80, parque: segundo });\n    const otra = await zonas.findOneBy({ nombre: 'Zona de juegos · nuevo' })\n      ?? await zonas.save({ nombre: 'Zona de juegos · nuevo', capacidad: 140, parque: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export PARQUE_1_ID=${primero.id}`,\n      `export PARQUE_2_ID=${segundo.id}`,\n      `export ZONA_1_ID=${principal.id}`,\n      `export ZONA_2_ID=${secundaria.id}`,\n      `export ZONA_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await zonas.find({ relations: { parque: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Parque del Agua",
+            "code": "curl -i -X POST \"http://localhost:3000/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Agua\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Zona principal: %s\\nOtro parque: %s\\n' \"$ZONA_1_ID\" \"$PARQUE_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Parque del Este",
+            "code": "curl -i -X POST \"http://localhost:3000/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Este\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar parques",
+            "code": "curl -i \"http://localhost:3000/parques\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos parques y tres zonas de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /parques muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Parque del Agua",
-          "Zona de juegos y otra zona",
-          "Parque del Este",
-          "Zona de picnic"
+          "POST /parques",
+          "Controller / Handler",
+          "Service",
+          "GET /parques"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/zonas/zonas.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/zonas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"capacidad\\\":31,\\\"parqueId\\\":$PARQUE_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/zonas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Zona de juegos",
+            "code": "curl -i -X POST \"http://localhost:3000/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de juegos\",\"capacidad\":30,\"parqueId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Zona de picnic",
+            "code": "curl -i -X POST \"http://localhost:3000/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de picnic\",\"capacidad\":80,\"parqueId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Zona de juegos · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de juegos · nuevo\",\"capacidad\":140,\"parqueId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":31,\"parqueId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/zonas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro zonas. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/zonas/zonas.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/zonas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/zonas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/zonas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/zonas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la zona de prueba. Siguen las tres zonas originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/zonas/zonas.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar capacidad",
-            "code": "curl -i -X PATCH \"http://localhost:3000/zonas/$ZONA_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":110}'\ncurl -i http://localhost:3000/zonas",
+            "title": "Cambiar capacidad",
+            "code": "curl -i -X PATCH \"http://localhost:3000/zonas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":110}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/zonas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La zona principal tiene capacidad 110 y conserva su parque.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/zonas/zonas.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/zonas/$ZONA_1_ID/parque\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"parqueId\\\":$PARQUE_2_ID}\"\ncurl -i http://localhost:3000/zonas",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/zonas/1/parque\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"parqueId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/zonas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La zona principal pasa al segundo parque y conserva su capacidad 110.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. ZONA_1_ID es el ID real de «Zona de juegos»; ZONA_2_ID, el de «Zona de picnic». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/zonas/zonas.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/parques/$PARQUE_2_ID/zonas?minimo=81\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/parques/2/zonas?minimo=81\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo parque y la zona principal; el filtro excluye las otras dos zonas.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"ZONAS_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/crear-listar/repository.mjs",
+            "path": "src/parques/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_PARQUE } from '../../models/parque-zona.model.mjs';\n\nexport async function crearParqueRepository(parque) {\n  await MODELO_PARQUE.build(EntityRepository).put(\n    parque,\n    { condition: { attr: 'parqueId', exists: false } }\n  );\n}\n\nexport async function listarParquesRepository() {\n  const { Items = [] } = await MODELO_PARQUE.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/parques/crear-listar\ncode src/parques/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/crear-listar/service.mjs",
+            "path": "src/parques/crear-listar/service.mjs",
+            "code": "import { crearParqueRepository, listarParquesRepository } from './repository.mjs';\n\nexport async function crearParqueService(nombre) {\n  const parqueId = Date.now();\n  const parque = { parqueId, nombre };\n  await crearParqueRepository(parque);\n  return parque;\n}\n\nexport function listarParquesService() {\n  return listarParquesRepository();\n}",
+            "create": "mkdir -p src/parques/crear-listar\ncode src/parques/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/parques/crear-listar/handler.mjs",
+            "path": "src/parques/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Agua\"}'\ncurl -i \"$API_URL/parques\"\n*/\n// POST /parques con JSON: {\"nombre\":\"Parque del Agua\"}\n// GET /parques lista los registros y sus IDs.\nimport { crearParqueService, listarParquesService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const parque = await crearParqueService(nombre);\n  return { statusCode: 201, body: JSON.stringify(parque) };\n}\n\nexport async function listarHandler() {\n  const parques = await listarParquesService();\n  return { statusCode: 200, body: JSON.stringify(parques) };\n}",
+            "create": "mkdir -p src/parques/crear-listar\ncode src/parques/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen PARQUES_tuEquipo y ZONAS_tuEquipo. PK del lado N: ZONA_ID; índice: PorParque. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar parques antes de crear zonas.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar parques por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Parque 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PARQUES_${TALLER_EQUIPO}\\\" VALUE {'PARQUE_ID':1,'NOMBRE':'Parque del Agua'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Parque del Agua",
+            "code": "curl -i -X POST \"$API_URL/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Agua\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Parque 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"PARQUES_${TALLER_EQUIPO}\\\" VALUE {'PARQUE_ID':2,'NOMBRE':'Parque del Este'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Parque del Este",
+            "code": "curl -i -X POST \"$API_URL/parques\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Parque del Este\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Zona 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ZONAS_${TALLER_EQUIPO}\\\" VALUE {'ZONA_ID':7,'NOMBRE':'Zona de juegos','CAPACIDAD':30,'PARQUE_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Zona 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ZONAS_${TALLER_EQUIPO}\\\" VALUE {'ZONA_ID':8,'NOMBRE':'Zona de picnic','CAPACIDAD':80,'PARQUE_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Zona 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ZONAS_${TALLER_EQUIPO}\\\" VALUE {'ZONA_ID':9,'NOMBRE':'Zona de juegos · nuevo','CAPACIDAD':140,'PARQUE_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"PARQUES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ZONAS_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar parques",
+            "code": "curl -i \"$API_URL/parques\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Parque y tres de Zona, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /parques muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Parque 1",
-          "Zona 7 y 9",
-          "Parque 2",
-          "Zona 8"
+          "POST /parques",
+          "Controller / Handler",
+          "Service",
+          "GET /parques"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/zonas/crear-listar/handler.mjs\nnode --check src/zonas/crear-listar/service.mjs\nnode --check src/zonas/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/zonas\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":31,\"parqueId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).zonaId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/zonas\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Zona de juegos",
+            "code": "curl -i -X POST \"$API_URL/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de juegos\",\"capacidad\":30,\"parqueId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarZonas --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Zona de picnic",
+            "code": "curl -i -X POST \"$API_URL/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de picnic\",\"capacidad\":80,\"parqueId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Zona de juegos · nuevo",
+            "code": "curl -i -X POST \"$API_URL/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de juegos · nuevo\",\"capacidad\":140,\"parqueId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/zonas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"capacidad\":31,\"parqueId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/zonas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/zonas/eliminar/handler.mjs\nnode --check src/zonas/eliminar/service.mjs\nnode --check src/zonas/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/zonas/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/zonas\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/zonas/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/zonas\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/zonas/modificar-capacidad/handler.mjs\nnode --check src/zonas/modificar-capacidad/service.mjs\nnode --check src/zonas/modificar-capacidad/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar capacidad",
-            "code": "curl -i -X PATCH \"$API_URL/zonas/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":110}'\ncurl -i \"$API_URL/zonas\"",
+            "title": "Cambiar capacidad",
+            "code": "curl -i -X PATCH \"$API_URL/zonas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"capacidad\":110}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/zonas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · capacidad = 110 personas · parqueId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n  trasladarZona:\n    handler: src/zonas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}/parque' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n  trasladarZona:\n    handler: src/zonas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}/parque' }\n\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/zonas/trasladar/handler.mjs\nnode --check src/zonas/trasladar/service.mjs\nnode --check src/zonas/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/zonas/7/parque\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"parqueId\":2}'\ncurl -i \"$API_URL/zonas\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/zonas/1/parque\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"parqueId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/zonas\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · capacidad = 110 personas · parqueId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n  trasladarZona:\n    handler: src/zonas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}/parque' }\n  consultarParque:\n    handler: src/parques/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/parques/{parqueId}/zonas' }\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
+            "code": "service: taller-ch14\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_PARQUES: { Ref: TablaParques }\n    TABLA_ZONAS: { Ref: TablaZonas }\n\n\nfunctions:\n  crearParque:\n    handler: src/parques/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /parques }\n  listarParques:\n    handler: src/parques/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /parques }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearZona:\n    handler: src/zonas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/zonas' }\n  listarZonas:\n    handler: src/zonas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/zonas' }\n  eliminarZona:\n    handler: src/zonas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/zonas/{zonaId}' }\n  modificarCapacidad:\n    handler: src/zonas/modificar-capacidad/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}' }\n  trasladarZona:\n    handler: src/zonas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/zonas/{zonaId}/parque' }\n  consultarParque:\n    handler: src/parques/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/parques/{parqueId}/zonas' }\nresources:\n  Resources:\n    TablaParques:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: PARQUES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: PARQUE_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_PARQUE.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: PARQUE_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaZonas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ZONAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: ZONA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   CAPACIDAD (N: número).\n        #   PARQUE_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_ZONA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: ZONA_ID, AttributeType: N }\n          - { AttributeName: PARQUE_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: ZONA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en ZONAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorParque\n            # Clave compuesta = partition key + sort key:\n            # (PARQUE_ID, ZONA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: PARQUE_ID\n                KeyType: HASH   # Partition key. Agrupa por Parque.\n              - AttributeName: ZONA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de ZONAS copiados al índice.\n                - NOMBRE\n                - CAPACIDAD",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/parques/consultar/handler.mjs\nnode --check src/parques/consultar/service.mjs\nnode --check src/parques/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/parques/2/zonas?minimo=81\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/parques/2/zonas?minimo=81\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Parque del Este + registro 7 (110 personas). Excluye el 8 (80 personas) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ZONAS_${TALLER_EQUIPO}\\\" WHERE ZONA_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

@@ -248,4 +248,6 @@ def main():
         for cue in stage['cues']:assert stage['code'][cue['start']:cue['end']]==cue['token'],stage['id']
     print('Arturo: base docente integrada; otros contextos y Serverless intactos.')
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    from version_estudio import main as generar_version_actual
+    generar_version_actual()

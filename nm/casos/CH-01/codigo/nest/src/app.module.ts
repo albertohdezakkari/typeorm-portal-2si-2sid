@@ -7,6 +7,8 @@ import { AnimalesModule } from './animales/animales.module';
 import { CuidadoresModule } from './cuidadores/cuidadores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { RefugiosModule } from './refugios/refugios.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    RefugiosModule,
     AnimalesModule,
     CuidadoresModule,
     AsignacionesModule

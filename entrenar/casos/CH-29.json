@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Granja",
+        "path": "src/granjas/granjas.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Granja } from './entities/granja.entity';\n\n@Injectable()\nexport class GranjasService {\n  constructor(\n    @InjectRepository(Granja) private readonly granjas: Repository<Granja>\n  ) {}\n\n  crearGranja(nombre: string) {\n    const granja = this.granjas.create({ nombre });\n    return this.granjas.save(granja);\n  }\n\n  listarGranjas() {\n    return this.granjas.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.granjas.save(granja);",
+            "title": "Service · Granja",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Granja",
+        "path": "src/granjas/granjas.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\ncurl -i \"http://localhost:3000/granjas\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { GranjasService } from './granjas.service';\n\n@Controller('granjas')\nexport class GranjasController {\n  constructor(private readonly service: GranjasService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearGranja(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarGranjas();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Granja",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Granja",
+        "path": "src/granjas/granjas.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Granja } from './entities/granja.entity';\nimport { GranjasService } from './granjas.service';\nimport { GranjasController } from './granjas.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Granja])],\n  providers: [GranjasService],\n  controllers: [GranjasController]\n})\nexport class GranjasModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Granja",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\nimport { GranjasModule } from './granjas/granjas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GranjasModule,\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar granjas",
+        "path": "Peticiones · granjas",
+        "code": "curl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\n\ncurl -i -X POST \"http://localhost:3000/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Monte\"}'\n\ncurl -i \"http://localhost:3000/granjas\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/granjas\" \\",
+            "title": "Crear y listar granjas",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/cosechas/cosechas.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /cosechas\n{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}\n\n201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/cosechas\"\n\ncurl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate\",\"kilos\":80,\"granjaId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de calabaza\",\"kilos\":220,\"granjaId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate · nuevo\",\"kilos\":380,\"granjaId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}'\n\ncurl -i \"http://localhost:3000/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /cosechas/10\n\n204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/cosechas/4\"\n\ncurl -i \"http://localhost:3000/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /cosechas/7\n{\"kilos\":300}\n\n200 · Registro 7 · kilos = 300 kg · granjaId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · kilos = 300 kg · granjaId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'\n\ncurl -i \"http://localhost:3000/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /cosechas/7/granja\n{\"granjaId\":2}\n\n200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/cosechas/1/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"granjaId\":2}'\n\ncurl -i \"http://localhost:3000/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /granjas/2/cosechas?minimo=221\n\n200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/granjas/2/cosechas?minimo=221\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cosechas }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cosechas }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /cosechas/{cosechaId} }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId} }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId}/granja }\n  consultarGranja:\n    handler: src/granjas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /granjas/{granjaId}/cosechas }",
+        "code": "functions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  crearCosecha:\n    handler: src/cosechas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /cosechas }\n  listarCosechas:\n    handler: src/cosechas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /cosechas }\n  eliminarCosecha:\n    handler: src/cosechas/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: /cosechas/{cosechaId} }\n  modificarKilos:\n    handler: src/cosechas/modificar-kilos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId} }\n  trasladarCosecha:\n    handler: src/cosechas/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: /cosechas/{cosechaId}/granja }\n  consultarGranja:\n    handler: src/granjas/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: /granjas/{granjaId}/cosechas }",
         "cues": [
           {
             "text": "src/cosechas/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Granja",
+        "path": "src/granjas/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_GRANJA } from '../../models/granja-cosecha.model.mjs';\n\nexport async function crearGranjaRepository(granja) {\n  await MODELO_GRANJA.build(EntityRepository).put(\n    granja,\n    { condition: { attr: 'granjaId', exists: false } }\n  );\n}\n\nexport async function listarGranjasRepository() {\n  const { Items = [] } = await MODELO_GRANJA.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Granja",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Granja",
+        "path": "src/granjas/crear-listar/service.mjs",
+        "code": "import { crearGranjaRepository, listarGranjasRepository } from './repository.mjs';\n\nexport async function crearGranjaService(nombre) {\n  const granjaId = Date.now();\n  const granja = { granjaId, nombre };\n  await crearGranjaRepository(granja);\n  return granja;\n}\n\nexport function listarGranjasService() {\n  return listarGranjasRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Granja",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Granja",
+        "path": "src/granjas/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\ncurl -i \"$API_URL/granjas\"\n*/\n// POST /granjas con JSON: {\"nombre\":\"Granja del Sol\"}\n// GET /granjas lista los registros y sus IDs.\nimport { crearGranjaService, listarGranjasService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const granja = await crearGranjaService(nombre);\n  return { statusCode: 201, body: JSON.stringify(granja) };\n}\n\nexport async function listarHandler() {\n  const granjas = await listarGranjasService();\n  return { statusCode: 200, body: JSON.stringify(granjas) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Granja",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar granjas",
+        "path": "Peticiones · granjas",
+        "code": "curl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Sol\"}'\n\ncurl -i -X POST \"$API_URL/granjas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Granja del Monte\"}'\n\ncurl -i \"$API_URL/granjas\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/granjas\" \\",
+            "title": "Crear y listar granjas",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /cosechas\n{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}\n\n201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /cosechas → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/cosechas\"\n\ncurl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate\",\"kilos\":80,\"granjaId\":1}'\n\ncurl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de calabaza\",\"kilos\":220,\"granjaId\":2}'\n\ncurl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cosecha de tomate · nuevo\",\"kilos\":380,\"granjaId\":1}'\n\ncurl -i -X POST \"$API_URL/cosechas\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"kilos\":81,\"granjaId\":2}'\n\ncurl -i \"$API_URL/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /cosechas/10\n\n204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /cosechas → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/cosechas/4\"\n\ncurl -i \"$API_URL/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /cosechas/7\n{\"kilos\":300}\n\n200 · Registro 7 · kilos = 300 kg · granjaId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · kilos = 300 kg · granjaId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · kilos = 300 kg · granjaId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/cosechas/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"kilos\":300}'\n\ncurl -i \"$API_URL/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /cosechas/7/granja\n{\"granjaId\":2}\n\n200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · kilos = 300 kg · granjaId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/cosechas/1/granja\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"granjaId\":2}'\n\ncurl -i \"$API_URL/cosechas\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /granjas/2/cosechas?minimo=221\n\n200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Granja del Monte + registro 7 (300 kg). Excluye el 8 (220 kg) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/granjas/2/cosechas?minimo=221\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1668,5 +1778,107 @@
       "nest:17",
       "nest:20"
     ]
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { CosechasModule } from './cosechas/cosechas.module';\n\nimport { GranjasModule } from './granjas/granjas.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GranjasModule,\n    CosechasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch29\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GRANJAS: { Ref: TablaGranjas }\n    TABLA_COSECHAS: { Ref: TablaCosechas }\n\n\nfunctions:\n  crearGranja:\n    handler: src/granjas/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /granjas }\n  listarGranjas:\n    handler: src/granjas/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /granjas }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaGranjas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GRANJAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GRANJA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GRANJA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GRANJA_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaCosechas:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: COSECHAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: COSECHA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   KILOS (N: número).\n        #   GRANJA_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_COSECHA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: COSECHA_ID, AttributeType: N }\n          - { AttributeName: GRANJA_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: COSECHA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en COSECHAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGranja\n            # Clave compuesta = partition key + sort key:\n            # (GRANJA_ID, COSECHA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GRANJA_ID\n                KeyType: HASH   # Partition key. Agrupa por Granja.\n              - AttributeName: COSECHA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de COSECHAS copiados al índice.\n                - NOMBRE\n                - KILOS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

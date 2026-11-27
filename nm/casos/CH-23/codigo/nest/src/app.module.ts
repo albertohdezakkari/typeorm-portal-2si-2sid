@@ -7,6 +7,8 @@ import { ComandasModule } from './comandas/comandas.module';
 import { CocinerosModule } from './cocineros/cocineros.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { CafeteriasModule } from './cafeterias/cafeterias.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    CafeteriasModule,
     ComandasModule,
     CocinerosModule,
     AsignacionesModule

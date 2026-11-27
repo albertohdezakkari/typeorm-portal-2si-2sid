@@ -738,7 +738,7 @@ D=dict(version=1,unit='nm',caseId='CH-22',title='Obras y profesionales · relaci
 from nest_sencillo import apply_nm
 apply_nm(D,NEST)
 from version_estudio import nm
-nm(D,NEST)
+nm(D,NEST,CLOUD)
 for tech,files in [('nest',NEST),('cloud',CLOUD)]:
  dest=OUT/'codigo'/tech
  if tech=='nest':

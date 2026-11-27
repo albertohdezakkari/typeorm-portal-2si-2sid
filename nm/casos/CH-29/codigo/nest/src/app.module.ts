@@ -7,6 +7,8 @@ import { CosechasModule } from './cosechas/cosechas.module';
 import { AgricultoresModule } from './agricultores/agricultores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { GranjasModule } from './granjas/granjas.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    GranjasModule,
     CosechasModule,
     AgricultoresModule,
     AsignacionesModule

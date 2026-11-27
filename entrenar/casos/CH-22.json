@@ -182,6 +182,91 @@
         ]
       },
       {
+        "chapter": 0,
+        "name": "Service · Ayuntamiento",
+        "path": "src/ayuntamientos/ayuntamientos.service.ts",
+        "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Ayuntamiento } from './entities/ayuntamiento.entity';\n\n@Injectable()\nexport class AyuntamientosService {\n  constructor(\n    @InjectRepository(Ayuntamiento) private readonly ayuntamientos: Repository<Ayuntamiento>\n  ) {}\n\n  crearAyuntamiento(nombre: string) {\n    const ayuntamiento = this.ayuntamientos.create({ nombre });\n    return this.ayuntamientos.save(ayuntamiento);\n  }\n\n  listarAyuntamientos() {\n    return this.ayuntamientos.find({ order: { id: 'ASC' } });\n  }\n}",
+        "cues": [
+          {
+            "text": "return this.ayuntamientos.save(ayuntamiento);",
+            "title": "Service · Ayuntamiento",
+            "note": "El Service usa el repositorio de su Entity: create prepara el objeto, save lo guarda y devuelve su ID; find permite listar lo guardado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Controller · Ayuntamiento",
+        "path": "src/ayuntamientos/ayuntamientos.controller.ts",
+        "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Río\"}'\ncurl -i \"http://localhost:3000/ayuntamientos\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { AyuntamientosService } from './ayuntamientos.service';\n\n@Controller('ayuntamientos')\nexport class AyuntamientosController {\n  constructor(private readonly service: AyuntamientosService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearAyuntamiento(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarAyuntamientos();\n  }\n}",
+        "cues": [
+          {
+            "text": "@Post()",
+            "title": "Controller · Ayuntamiento",
+            "note": "El Controller recibe el JSON de POST y entrega nombre al Service. GET llama al listado del mismo Service."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Módulo · Ayuntamiento",
+        "path": "src/ayuntamientos/ayuntamientos.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Ayuntamiento } from './entities/ayuntamiento.entity';\nimport { AyuntamientosService } from './ayuntamientos.service';\nimport { AyuntamientosController } from './ayuntamientos.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Ayuntamiento])],\n  providers: [AyuntamientosService],\n  controllers: [AyuntamientosController]\n})\nexport class AyuntamientosModule {}",
+        "cues": [
+          {
+            "text": "TypeOrmModule.forFeature",
+            "title": "Módulo · Ayuntamiento",
+            "note": "forFeature permite inyectar el repositorio de esta Entity. El módulo registra su Service y su Controller."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta ambos módulos",
+        "path": "src/app.module.ts",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ObrasModule } from './obras/obras.module';\n\nimport { AyuntamientosModule } from './ayuntamientos/ayuntamientos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AyuntamientosModule,\n    ObrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "cues": [
+          {
+            "text": "imports: [",
+            "title": "Conecta ambos módulos",
+            "note": "Conserva la conexión del proyecto base y registra los módulos de los dos extremos de la relación."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar ayuntamientos",
+        "path": "Peticiones · ayuntamientos",
+        "code": "curl -i -X POST \"http://localhost:3000/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Río\"}'\n\ncurl -i -X POST \"http://localhost:3000/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Valle\"}'\n\ncurl -i \"http://localhost:3000/ayuntamientos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"http://localhost:3000/ayuntamientos\" \\",
+            "title": "Crear y listar ayuntamientos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
         "chapter": 1,
         "name": "Service",
         "path": "src/obras/obras.service.ts",
@@ -273,14 +358,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /obras\n{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}\n\n201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/obras\"\n\ncurl -i -X POST \"http://localhost:3000/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Mejora de acera\",\"presupuestoEuros\":3000,\"ayuntamientoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de sombra\",\"presupuestoEuros\":12000,\"ayuntamientoId\":2}'\n\ncurl -i -X POST \"http://localhost:3000/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Mejora de acera · nuevo\",\"presupuestoEuros\":18000,\"ayuntamientoId\":1}'\n\ncurl -i -X POST \"http://localhost:3000/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}'\n\ncurl -i \"http://localhost:3000/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -338,14 +417,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /obras/10\n\n204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"http://localhost:3000/obras/4\"\n\ncurl -i \"http://localhost:3000/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -409,14 +482,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /obras/7\n{\"presupuestoEuros\":15000}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/obras/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"presupuestoEuros\":15000}'\n\ncurl -i \"http://localhost:3000/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -480,14 +547,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /obras/7/ayuntamiento\n{\"ayuntamientoId\":2}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"http://localhost:3000/obras/1/ayuntamiento\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"ayuntamientoId\":2}'\n\ncurl -i \"http://localhost:3000/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -557,14 +618,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /ayuntamientos/2/obras?minimo=12001\n\n200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).\n\nEjemplo visual: los números ilustran la traza. Los comandos para tu base están en «Prueba este caso desde tu terminal», al pie de este mismo paso. Utiliza los IDs reales de ids-aula.env.",
-        "cues": [
-          {
-            "text": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"http://localhost:3000/ayuntamientos/2/obras?minimo=12001\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -796,7 +851,7 @@
         "chapter": 0,
         "name": "Conectar las funciones",
         "path": "serverless.yml · functions",
-        "code": "functions:\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}' }\n  trasladarObra:\n    handler: src/obras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}/ayuntamiento' }\n  consultarAyuntamiento:\n    handler: src/ayuntamientos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/ayuntamientos/{ayuntamientoId}/obras' }",
+        "code": "functions:\n  crearAyuntamiento:\n    handler: src/ayuntamientos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /ayuntamientos }\n  listarAyuntamientos:\n    handler: src/ayuntamientos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /ayuntamientos }\n  crearObra:\n    handler: src/obras/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/obras' }\n  listarObras:\n    handler: src/obras/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/obras' }\n  eliminarObra:\n    handler: src/obras/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/obras/{obraId}' }\n  modificarPresupuestoEuros:\n    handler: src/obras/modificar-presupuesto-euros/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}' }\n  trasladarObra:\n    handler: src/obras/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/obras/{obraId}/ayuntamiento' }\n  consultarAyuntamiento:\n    handler: src/ayuntamientos/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/ayuntamientos/{ayuntamientoId}/obras' }",
         "cues": [
           {
             "text": "src/obras/crear-listar/handler.crearHandler",
@@ -817,6 +872,91 @@
         "page": 4,
         "exact": false,
         "scene": "flow"
+      },
+      {
+        "chapter": 0,
+        "name": "Repository · Ayuntamiento",
+        "path": "src/ayuntamientos/crear-listar/repository.mjs",
+        "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_AYUNTAMIENTO } from '../../models/ayuntamiento-obra.model.mjs';\n\nexport async function crearAyuntamientoRepository(ayuntamiento) {\n  await MODELO_AYUNTAMIENTO.build(EntityRepository).put(\n    ayuntamiento,\n    { condition: { attr: 'ayuntamientoId', exists: false } }\n  );\n}\n\nexport async function listarAyuntamientosRepository() {\n  const { Items = [] } = await MODELO_AYUNTAMIENTO.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+        "cues": [
+          {
+            "text": "build(EntityRepository)",
+            "title": "Repository · Ayuntamiento",
+            "note": "El Repository parte de Entity. put guarda un registro; scan lee los registros para el listado."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Service · Ayuntamiento",
+        "path": "src/ayuntamientos/crear-listar/service.mjs",
+        "code": "import { crearAyuntamientoRepository, listarAyuntamientosRepository } from './repository.mjs';\n\nexport async function crearAyuntamientoService(nombre) {\n  const ayuntamientoId = Date.now();\n  const ayuntamiento = { ayuntamientoId, nombre };\n  await crearAyuntamientoRepository(ayuntamiento);\n  return ayuntamiento;\n}\n\nexport function listarAyuntamientosService() {\n  return listarAyuntamientosRepository();\n}",
+        "cues": [
+          {
+            "text": "Date.now()",
+            "title": "Service · Ayuntamiento",
+            "note": "El Service genera el ID, prepara el objeto y llama al Repository. Conserva el ID de la respuesta para relacionar el siguiente registro."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Handler · Ayuntamiento",
+        "path": "src/ayuntamientos/crear-listar/handler.mjs",
+        "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Río\"}'\ncurl -i \"$API_URL/ayuntamientos\"\n*/\n// POST /ayuntamientos con JSON: {\"nombre\":\"Ayuntamiento del Río\"}\n// GET /ayuntamientos lista los registros y sus IDs.\nimport { crearAyuntamientoService, listarAyuntamientosService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const ayuntamiento = await crearAyuntamientoService(nombre);\n  return { statusCode: 201, body: JSON.stringify(ayuntamiento) };\n}\n\nexport async function listarHandler() {\n  const ayuntamientos = await listarAyuntamientosService();\n  return { statusCode: 200, body: JSON.stringify(ayuntamientos) };\n}",
+        "cues": [
+          {
+            "text": "JSON.parse(event.body)",
+            "title": "Handler · Ayuntamiento",
+            "note": "El Handler recibe el cuerpo JSON de API Gateway, entrega nombre al Service y devuelve el registro creado. El otro Handler atiende GET."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Conecta las altas y los listados",
+        "path": "serverless.yml",
+        "code": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  crearAyuntamiento:\n    handler: src/ayuntamientos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /ayuntamientos }\n  listarAyuntamientos:\n    handler: src/ayuntamientos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /ayuntamientos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS",
+        "cues": [
+          {
+            "text": "functions:",
+            "title": "Conecta las altas y los listados",
+            "note": "Cada función vincula un Handler con una ruta y un método HTTP. Guarda los archivos y despliega antes de probar."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
+      },
+      {
+        "chapter": 0,
+        "name": "Crear y listar ayuntamientos",
+        "path": "Peticiones · ayuntamientos",
+        "code": "curl -i -X POST \"$API_URL/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Río\"}'\n\ncurl -i -X POST \"$API_URL/ayuntamientos\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ayuntamiento del Valle\"}'\n\ncurl -i \"$API_URL/ayuntamientos\"",
+        "cues": [
+          {
+            "text": "curl -i -X POST \"$API_URL/ayuntamientos\" \\",
+            "title": "Crear y listar ayuntamientos",
+            "note": "Ejecuta cada POST, observa su respuesta y anota su ID. GET muestra los principales disponibles; usa esos IDs al crear los registros relacionados."
+          }
+        ],
+        "page": 2,
+        "exact": false,
+        "scene": "parent-api",
+        "apiStage": true
       },
       {
         "chapter": 1,
@@ -907,14 +1047,8 @@
         "chapter": 1,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "POST /obras\n{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}\n\n201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros\n\nID 10: ejemplo visual. Utiliza el ID devuelto por tu POST.",
-        "cues": [
-          {
-            "text": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros",
-            "title": "Comprobar el resultado",
-            "note": "201 · Registro 10 creado → GET /obras → 200 · aparecen 4 registros"
-          }
-        ],
+        "code": "curl -i \"$API_URL/obras\"\n\ncurl -i -X POST \"$API_URL/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Mejora de acera\",\"presupuestoEuros\":3000,\"ayuntamientoId\":1}'\n\ncurl -i -X POST \"$API_URL/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Zona de sombra\",\"presupuestoEuros\":12000,\"ayuntamientoId\":2}'\n\ncurl -i -X POST \"$API_URL/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Mejora de acera · nuevo\",\"presupuestoEuros\":18000,\"ayuntamientoId\":1}'\n\ncurl -i -X POST \"$API_URL/obras\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"presupuestoEuros\":3001,\"ayuntamientoId\":2}'\n\ncurl -i \"$API_URL/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -987,14 +1121,8 @@
         "chapter": 2,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "DELETE /obras/10\n\n204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
-        "cues": [
-          {
-            "text": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9",
-            "title": "Comprobar el resultado",
-            "note": "204 · Registro 10 eliminado → GET /obras → 200 · quedan 7, 8 y 9"
-          }
-        ],
+        "code": "curl -i -X DELETE \"$API_URL/obras/4\"\n\ncurl -i \"$API_URL/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1077,14 +1205,8 @@
         "chapter": 3,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /obras/7\n{\"presupuestoEuros\":15000}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId = 1"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/obras/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"presupuestoEuros\":15000}'\n\ncurl -i \"$API_URL/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1172,14 +1294,8 @@
         "chapter": 4,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "PATCH /obras/7/ayuntamiento\n{\"ayuntamientoId\":2}\n\n200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
-        "cues": [
-          {
-            "text": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2",
-            "title": "Comprobar el resultado",
-            "note": "200 · Registro 7 · presupuestoEuros = 15000 € · ayuntamientoId pasa de 1 a 2"
-          }
-        ],
+        "code": "curl -i -X PATCH \"$API_URL/obras/1/ayuntamiento\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"ayuntamientoId\":2}'\n\ncurl -i \"$API_URL/obras\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1277,14 +1393,8 @@
         "chapter": 5,
         "name": "Comprobar",
         "path": "Petición y resultado · ficha página 4",
-        "code": "GET /ayuntamientos/2/obras?minimo=12001\n\n200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
-        "cues": [
-          {
-            "text": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1).",
-            "title": "Comprobar el resultado",
-            "note": "200 · Ayuntamiento del Valle + registro 7 (15000 €). Excluye el 8 (12000 €) y el 9 (pertenece al ID 1)."
-          }
-        ],
+        "code": "curl -i \"$API_URL/ayuntamientos/2/obras?minimo=12001\"",
+        "cues": [],
         "page": 4,
         "exact": false,
         "scene": "result"
@@ -1625,5 +1735,107 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": true
+  },
+  "apiAppModule": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ObrasModule } from './obras/obras.module';\n\nimport { AyuntamientosModule } from './ayuntamientos/ayuntamientos.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    AyuntamientosModule,\n    ObrasModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+  "apiCloudYaml": "service: taller-ch22\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_AYUNTAMIENTOS: { Ref: TablaAyuntamientos }\n    TABLA_OBRAS: { Ref: TablaObras }\n\n\nfunctions:\n  crearAyuntamiento:\n    handler: src/ayuntamientos/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /ayuntamientos }\n  listarAyuntamientos:\n    handler: src/ayuntamientos/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /ayuntamientos }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaAyuntamientos:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: AYUNTAMIENTOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: AYUNTAMIENTO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_AYUNTAMIENTO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: AYUNTAMIENTO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaObras:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: OBRAS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: OBRA_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PRESUPUESTO_EUROS (N: número).\n        #   AYUNTAMIENTO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_OBRA.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: OBRA_ID, AttributeType: N }\n          - { AttributeName: AYUNTAMIENTO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: OBRA_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en OBRAS.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorAyuntamiento\n            # Clave compuesta = partition key + sort key:\n            # (AYUNTAMIENTO_ID, OBRA_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: AYUNTAMIENTO_ID\n                KeyType: HASH   # Partition key. Agrupa por Ayuntamiento.\n              - AttributeName: OBRA_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de OBRAS copiados al índice.\n                - NOMBRE\n                - PRESUPUESTO_EUROS",
+  "apiRevision": 1,
+  "apiMigration": {
+    "nest": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "5": 5,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "13": 18,
+        "14": 19,
+        "16": 21,
+        "17": 22,
+        "19": 24,
+        "20": 25
+      }
+    },
+    "cloud": {
+      "positions": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "retained": {
+        "0": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4,
+        "6": 11,
+        "7": 12,
+        "8": 13,
+        "10": 15,
+        "11": 16,
+        "12": 17,
+        "14": 19,
+        "15": 20,
+        "16": 21,
+        "18": 23,
+        "19": 24,
+        "20": 25,
+        "22": 27,
+        "23": 28,
+        "24": 29
+      }
+    }
   }
 }

@@ -69,7 +69,7 @@
         "kind": "command",
         "code": "# Terminal 2 · misma carpeta del backend.\npwd\ncurl -i http://localhost:3000/salud\ncurl -i http://localhost:3000/sesiones",
         "path": "",
-        "note": "Continúa en la carpeta backend de tu proyecto Gimnasio/Sesion ya preparado en 1:N. No clones ni instales otra base. Conserva .env, dependencias, tablas, datos y tus casos anteriores. Si Nest ya está ejecutándose, pasa directamente al bloque 2.",
+        "note": "Continúa en el backend 1:N existente. Los registros de ambos extremos se crean mediante POST y se consultan con GET; conserva sus IDs reales. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "expect": "Tu API 1:N sigue funcionando: /salud y /sesiones devuelven HTTP 200. Conserva las sesiones y sus IDs; este bloque solo añade Instructor y Asignacion.",
         "focus": "model",
         "cues": [
@@ -283,7 +283,7 @@
         "chapter": 1,
         "title": "Conecta los dos nuevos módulos",
         "kind": "module",
-        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\nimport { InstructoresModule } from './instructores/instructores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    SesionesModule,\n    InstructoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+        "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { SesionesModule } from './sesiones/sesiones.module';\nimport { InstructoresModule } from './instructores/instructores.module';\nimport { AsignacionesModule } from './asignaciones/asignaciones.module';\n\nimport { GimnasiosModule } from './gimnasios/gimnasios.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    GimnasiosModule,\n    SesionesModule,\n    InstructoresModule,\n    AsignacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
         "path": "src/app.module.ts",
         "note": "Mantén SesionesModule y la conexión original. Añade InstructoresModule y AsignacionesModule: cada recurso tendrá su módulo, Service y Controller.",
         "expect": "AppModule conserva Sesiones y añade Instructores y Asignaciones; synchronize: true crea las nuevas tablas.",
@@ -291,14 +291,14 @@
         "cues": [
           {
             "token": "InstructoresModule,",
-            "start": 1142,
-            "end": 1161,
+            "start": 1228,
+            "end": 1247,
             "note": "Carga el módulo que registra Instructor."
           },
           {
             "token": "AsignacionesModule\n",
-            "start": 1166,
-            "end": 1185,
+            "start": 1252,
+            "end": 1271,
             "note": "Carga el módulo que registra Asignacion y los dos extremos."
           }
         ],
@@ -461,7 +461,7 @@
         "kind": "command",
         "code": "curl -i -X POST \"http://localhost:3000/instructores\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Diego\",\"apellidos\":\"Ruiz López\",\"email\":\"diego.ruiz@example.test\"}'\ncurl -i \"http://localhost:3000/instructores\"",
         "path": "",
-        "note": "Terminal 2: ejecuta POST para crear un instructor a través del Controller y su Service. Anota el ID que devuelve la respuesta; GET lista los instructores. Los ejemplos siguientes usan instructor 1: si recibes otro ID, utiliza el tuyo.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "POST devuelve el instructor creado con su ID. GET permite comprobar que está guardado. Copia el ID real de la respuesta para el caso siguiente.",
         "focus": "response",
         "cues": [],
@@ -590,9 +590,9 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i http://localhost:3000/sesiones\ncurl -i -X POST \"http://localhost:3000/sesiones/7/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"instructorId\":1,\"rol\":\"Calentamiento\"}'",
+        "code": "curl -i http://localhost:3000/sesiones\ncurl -i -X POST \"http://localhost:3000/sesiones/1/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"instructorId\":1,\"rol\":\"Calentamiento\"}'",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "POST crea la asignación de una sesion existente con el instructor que acabas de crear. Repetir esa pareja devuelve 409.",
         "focus": "response",
         "cues": [],
@@ -683,9 +683,9 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i \"http://localhost:3000/sesiones/7/asignaciones\"",
+        "code": "curl -i \"http://localhost:3000/sesiones/1/asignaciones\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "GET devuelve las asignaciones de esa sesion. Tras la primera prueba aparece el vínculo que has creado con el POST.",
         "focus": "response",
         "cues": [],
@@ -778,7 +778,7 @@
         "kind": "command",
         "code": "curl -i \"http://localhost:3000/instructores/1/asignaciones\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "GET devuelve las sesiones en las que participa ese instructor. No presupone asignaciones cargadas previamente.",
         "focus": "response",
         "cues": [],
@@ -875,9 +875,9 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": "curl -i -X PATCH \"http://localhost:3000/sesiones/1/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "PATCH cambia únicamente el rol de la pareja de IDs que has creado; conserva la sesion y el instructor.",
         "focus": "response",
         "cues": [],
@@ -968,9 +968,9 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"http://localhost:3000/sesiones/7/asignaciones/1\"",
+        "code": "curl -i -X DELETE \"http://localhost:3000/sesiones/1/asignaciones/1\"",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "DELETE devuelve 204 y elimina solo la asignación indicada; la sesion y el instructor siguen existiendo.",
         "focus": "response",
         "cues": [],
@@ -981,9 +981,9 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "curl -i \"http://localhost:3000/sesiones/7/asignaciones\"\ncurl -i http://localhost:3000/sesiones\ncurl -i http://localhost:3000/instructores",
+        "code": "curl -i \"http://localhost:3000/sesiones/1/asignaciones\"\ncurl -i http://localhost:3000/sesiones\ncurl -i http://localhost:3000/instructores",
         "path": "",
-        "note": "Terminal 2: utiliza las rutas de tu Controller. En los ejemplos se usa la sesion 7 y el instructor 1. Sustituye esos números por el ID de una sesion que ya exista (GET /sesiones) y por el ID devuelto al crear el instructor. Conserva esos mismos dos IDs en las pruebas siguientes.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
         "expect": "La pareja eliminada ya no aparece. La sesion y el instructor siguen en sus listados; si habías creado más asignaciones, se conservan las demás.",
         "focus": "response",
         "cues": [],
@@ -1088,7 +1088,7 @@
         "kind": "command",
         "code": "# Abre una terminal en la carpeta de tu backend Serverless.\npwd\nls package.json serverless.yml src\naws sts get-caller-identity\nprintf 'Equipo: %s\\nAPI: %s\\n' \"$TALLER_EQUIPO\" \"$API_URL\"\ncurl -i \"$API_URL/salud\"\ncurl -i \"$API_URL/sesiones\"",
         "path": "",
-        "note": "Sitúa la terminal en la carpeta de tu proyecto Serverless 1:N, donde están package.json, serverless.yml y src. En VS Code o Codespaces puedes abrir esa carpeta en el terminal integrado. Conserva el nombre y la ubicación de tu proyecto y recupera las variables AWS_PROFILE, AWS_REGION, TALLER_EQUIPO y API_URL de tu despliegue. Si partes de cero, usa Abrir preparación 1:N y completa sus modelos y cinco casos antes de ampliar. Si tu proyecto está en otro ordenador, clona tu propio repositorio y abre la carpeta del backend. Continúa sobre esa copia.",
+        "note": "Continúa en el backend 1:N existente. Los registros de ambos extremos se crean mediante POST y se consultan con GET; conserva sus IDs reales. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "expect": "La API responde con HTTP 200. Se conservan los registros 7, 8 y 9 de Sesion. El registro 7 mantiene PLAZAS = 34 y GIMNASIO_ID = 2, como al terminar el 1:N.",
         "focus": "model",
         "cues": [
@@ -1112,7 +1112,7 @@
         "chapter": 1,
         "title": "Añade las dos tablas sin reemplazar las anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "Archivo acumulativo completo. env:TALLER_EQUIPO lee directamente la variable que has exportado en la terminal; si vale equipo01, ASIGNACIONES_${env:TALLER_EQUIPO} se convierte en ASIGNACIONES_equipo01. Los campos NOMBRE, APELLIDOS, EMAIL y ROL se declaran en Entity; AttributeDefinitions solo contiene claves. NonKeyAttributes copia ROL al índice.",
         "expect": "Cuatro tablas, las rutas 1:N originales y ninguna función N:M todavía.",
@@ -1132,20 +1132,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2001,
-            "end": 2014,
+            "start": 2287,
+            "end": 2300,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3268,
-            "end": 3282,
+            "start": 3554,
+            "end": 3568,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 4701,
-            "end": 4714,
+            "start": 4987,
+            "end": 5000,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1253,32 +1253,6 @@
         "create": null
       },
       {
-        "id": "datos",
-        "chapter": 2,
-        "title": "Carga los instructores y las asignaciones",
-        "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"INSTRUCTORES_${TALLER_EQUIPO}\\\" VALUE {'INSTRUCTOR_ID':1,'NOMBRE':'Diego','APELLIDOS':'Ruiz López','EMAIL':'diego.ruiz@example.test'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"INSTRUCTORES_${TALLER_EQUIPO}\\\" VALUE {'INSTRUCTOR_ID':2,'NOMBRE':'Ana','APELLIDOS':'Vidal Sanz','EMAIL':'ana.vidal@example.test'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':7,'INSTRUCTOR_ID':1,'ROL':'Calentamiento'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':7,'INSTRUCTOR_ID':2,'ROL':'Entrenamiento'}\"\naws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\" VALUE {'SESION_ID':8,'INSTRUCTOR_ID':1,'ROL':'Coordinación'}\"",
-        "path": "",
-        "note": "Terminal de tu proyecto Serverless, en la carpeta que contiene serverless.yml. Ejecuta las altas una sola vez; DuplicateItem indica que ese dato ya existe. No borres ni sobrescribas tus datos.",
-        "expect": "Dos instructores y las tres parejas de la ficha, con nombre, apellidos, email y rol.",
-        "focus": "model",
-        "cues": [],
-        "create": null
-      },
-      {
-        "id": "leer-datos",
-        "chapter": 2,
-        "title": "Lee las asignaciones con PartiQL",
-        "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"INSTRUCTORES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-        "path": "",
-        "note": "",
-        "expect": "Se ven tres vínculos y dos perfiles. En la salida CLI, N indica número y S texto.",
-        "focus": "model",
-        "cues": [],
-        "create": null
-      },
-      {
         "id": "crear-listar-repository",
         "chapter": 3,
         "title": "Prepara el Repository",
@@ -1286,7 +1260,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_INSTRUCTOR } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function crearInstructorRepository(instructor) {\n  await MODELO_INSTRUCTOR.build(EntityRepository).put(\n    instructor,\n    { condition: { attr: 'instructorId', exists: false } }\n  );\n}\n\nexport async function listarInstructoresRepository() {\n  const { Items = [] } = await MODELO_INSTRUCTOR.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/instructores/crear-listar/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los instructores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1324,7 +1298,7 @@
         "code": "import { crearInstructorRepository, listarInstructoresRepository } from './repository.mjs';\n\nexport async function crearInstructorService(nombre, apellidos, email) {\n  const instructorId = Date.now();\n  const instructor = { instructorId, nombre, apellidos, email };\n  await crearInstructorRepository(instructor);\n  return instructor;\n}\n\nexport function listarInstructoresService() {\n  return listarInstructoresRepository();\n}\n",
         "path": "src/instructores/crear-listar/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los instructores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1356,7 +1330,7 @@
         "code": "import { crearInstructorService, listarInstructoresService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre, apellidos, email } = JSON.parse(event.body);\n  const instructor = await crearInstructorService(nombre, apellidos, email);\n  return { statusCode: 201, body: JSON.stringify(instructor) };\n}\n\nexport async function listarHandler() {\n  const instructores = await listarInstructoresService();\n  return { statusCode: 200, body: JSON.stringify(instructores) };\n}\n",
         "path": "src/instructores/crear-listar/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los instructores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1385,10 +1359,10 @@
         "chapter": 3,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1405,20 +1379,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2308,
-            "end": 2321,
+            "start": 2594,
+            "end": 2607,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3575,
-            "end": 3589,
+            "start": 3861,
+            "end": 3875,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 5008,
-            "end": 5021,
+            "start": 5294,
+            "end": 5307,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1432,7 +1406,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1442,31 +1416,12 @@
         "chapter": 3,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"$API_URL/instructores\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Lucía\",\"apellidos\":\"Navarro Gil\",\"email\":\"lucia.navarro@example.test\"}'\ncurl -i \"$API_URL/instructores\"",
+        "code": "curl -i -X POST \"$API_URL/instructores\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Diego\",\"apellidos\":\"Ruiz López\",\"email\":\"diego.ruiz@example.test\"}'\ncurl -i \"$API_URL/instructores\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los instructores iniciales y a Lucía; no crea asignaciones.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 18,
-            "end": 25,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1474,19 +1429,12 @@
         "chapter": 3,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"body\": \"{\\\"nombre\\\": \\\"Lucía\\\", \\\"apellidos\\\": \\\"Navarro Gil\\\", \\\"email\\\": \\\"lucia.navarro@example.test\\\"}\"\n}",
+        "code": "{\n  \"body\": \"{\\\"nombre\\\":\\\"Lucía\\\",\\\"apellidos\\\":\\\"Navarro Gil\\\",\\\"email\\\":\\\"lucia.navarro@example.test\\\"}\"\n}",
         "path": "peticiones/nm-1.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "body",
-            "start": 5,
-            "end": 9,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-1.json\ncode peticiones/nm-1.json"
       },
       {
@@ -1497,7 +1445,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-crearInstructor\" \\\n  --payload fileb://peticiones/nm-1.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "POST 201 devuelve el ID real creado. GET 200 muestra los instructores iniciales y a Lucía; no crea asignaciones.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -1517,7 +1465,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_SESION } from '../../models/gimnasio-sesion.model.mjs';\nimport { MODELO_INSTRUCTOR, MODELO_ASIGNACION } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function buscarSesionRepository(sesionId) {\n  const { Item } = await MODELO_SESION.build(EntityRepository).get(\n    { sesionId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function buscarInstructorRepository(instructorId) {\n  const { Item } = await MODELO_INSTRUCTOR.build(EntityRepository).get(\n    { instructorId },\n    { consistent: true }\n  );\n  return Item;\n}\n\nexport async function asignarInstructorRepository(sesionId, instructorId, rol) {\n  const asignacion = { sesionId, instructorId, rol };\n  await MODELO_ASIGNACION.build(EntityRepository).put(\n    asignacion,\n    { condition: { attr: 'sesionId', exists: false } }\n  );\n  return asignacion;\n}\n",
         "path": "src/asignaciones/asignar-instructor/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1561,7 +1509,7 @@
         "code": "import { buscarSesionRepository, buscarInstructorRepository, asignarInstructorRepository } from './repository.mjs';\n\nexport class ReferenciaInexistenteError extends Error {}\n\nexport async function asignarInstructorService(sesionId, instructorId, rol) {\n  const sesion = await buscarSesionRepository(sesionId);\n  const instructor = await buscarInstructorRepository(instructorId);\n  if (!sesion || !instructor) {\n    throw new ReferenciaInexistenteError('No existe la sesion o el instructor');\n  }\n  return asignarInstructorRepository(sesionId, instructorId, rol);\n}\n",
         "path": "src/asignaciones/asignar-instructor/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1605,7 +1553,7 @@
         "code": "import { asignarInstructorService, ReferenciaInexistenteError } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const { instructorId, rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await asignarInstructorService(sesionId, instructorId, rol);\n    return { statusCode: 201, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error instanceof ReferenciaInexistenteError) {\n      return { statusCode: 404, body: JSON.stringify({ message: error.message }) };\n    }\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 409, body: JSON.stringify({ message: 'El instructor ya está asignado a esa sesion' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/asignar-instructor/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). En esta asociación se comprueba que existan ambos extremos y se rechaza una pareja duplicada.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1646,10 +1594,10 @@
         "chapter": 4,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1666,20 +1614,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2483,
-            "end": 2496,
+            "start": 2769,
+            "end": 2782,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3750,
-            "end": 3764,
+            "start": 4036,
+            "end": 4050,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 5183,
-            "end": 5196,
+            "start": 5469,
+            "end": 5482,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1693,7 +1641,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1703,31 +1651,12 @@
         "chapter": 4,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X POST \"$API_URL/sesiones/8/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"instructorId\":2,\"rol\":\"Entrenamiento\"}'",
+        "code": "curl -i $API_URL/sesiones\ncurl -i -X POST \"$API_URL/sesiones/1/asignaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"instructorId\":1,\"rol\":\"Calentamiento\"}'",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 18,
-            "end": 25,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "POST",
-            "start": 11,
-            "end": 15,
-            "note": "Da de alta un registro o una asociación."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1735,25 +1664,12 @@
         "chapter": 4,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"8\"\n  },\n  \"body\": \"{\\\"instructorId\\\": 2, \\\"rol\\\": \\\"Entrenamiento\\\"}\"\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"1\"\n  },\n  \"body\": \"{\\\"instructorId\\\":1,\\\"rol\\\":\\\"Entrenamiento\\\"}\"\n}",
         "path": "peticiones/nm-2.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          },
-          {
-            "token": "body",
-            "start": 52,
-            "end": 56,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-2.json\ncode peticiones/nm-2.json"
       },
       {
@@ -1764,7 +1680,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-asignarInstructor\" \\\n  --payload fileb://peticiones/nm-2.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "Se crea (8,2). Hay cuatro asignaciones. Repetir (8,2) devuelve 409 y conserva el rol anterior.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -1784,7 +1700,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorSesionRepository(sesionId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { partition: sesionId },\n    { consistent: true }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-sesion/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La sesion 7 devuelve (7,1,Calentamiento) y (7,2,Entrenamiento): dos instructores para una sesion.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -1816,7 +1732,7 @@
         "code": "import { listarAsignacionesPorSesionRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorSesionService(sesionId) {\n  return listarAsignacionesPorSesionRepository(sesionId);\n}\n",
         "path": "src/asignaciones/listar-por-sesion/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La sesion 7 devuelve (7,1,Calentamiento) y (7,2,Entrenamiento): dos instructores para una sesion.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -1842,7 +1758,7 @@
         "code": "import { listarAsignacionesPorSesionService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const asignaciones = await listarAsignacionesPorSesionService(sesionId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-sesion/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "La sesion 7 devuelve (7,1,Calentamiento) y (7,2,Entrenamiento): dos instructores para una sesion.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -1877,10 +1793,10 @@
         "chapter": 5,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -1897,20 +1813,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2666,
-            "end": 2679,
+            "start": 2952,
+            "end": 2965,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 3933,
-            "end": 3947,
+            "start": 4219,
+            "end": 4233,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 5366,
-            "end": 5379,
+            "start": 5652,
+            "end": 5665,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -1924,7 +1840,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -1934,25 +1850,12 @@
         "chapter": 5,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"$API_URL/sesiones/7/asignaciones\"",
+        "code": "curl -i \"$API_URL/sesiones/1/asignaciones\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. ",
-        "expect": "La sesion 7 devuelve (7,1,Calentamiento) y (7,2,Entrenamiento): dos instructores para una sesion.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 17,
-            "end": 24,
-            "note": "Dirección de la API que vas a consultar."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -1960,19 +1863,12 @@
         "chapter": 5,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"7\"\n  }\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-3.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-3.json\ncode peticiones/nm-3.json"
       },
       {
@@ -1983,7 +1879,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-listarAsignacionesPorSesion\" \\\n  --payload fileb://peticiones/nm-3.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "La sesion 7 devuelve (7,1,Calentamiento) y (7,2,Entrenamiento): dos instructores para una sesion.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2003,7 +1899,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function listarAsignacionesPorInstructorRepository(instructorId) {\n  const { Items = [] } = await MODELO_ASIGNACION.build(EntityRepository).query(\n    { index: 'PorInstructor', partition: instructorId }\n  );\n  return Items;\n}\n",
         "path": "src/asignaciones/listar-por-instructor/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El instructor 1 devuelve las sesiones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2041,7 +1937,7 @@
         "code": "import { listarAsignacionesPorInstructorRepository } from './repository.mjs';\n\nexport function listarAsignacionesPorInstructorService(instructorId) {\n  return listarAsignacionesPorInstructorRepository(instructorId);\n}\n",
         "path": "src/asignaciones/listar-por-instructor/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El instructor 1 devuelve las sesiones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2067,7 +1963,7 @@
         "code": "import { listarAsignacionesPorInstructorService } from './service.mjs';\n\nexport async function handler(event) {\n  const instructorId = Number(event.pathParameters.instructorId);\n  const asignaciones = await listarAsignacionesPorInstructorService(instructorId);\n  return { statusCode: 200, body: JSON.stringify(asignaciones) };\n}\n",
         "path": "src/asignaciones/listar-por-instructor/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "El instructor 1 devuelve las sesiones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2102,10 +1998,10 @@
         "chapter": 6,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2122,20 +2018,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 2865,
-            "end": 2878,
+            "start": 3151,
+            "end": 3164,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4132,
-            "end": 4146,
+            "start": 4418,
+            "end": 4432,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 2150,
-            "end": 2163,
+            "start": 2436,
+            "end": 2449,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2149,7 +2045,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2159,25 +2055,12 @@
         "chapter": 6,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X GET \"$API_URL/instructores/1/asignaciones\"",
+        "code": "curl -i \"$API_URL/instructores/1/asignaciones\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. Los listados de vínculos muestran IDs y ROL; no hacen un JOIN automático con los nombres. El índice es eventualmente consistente; repite la lectura si acabas de escribir.",
-        "expect": "El instructor 1 devuelve las sesiones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 17,
-            "end": 24,
-            "note": "Dirección de la API que vas a consultar."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2187,17 +2070,10 @@
         "kind": "command",
         "code": "{\n  \"pathParameters\": {\n    \"instructorId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-4.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-4.json\ncode peticiones/nm-4.json"
       },
       {
@@ -2208,7 +2084,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-listarAsignacionesPorInstructor\" \\\n  --payload fileb://peticiones/nm-4.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "El instructor 1 devuelve las sesiones 7 y 8 con sus roles. El GSI puede tardar en reflejar una escritura reciente.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2228,7 +2104,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function modificarRolRepository(sesionId, instructorId, rol) {\n  const { Attributes } = await MODELO_ASIGNACION.build(EntityRepository).update(\n    { sesionId, instructorId, rol },\n    {\n      condition: { attr: 'sesionId', exists: true },\n      returnValues: 'ALL_NEW'\n    }\n  );\n  return Attributes;\n}\n",
         "path": "src/asignaciones/modificar-rol/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2272,7 +2148,7 @@
         "code": "import { modificarRolRepository } from './repository.mjs';\n\nexport function modificarRolService(sesionId, instructorId, rol) {\n  return modificarRolRepository(sesionId, instructorId, rol);\n}\n",
         "path": "src/asignaciones/modificar-rol/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2310,7 +2186,7 @@
         "code": "import { modificarRolService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const instructorId = Number(event.pathParameters.instructorId);\n  const { rol } = JSON.parse(event.body);\n  try {\n    const asignacion = await modificarRolService(sesionId, instructorId, rol);\n    return { statusCode: 200, body: JSON.stringify(asignacion) };\n  } catch (error) {\n    if (error.name === 'ConditionalCheckFailedException') {\n      return { statusCode: 404, body: JSON.stringify({ message: 'No existe la asignación' }) };\n    }\n    throw error;\n  }\n}\n",
         "path": "src/asignaciones/modificar-rol/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2351,10 +2227,10 @@
         "chapter": 7,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2371,20 +2247,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 3046,
-            "end": 3059,
+            "start": 3332,
+            "end": 3345,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4313,
-            "end": 4327,
+            "start": 4599,
+            "end": 4613,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 2150,
-            "end": 2163,
+            "start": 2436,
+            "end": 2449,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2398,7 +2274,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2408,31 +2284,12 @@
         "chapter": 7,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X PATCH \"$API_URL/sesiones/7/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
+        "code": "curl -i -X PATCH \"$API_URL/sesiones/1/asignaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"rol\":\"Jefe de equipo\"}'",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 19,
-            "end": 26,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "PATCH",
-            "start": 11,
-            "end": 16,
-            "note": "Modifica únicamente el dato que envías."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2440,25 +2297,12 @@
         "chapter": 7,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"7\",\n    \"instructorId\": \"1\"\n  },\n  \"body\": \"{\\\"rol\\\": \\\"Jefe de equipo\\\"}\"\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"1\",\n    \"instructorId\": \"1\"\n  },\n  \"body\": \"{\\\"rol\\\":\\\"Jefe de equipo\\\"}\"\n}",
         "path": "peticiones/nm-5.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          },
-          {
-            "token": "body",
-            "start": 77,
-            "end": 81,
-            "note": "Contiene el cuerpo JSON de la petición, como texto."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-5.json\ncode peticiones/nm-5.json"
       },
       {
@@ -2469,7 +2313,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-modificarRol\" \\\n  --payload fileb://peticiones/nm-5.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "Solo (7,1) cambia a Jefe de equipo. Permanecen los dos IDs y los otros tres vínculos.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2489,7 +2333,7 @@
         "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_ASIGNACION } from '../../models/instructor-asignacion.model.mjs';\n\nexport async function eliminarAsignacionRepository(sesionId, instructorId) {\n  await MODELO_ASIGNACION.build(EntityRepository).delete(\n    { sesionId, instructorId }\n  );\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/repository.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las sesiones y los instructores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "repository",
         "cues": [
           {
@@ -2527,7 +2371,7 @@
         "code": "import { eliminarAsignacionRepository } from './repository.mjs';\n\nexport function eliminarAsignacionService(sesionId, instructorId) {\n  return eliminarAsignacionRepository(sesionId, instructorId);\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/service.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las sesiones y los instructores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "service",
         "cues": [
           {
@@ -2559,7 +2403,7 @@
         "code": "import { eliminarAsignacionService } from './service.mjs';\n\nexport async function handler(event) {\n  const sesionId = Number(event.pathParameters.sesionId);\n  const instructorId = Number(event.pathParameters.instructorId);\n  await eliminarAsignacionService(sesionId, instructorId);\n  return { statusCode: 204, body: '' };\n}\n",
         "path": "src/asignaciones/eliminar-asignacion/handler.mjs",
         "note": "El archivo está completo: imports, métodos y cierres. Siempre partimos de la Entity con build(EntityRepository). get/put/scan/query/update/delete ya envían la operación, sin .send(). Los dos IDs identifican una sola asignación.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las sesiones y los instructores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "entry",
         "cues": [
           {
@@ -2594,10 +2438,10 @@
         "chapter": 8,
         "title": "Registra el caso y conserva los anteriores",
         "kind": "yaml",
-        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n  eliminarAsignacion:\n    handler: src/asignaciones/eliminar-asignacion/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
+        "code": "service: taller-ch06\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_GIMNASIOS: { Ref: TablaGimnasios }\n    TABLA_SESIONES: { Ref: TablaSesiones }\n    TABLA_INSTRUCTORES: { Ref: TablaInstructores }\n    TABLA_ASIGNACIONES: { Ref: TablaAsignaciones }\n\n\nfunctions:\n  crearGimnasio:\n    handler: src/gimnasios/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /gimnasios }\n  listarGimnasios:\n    handler: src/gimnasios/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /gimnasios }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearSesion:\n    handler: src/sesiones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/sesiones' }\n  listarSesiones:\n    handler: src/sesiones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/sesiones' }\n  eliminarSesion:\n    handler: src/sesiones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}' }\n  modificarPlazas:\n    handler: src/sesiones/modificar-plazas/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}' }\n  trasladarSesion:\n    handler: src/sesiones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/gimnasio' }\n  consultarGimnasio:\n    handler: src/gimnasios/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/gimnasios/{gimnasioId}/sesiones' }\n  crearInstructor:\n    handler: src/instructores/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/instructores' }\n  listarInstructores:\n    handler: src/instructores/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/instructores' }\n  asignarInstructor:\n    handler: src/asignaciones/asignar-instructor/handler.handler\n    events:\n      - httpApi: { method: POST, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorSesion:\n    handler: src/asignaciones/listar-por-sesion/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/sesiones/{sesionId}/asignaciones' }\n  listarAsignacionesPorInstructor:\n    handler: src/asignaciones/listar-por-instructor/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/instructores/{instructorId}/asignaciones' }\n  modificarRol:\n    handler: src/asignaciones/modificar-rol/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n  eliminarAsignacion:\n    handler: src/asignaciones/eliminar-asignacion/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/sesiones/{sesionId}/asignaciones/{instructorId}' }\n\nresources:\n  Resources:\n    TablaGimnasios:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: GIMNASIOS_${env:TALLER_EQUIPO}\n        # PARTITION KEY: GIMNASIO_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_GIMNASIO.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: GIMNASIO_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaSesiones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: SESIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: SESION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   PLAZAS (N: número).\n        #   GIMNASIO_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_SESION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: GIMNASIO_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en SESIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorGimnasio\n            # Clave compuesta = partition key + sort key:\n            # (GIMNASIO_ID, SESION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: GIMNASIO_ID\n                KeyType: HASH   # Partition key. Agrupa por Gimnasio.\n              - AttributeName: SESION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de SESIONES copiados al índice.\n                - NOMBRE\n                - PLAZAS\n\n    TablaInstructores:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: INSTRUCTORES_${env:TALLER_EQUIPO}\n        # PK: INSTRUCTOR_ID. Datos: NOMBRE, APELLIDOS, EMAIL (en Entity).\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: HASH  # Partition key: identifica al instructor.\n\n    TablaAsignaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ASIGNACIONES_${env:TALLER_EQUIPO}\n        # PK compuesta: SESION_ID + INSTRUCTOR_ID. Dato no clave: ROL.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: SESION_ID, AttributeType: N }\n          - { AttributeName: INSTRUCTOR_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: SESION_ID\n            KeyType: HASH  # Partition key: agrupa las asignaciones de una sesion.\n          - AttributeName: INSTRUCTOR_ID\n            KeyType: RANGE # Sort key: distingue al instructor dentro de la sesion.\n        GlobalSecondaryIndexes:\n          - IndexName: PorInstructor\n            KeySchema:\n              - AttributeName: INSTRUCTOR_ID\n                KeyType: HASH  # Agrupa las asignaciones del instructor.\n              - AttributeName: SESION_ID\n                KeyType: RANGE # Ordena sus sesiones por ID.\n            Projection:\n              ProjectionType: INCLUDE\n              NonKeyAttributes:\n                - ROL # Copia ROL al índice; ambas claves ya se incluyen.\n\n  Outputs:\n    InstructoresTableName:\n      Value: { Ref: TablaInstructores }\n    AsignacionesTableName:\n      Value: { Ref: TablaAsignaciones }\n",
         "path": "serverless.yml",
         "note": "",
-        "expect": "Solo se registran archivos que ya has creado; siguen disponibles las rutas anteriores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "route",
         "cues": [
           {
@@ -2614,20 +2458,20 @@
           },
           {
             "token": "KeyType: HASH",
-            "start": 3240,
-            "end": 3253,
+            "start": 3526,
+            "end": 3539,
             "note": "Partition key; no significa autonumérico."
           },
           {
             "token": "KeyType: RANGE",
-            "start": 4507,
-            "end": 4521,
+            "start": 4793,
+            "end": 4807,
             "note": "Sort key. Junto a HASH identifica el ítem."
           },
           {
             "token": "PorInstructor",
-            "start": 2150,
-            "end": 2163,
+            "start": 2436,
+            "end": 2449,
             "note": "Índice inverso que DynamoDB mantiene al escribir."
           }
         ],
@@ -2641,7 +2485,7 @@
         "code": "npm run deploy",
         "path": "",
         "note": "En Nest usa Terminal 1 (detén el proceso anterior). Las peticiones van en Terminal 2. En Serverless despliega después de guardar los archivos.",
-        "expect": "La aplicación arranca o despliega sin handlers ni imports inexistentes.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
         "cues": [],
         "create": null
@@ -2651,31 +2495,12 @@
         "chapter": 8,
         "title": "Prueba con curl",
         "kind": "command",
-        "code": "curl -i -X DELETE \"$API_URL/sesiones/7/asignaciones/1\"",
+        "code": "curl -i -X DELETE \"$API_URL/sesiones/1/asignaciones/1\"",
         "path": "",
-        "note": "API_URL debe contener la URL real de tu HTTP API. ",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las sesiones y los instructores.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
-        "cues": [
-          {
-            "token": "curl",
-            "start": 0,
-            "end": 4,
-            "note": "Envía la petición HTTP al proyecto real."
-          },
-          {
-            "token": "API_URL",
-            "start": 20,
-            "end": 27,
-            "note": "Dirección de la API que vas a consultar."
-          },
-          {
-            "token": "DELETE",
-            "start": 11,
-            "end": 17,
-            "note": "Elimina el vínculo identificado por la ruta."
-          }
-        ],
+        "cues": [],
         "create": null
       },
       {
@@ -2683,19 +2508,12 @@
         "chapter": 8,
         "title": "Prepara el mismo evento para Invoke",
         "kind": "command",
-        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"7\",\n    \"instructorId\": \"1\"\n  }\n}",
+        "code": "{\n  \"pathParameters\": {\n    \"sesionId\": \"1\",\n    \"instructorId\": \"1\"\n  }\n}",
         "path": "peticiones/nm-6.json",
-        "note": "Este bloque es el contenido del fichero JSON, no un comando Bash. body contiene texto JSON y pathParameters reproduce la ruta HTTP. Conserva ese contrato.",
-        "expect": "El mismo handler puede recibir este evento aunque no intervenga API Gateway.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. Guarda este JSON con los IDs reales antes del Invoke.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "request",
-        "cues": [
-          {
-            "token": "pathParameters",
-            "start": 5,
-            "end": 19,
-            "note": "Reproduce los parámetros que recibiría el handler por HTTP."
-          }
-        ],
+        "cues": [],
         "create": "mkdir -p peticiones\nls -d peticiones\ntouch peticiones/nm-6.json\ncode peticiones/nm-6.json"
       },
       {
@@ -2706,7 +2524,7 @@
         "code": "aws lambda invoke \\\n  --function-name \"taller-ch06-${TALLER_EQUIPO}-eliminarAsignacion\" \\\n  --payload fileb://peticiones/nm-6.json \\\n  respuesta-nm.json\ncat respuesta-nm.json",
         "path": "",
         "note": "AWS CLI usa AWS_PROFILE y AWS_REGION de tu terminal. fileb:// lee los bytes del JSON; no necesitas escribir opciones de base64. En POST usa curl o Invoke para crear, no ambos seguidos: el segundo sería otra alta o un duplicado. En DELETE la segunda llamada es idempotente.",
-        "expect": "HTTP 204. Se elimina solo (7,1); permanecen (7,2), (8,1), (8,2), las sesiones y los instructores.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [
           {
@@ -2723,10 +2541,10 @@
         "chapter": 9,
         "title": "Comprueba qué cambió y qué se conserva",
         "kind": "command",
-        "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"ASIGNACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
+        "code": "curl -i \"$API_URL/sesiones/1/asignaciones\"\ncurl -i $API_URL/sesiones\ncurl -i $API_URL/instructores",
         "path": "",
-        "note": "",
-        "expect": "Tras los seis casos quedan (7,2), (8,1) y (8,2). Permanecen sesiones y instructores, y la relación 1:N anterior.",
+        "note": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos. En N:M usa el ID del registro 1:N y el del perfil que acabas de crear.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "response",
         "cues": [],
         "create": null
@@ -2739,7 +2557,7 @@
         "code": "",
         "path": "",
         "note": "",
-        "expect": "Puedes explicar la PK compuesta, las dos lecturas, el índice y la diferencia entre borrar el vínculo y borrar un extremo.",
+        "expect": "Realiza esta operación sobre los IDs creados mediante la API. Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "focus": "model",
         "cues": [],
         "create": null
@@ -3345,5 +3163,167 @@
     "backend": "backend",
     "pilot": false
   },
-  "nestWithoutSeed": true
+  "nestWithoutSeed": true,
+  "apiRevision": 1,
+  "apiPreviousIds": {
+    "nest": [
+      "situacion",
+      "logico",
+      "retomar",
+      "instructor",
+      "asig-inversas",
+      "sesion-inversa",
+      "instructores-modulo",
+      "asignaciones-modulo",
+      "registrar",
+      "arrancar",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "asignar-instructor-service",
+      "asignar-instructor-entry",
+      "asignar-instructor-registro",
+      "asignar-instructor-ejecutar",
+      "asignar-instructor-curl",
+      "listar-por-sesion-service",
+      "listar-por-sesion-entry",
+      "listar-por-sesion-ejecutar",
+      "listar-por-sesion-curl",
+      "listar-por-instructor-service",
+      "listar-por-instructor-entry",
+      "listar-por-instructor-ejecutar",
+      "listar-por-instructor-curl",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "persistencia",
+      "repaso"
+    ],
+    "cloud": [
+      "situacion",
+      "logico",
+      "nosql",
+      "retomar",
+      "infra",
+      "table",
+      "entity",
+      "desplegar",
+      "datos",
+      "leer-datos",
+      "crear-listar-repository",
+      "crear-listar-service",
+      "crear-listar-entry",
+      "crear-listar-registro",
+      "crear-listar-ejecutar",
+      "crear-listar-curl",
+      "crear-listar-evento",
+      "crear-listar-invoke",
+      "asignar-instructor-repository",
+      "asignar-instructor-service",
+      "asignar-instructor-entry",
+      "asignar-instructor-registro",
+      "asignar-instructor-ejecutar",
+      "asignar-instructor-curl",
+      "asignar-instructor-evento",
+      "asignar-instructor-invoke",
+      "listar-por-sesion-repository",
+      "listar-por-sesion-service",
+      "listar-por-sesion-entry",
+      "listar-por-sesion-registro",
+      "listar-por-sesion-ejecutar",
+      "listar-por-sesion-curl",
+      "listar-por-sesion-evento",
+      "listar-por-sesion-invoke",
+      "listar-por-instructor-repository",
+      "listar-por-instructor-service",
+      "listar-por-instructor-entry",
+      "listar-por-instructor-registro",
+      "listar-por-instructor-ejecutar",
+      "listar-por-instructor-curl",
+      "listar-por-instructor-evento",
+      "listar-por-instructor-invoke",
+      "modificar-rol-repository",
+      "modificar-rol-service",
+      "modificar-rol-entry",
+      "modificar-rol-registro",
+      "modificar-rol-ejecutar",
+      "modificar-rol-curl",
+      "modificar-rol-evento",
+      "modificar-rol-invoke",
+      "eliminar-asignacion-repository",
+      "eliminar-asignacion-service",
+      "eliminar-asignacion-entry",
+      "eliminar-asignacion-registro",
+      "eliminar-asignacion-ejecutar",
+      "eliminar-asignacion-curl",
+      "eliminar-asignacion-evento",
+      "eliminar-asignacion-invoke",
+      "persistencia",
+      "repaso"
+    ]
+  },
+  "apiContext": {
+    "id": "CH-06",
+    "title": "Gimnasio → Sesion",
+    "parent": {
+      "entity": "Gimnasio",
+      "sql": "GIMNASIO",
+      "table": "GIMNASIOS",
+      "route": "gimnasios",
+      "property": "gimnasio",
+      "input": "gimnasioId",
+      "variable": "TABLA_GIMNASIOS",
+      "model": "MODELO_GIMNASIO",
+      "file": "src/gimnasios/entities/gimnasio.entity.ts",
+      "examples": [
+        "Gimnasio Norte",
+        "Gimnasio Centro"
+      ]
+    },
+    "child": {
+      "entity": "Sesion",
+      "sql": "SESION",
+      "table": "SESIONES",
+      "route": "sesiones",
+      "property": "sesion",
+      "input": "sesionId",
+      "inverse": "sesiones",
+      "variable": "TABLA_SESIONES",
+      "model": "MODELO_SESION",
+      "file": "src/sesiones/entities/sesion.entity.ts"
+    },
+    "text": {
+      "property": "nombre",
+      "column": "NOMBRE"
+    },
+    "metric": {
+      "property": "plazas",
+      "column": "PLAZAS",
+      "label": "Plazas",
+      "unit": "personas",
+      "initial": 10,
+      "other": 24,
+      "after": 34,
+      "minimum": 25,
+      "create": 11,
+      "unrelated": 44
+    },
+    "foreignKey": "ID_GIMNASIO",
+    "index": "PorGimnasio",
+    "modelFile": "src/models/gimnasio-sesion.model.mjs",
+    "createName": "Registro de prueba"
+  },
+  "apiProfile": {
+    "entity": "Instructor",
+    "route": "instructores",
+    "input": "instructorId",
+    "role": "Calentamiento"
+  }
 }

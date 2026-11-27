@@ -7,6 +7,8 @@ import { EscenasModule } from './escenas/escenas.module';
 import { ActoresModule } from './actores/actores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { EstudiosModule } from './estudios/estudios.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    EstudiosModule,
     EscenasModule,
     ActoresModule,
     AsignacionesModule

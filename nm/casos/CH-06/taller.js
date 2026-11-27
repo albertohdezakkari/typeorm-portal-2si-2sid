@@ -1,3 +1,4 @@
+import { montarPeticiones } from '../../../peticiones.js?v=altas-api-1';
 const root=document.getElementById('nm-root');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let D,S,binding=null,ready=false,timer=null,selected=null,drag=null,menuCollapsed=false,scrollYBefore=0,scrollDistance=0,scrollDirection=0,scrollFrame=0,keyboardNavigation=false,outerHeight=0,outerOffset=0;
@@ -33,7 +34,12 @@ function defaults(saved){
   if(saved.track==='nest'&&changed('nest:'+D.tracks.nest[saved.positions?.nest]?.id)){saved.cue=0;saved.mode='observe';saved.full=false;}
  }
 
- const s={version:1,unit:'nm',caseId:'CH-06',...(D.ormDataRevision?{ormDataRevision:D.ormDataRevision}:{}),...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
+ if(D.apiRevision&&saved&&saved.apiRevision!==D.apiRevision){
+  saved=structuredClone(saved);
+  for(const t of ['nest','cloud']){const id=D.apiPreviousIds?.[t]?.[saved.positions?.[t]];const target=['datos','leer-datos','cargar'].includes(id)?'crear-listar-repository':id;const i=D.tracks[t].findIndex(x=>x.id===target);if(saved.positions)saved.positions[t]=Math.max(0,i);}
+  saved.checked=(saved.checked||[]).filter(k=>!k.startsWith('cloud:')||!/(datos|curl|evento|persistencia)/.test(k));
+ }
+ const s={apiRevision:D.apiRevision??0,version:1,unit:'nm',caseId:'CH-06',...(D.ormDataRevision?{ormDataRevision:D.ormDataRevision}:{}),...(D.nestSimpleRevision?{nestSimpleRevision:D.nestSimpleRevision}:{}),modelAccess:2,track:'nest',positions:{nest:0,cloud:0},cue:0,mode:'observe',full:false,answers:{},solved:[],checked:[]};
  if(saved?.version===1&&saved.unit==='nm'&&saved.caseId==='CH-06'){
   s.track=saved.track==='cloud'?'cloud':'nest';
   for(const t of ['nest','cloud'])if(Number.isInteger(saved.positions?.[t])&&D.tracks[t][saved.positions[t]])s.positions[t]=saved.positions[t];
@@ -184,6 +190,7 @@ function render(){
   $('[data-action=next]').disabled=S.positions[S.track]===list.length-1;
   const notes=$('.nm-explanation');if(notes)notes.innerHTML=`<div class="reading-notes"><h3>Cómo leer este archivo</h3>${s.cues.map(c=>`<section><code>${esc(c.token)}</code><p>${esc(c.note)}</p></section>`).join('')}</div>`;
  }
+ if(D.apiRevision){const lab=document.createElement('section');$('.nm-bottom').before(lab);montarPeticiones(lab,D.apiContext,{track:S.track,profile:D.apiProfile});}
  updateNMGuidance();
  if(guidedFocus)root.querySelector(guidedFocus)?.focus({preventScroll:true});
  else if(focus)root.querySelector(focus)?.focus({preventScroll:true});
@@ -282,7 +289,7 @@ function startAtBeginning(){
 }
 async function init(payload){
  if(ready)return;binding=payload?.binding||null;
- try{D=await (await fetch('CH-06.json?v=estudio-todos-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
+ try{D=await (await fetch('CH-06.json?v=altas-api-1')).json();S=defaults(payload?.state);ready=true;shell();render();if(payload?.startAtBeginning)startAtBeginning();send('nm:loaded');}
  catch(error){root.innerHTML='<p role="alert">No se ha podido abrir la unidad N:M. Recarga el cuaderno.</p>';send('nm:error',{message:error.message});}
 }
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==parent)return;if(event.data?.type==='nm:init')init(event.data);if(ready&&event.data?.binding===binding&&event.data.type==='nm:start')startAtBeginning();if(ready&&event.data?.binding===binding&&event.data.type==='nm:viewport'){outerHeight=event.data.height;outerOffset=event.data.offset;syncMenu();if(!(keyboardNavigation&&$('.nm-menu-content').contains(document.activeElement))){if(event.data.direction>0&&outerOffset>0)setMenu(true);else if(event.data.direction<0||outerOffset===0)setMenu(false);}}});

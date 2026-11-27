@@ -316,13 +316,6 @@
         "where": "backend · antes del primer arranque",
         "blocks": [
           {
-            "kind": "command",
-            "title": "Excluye los IDs de tu base del repositorio",
-            "code": "printf '\\nids-aula.env\\n' >> .gitignore",
-            "explain": "Cada base genera sus propios IDs. ids-aula.env no se sube a GitHub.",
-            "terms": []
-          },
-          {
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
@@ -414,7 +407,7 @@
             "kind": "file",
             "title": "src/app.module.ts",
             "path": "src/app.module.ts",
-            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
+            "code": "import { Module } from '@nestjs/common';\nimport { ConfigModule, ConfigService } from '@nestjs/config';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { resolve } from 'node:path';\nimport { SaludController } from './salud.controller';\nimport { ReparacionesModule } from './reparaciones/reparaciones.module';\n\nimport { TalleresModule } from './talleres/talleres.module';\n\n@Module({\n  imports: [\n    ConfigModule.forRoot({\n      isGlobal: true,\n      envFilePath: [resolve(__dirname, '../.env'), resolve(__dirname, '../.env.example')]\n    }),\n    TypeOrmModule.forRootAsync({\n      inject: [ConfigService],\n      useFactory: (config: ConfigService) => ({\n        type: 'postgres',\n        host: config.getOrThrow<string>('DB_HOST'),\n        port: Number(config.getOrThrow<string>('DB_PORT')),\n        username: config.getOrThrow<string>('DB_USER'),\n        password: config.getOrThrow<string>('DB_PASSWORD'),\n        database: config.getOrThrow<string>('DB_NAME'),\n        autoLoadEntities: true,\n        synchronize: true\n      })\n    }),\n    TalleresModule,\n    ReparacionesModule\n  ],\n  controllers: [SaludController]\n})\nexport class AppModule {}",
             "create": "mkdir -p src\ncode src/app.module.ts",
             "explain": "Conserva la conexión de la base y añade ReparacionesModule al array imports. forRootAsync abre PostgreSQL; forFeature prepara los repositorios de estas Entities.",
             "terms": []
@@ -432,9 +425,39 @@
             "code": "curl -i http://localhost:3000/salud",
             "explain": "En pgAdmin actualiza Schemas → public → Tables: verás TALLER y REPARACION, creadas por TypeORM con la FK ID_TALLER.",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/talleres.service.ts",
+            "path": "src/talleres/talleres.service.ts",
+            "code": "import { Injectable } from '@nestjs/common';\nimport { InjectRepository } from '@nestjs/typeorm';\nimport { Repository } from 'typeorm';\nimport { Taller } from './entities/taller.entity';\n\n@Injectable()\nexport class TalleresService {\n  constructor(\n    @InjectRepository(Taller) private readonly talleres: Repository<Taller>\n  ) {}\n\n  crearTaller(nombre: string) {\n    const taller = this.talleres.create({ nombre });\n    return this.talleres.save(taller);\n  }\n\n  listarTalleres() {\n    return this.talleres.find({ order: { id: 'ASC' } });\n  }\n}",
+            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.service.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/talleres.controller.ts",
+            "path": "src/talleres/talleres.controller.ts",
+            "code": "/* Terminal 2 · Nest abierto en Terminal 1\ncurl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\ncurl -i \"http://localhost:3000/talleres\"\n*/\nimport { Body, Controller, Get, Post } from '@nestjs/common';\nimport { TalleresService } from './talleres.service';\n\n@Controller('talleres')\nexport class TalleresController {\n  constructor(private readonly service: TalleresService) {}\n\n  @Post()\n  crear(@Body() datos: { nombre: string }) {\n    return this.service.crearTaller(datos.nombre);\n  }\n\n  @Get()\n  listar() {\n    return this.service.listarTalleres();\n  }\n}",
+            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.controller.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/talleres.module.ts",
+            "path": "src/talleres/talleres.module.ts",
+            "code": "import { Module } from '@nestjs/common';\nimport { TypeOrmModule } from '@nestjs/typeorm';\nimport { Taller } from './entities/taller.entity';\nimport { TalleresService } from './talleres.service';\nimport { TalleresController } from './talleres.controller';\n\n@Module({\n  imports: [TypeOrmModule.forFeature([Taller])],\n  providers: [TalleresService],\n  controllers: [TalleresController]\n})\nexport class TalleresModule {}",
+            "create": "mkdir -p src/talleres\ncode src/talleres/talleres.module.ts",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "TypeORM ha creado TALLER y REPARACION desde las Entities. AppModule importa ReparacionesModule. El módulo conecta las Entities con el Repository nativo de TypeORM.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar talleres antes de crear reparaciones.",
         "scene": "model",
         "nodes": [
           "AppModule",
@@ -449,41 +472,46 @@
       },
       {
         "id": "datos",
-        "title": "Carga los datos de tu ficha",
-        "lead": "Carga los mismos ejemplos con save() y consulta con find(). Si ya existen, se conservan. No escribes consultas manuales.",
-        "where": "backend · tu proyecto Nest",
+        "title": "Crear y listar talleres por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Nest",
         "blocks": [
           {
-            "kind": "file",
-            "title": "src/datos/cargar-datos.ts",
-            "path": "src/datos/cargar-datos.ts",
-            "code": "import { NestFactory } from '@nestjs/core';\nimport { DataSource } from 'typeorm';\nimport { writeFileSync } from 'node:fs';\nimport { AppModule } from '../app.module';\nimport { Taller } from '../talleres/entities/taller.entity';\nimport { Reparacion } from '../reparaciones/entities/reparacion.entity';\n\nasync function cargarDatos() {\n  const app = await NestFactory.createApplicationContext(AppModule, { logger: false });\n  try {\n    const db = app.get(DataSource);\n    const talleres = db.getRepository(Taller);\n    const reparaciones = db.getRepository(Reparacion);\n\n    const primero = await talleres.findOneBy({ nombre: 'Taller Norte' })\n      ?? await talleres.save({ nombre: 'Taller Norte' });\n    const segundo = await talleres.findOneBy({ nombre: 'Taller del Barrio' })\n      ?? await talleres.save({ nombre: 'Taller del Barrio' });\n\n    const principal = await reparaciones.findOneBy({ nombre: 'Ajuste de frenos' })\n      ?? await reparaciones.save({ nombre: 'Ajuste de frenos', costeCentimos: 2500, taller: primero });\n    const secundaria = await reparaciones.findOneBy({ nombre: 'Cambio de cadena' })\n      ?? await reparaciones.save({ nombre: 'Cambio de cadena', costeCentimos: 7000, taller: segundo });\n    const otra = await reparaciones.findOneBy({ nombre: 'Ajuste de frenos · nuevo' })\n      ?? await reparaciones.save({ nombre: 'Ajuste de frenos · nuevo', costeCentimos: 12000, taller: primero });\n\n    writeFileSync('ids-aula.env', [\n      `export TALLER_1_ID=${primero.id}`,\n      `export TALLER_2_ID=${segundo.id}`,\n      `export REPARACION_1_ID=${principal.id}`,\n      `export REPARACION_2_ID=${secundaria.id}`,\n      `export REPARACION_3_ID=${otra.id}`\n    ].join('\\n') + '\\n');\n    console.table(await reparaciones.find({ relations: { taller: true }, order: { id: 'ASC' } }));\n    console.log('Datos preparados. Carga los IDs en esta terminal: . ./ids-aula.env');\n  } finally {\n    await app.close();\n  }\n}\n\ncargarDatos().catch(error => { console.error(error); process.exitCode = 1; });",
-            "create": "mkdir -p src/datos\ntouch src/datos/cargar-datos.ts\ncode src/datos/cargar-datos.ts",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes. AppModule carga .env y .env.example igual que el backend. Ejecuta el script con node después de compilar; no modifica tu configuración.",
+            "kind": "command",
+            "title": "Terminal 1 · arrancar Nest",
+            "code": "npm run start:dev",
+            "explain": "Deja esta terminal abierta y ejecuta los curl en Terminal 2.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Compila y carga los ejemplos",
-            "code": "npm run build\nnode dist/datos/cargar-datos.js",
-            "explain": "Este archivo usa las Entities: findOneBy busca un ejemplo existente y save lo crea si falta. Los IDs los genera PostgreSQL mediante PrimaryGeneratedColumn. Repetir la carga conserva los datos ya existentes.",
+            "title": "1 · Crear Taller Norte",
+            "code": "curl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Carga los IDs reales",
-            "code": ". ./ids-aula.env\nprintf 'Reparacion principal: %s\\nOtro taller: %s\\n' \"$REPARACION_1_ID\" \"$TALLER_2_ID\"",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
+            "title": "2 · Crear Taller del Barrio",
+            "code": "curl -i -X POST \"http://localhost:3000/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller del Barrio\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "3 · Listar talleres",
+            "code": "curl -i \"http://localhost:3000/talleres\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Hay dos talleres y tres reparaciones de ejemplo. La tabla impresa por find() muestra sus IDs reales; ids-aula.env permite usarlos en las pruebas.",
-        "scene": "records",
+        "expect": "GET /talleres muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Taller Norte",
-          "Ajuste de frenos y otra reparacion",
-          "Taller del Barrio",
-          "Cambio de cadena"
+          "POST /talleres",
+          "Controller / Handler",
+          "Service",
+          "GET /talleres"
         ],
         "workshop": null
       },
@@ -493,13 +521,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.service.ts",
@@ -542,20 +563,48 @@
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"http://localhost:3000/reparaciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"nombre\\\":\\\"Registro de prueba\\\",\\\"costeCentimos\\\":2501,\\\"tallerId\\\":$TALLER_2_ID}\" \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).id')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/reparaciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ajuste de frenos",
+            "code": "curl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos\",\"costeCentimos\":2500,\"tallerId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Cambio de cadena",
+            "code": "curl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cambio de cadena\",\"costeCentimos\":7000,\"tallerId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ajuste de frenos · nuevo",
+            "code": "curl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos · nuevo\",\"costeCentimos\":12000,\"tallerId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"http://localhost:3000/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"http://localhost:3000/reparaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "El alta devuelve un ID real y el listado pasa de tres a cuatro reparaciones. Conserva ese ID para el borrado.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -574,13 +623,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.service.ts",
@@ -614,13 +656,20 @@
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"http://localhost:3000/reparaciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"http://localhost:3000/reparaciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"http://localhost:3000/reparaciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"http://localhost:3000/reparaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Se elimina únicamente la reparacion de prueba. Siguen las tres reparaciones originales con sus datos y relaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -639,13 +688,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.service.ts",
@@ -679,13 +721,20 @@
           },
           {
             "kind": "command",
-            "title": "Modificar coste",
-            "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/$REPARACION_1_ID\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'\ncurl -i http://localhost:3000/reparaciones",
+            "title": "Cambiar coste",
+            "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"http://localhost:3000/reparaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La reparacion principal tiene coste 9500 y conserva su taller.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -704,13 +753,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.service.ts",
@@ -744,13 +786,20 @@
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/$REPARACION_1_ID/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"{\\\"tallerId\\\":$TALLER_2_ID}\"\ncurl -i http://localhost:3000/reparaciones",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"http://localhost:3000/reparaciones/1/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tallerId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"http://localhost:3000/reparaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "La reparacion principal pasa al segundo taller y conserva su coste 9500.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -769,13 +818,6 @@
         "lead": "Añade el método de este caso al mismo Service y al mismo Controller. Copia cada archivo completo y guarda; conserva los métodos anteriores.",
         "where": "backend · tu proyecto Nest",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Terminal 2 · recupera los IDs de tu proyecto",
-            "code": ". ./ids-aula.env",
-            "explain": "Ejecuta en Terminal 2. El punto seguido de espacio carga las variables de ids-aula.env en esta terminal. REPARACION_1_ID es el ID real de «Ajuste de frenos»; REPARACION_2_ID, el de «Cambio de cadena». Los números 7, 8 y 9 de los dibujos son ejemplos para explicar la traza; no se fuerzan en tu base.",
-            "terms": []
-          },
           {
             "kind": "file",
             "title": "src/reparaciones/reparaciones.service.ts",
@@ -809,13 +851,13 @@
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i \"http://localhost:3000/talleres/$TALLER_2_ID/reparaciones?minimo=7001\"",
-            "explain": "",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"http://localhost:3000/talleres/2/reparaciones?minimo=7001\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "La respuesta incluye el segundo taller y la reparacion principal; el filtro excluye las otras dos reparaciones.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. Nest mantiene el servidor abierto en Terminal 1.",
         "scene": "trace",
         "nodes": [
           "Petición",
@@ -1135,7 +1177,7 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Archivo completo: proveedor, rol, variables, salud y las dos tablas de tu contexto. El nombre físico añade tu equipo.",
             "terms": [
@@ -1190,9 +1232,39 @@
             "code": "npm run deploy\naws dynamodb describe-table --table-name \"REPARACIONES_${TALLER_EQUIPO}\" --query 'Table.{Tabla:TableName,Claves:KeySchema,Indices:GlobalSecondaryIndexes[*].IndexName}' --output json",
             "explain": "",
             "terms": []
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/crear-listar/repository.mjs",
+            "path": "src/talleres/crear-listar/repository.mjs",
+            "code": "import { EntityRepository } from 'dynamodb-toolbox/entity/actions/repository';\nimport { MODELO_TALLER } from '../../models/taller-reparacion.model.mjs';\n\nexport async function crearTallerRepository(taller) {\n  await MODELO_TALLER.build(EntityRepository).put(\n    taller,\n    { condition: { attr: 'tallerId', exists: false } }\n  );\n}\n\nexport async function listarTalleresRepository() {\n  const { Items = [] } = await MODELO_TALLER.build(EntityRepository).scan(\n    { consistent: true }\n  );\n  return Items;\n}",
+            "create": "mkdir -p src/talleres/crear-listar\ncode src/talleres/crear-listar/repository.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/crear-listar/service.mjs",
+            "path": "src/talleres/crear-listar/service.mjs",
+            "code": "import { crearTallerRepository, listarTalleresRepository } from './repository.mjs';\n\nexport async function crearTallerService(nombre) {\n  const tallerId = Date.now();\n  const taller = { tallerId, nombre };\n  await crearTallerRepository(taller);\n  return taller;\n}\n\nexport function listarTalleresService() {\n  return listarTalleresRepository();\n}",
+            "create": "mkdir -p src/talleres/crear-listar\ncode src/talleres/crear-listar/service.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
+          },
+          {
+            "kind": "file",
+            "title": "src/talleres/crear-listar/handler.mjs",
+            "path": "src/talleres/crear-listar/handler.mjs",
+            "code": "/* Terminal · API_URL es la URL real de tu API\ncurl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'\ncurl -i \"$API_URL/talleres\"\n*/\n// POST /talleres con JSON: {\"nombre\":\"Taller Norte\"}\n// GET /talleres lista los registros y sus IDs.\nimport { crearTallerService, listarTalleresService } from './service.mjs';\n\nexport async function crearHandler(event) {\n  const { nombre } = JSON.parse(event.body);\n  const taller = await crearTallerService(nombre);\n  return { statusCode: 201, body: JSON.stringify(taller) };\n}\n\nexport async function listarHandler() {\n  const talleres = await listarTalleresService();\n  return { statusCode: 200, body: JSON.stringify(talleres) };\n}",
+            "create": "mkdir -p src/talleres/crear-listar\ncode src/talleres/crear-listar/handler.mjs",
+            "explain": "Alta y listado normales: el Controller/Handler llama al Service.",
+            "terms": [],
+            "apiFile": true
           }
         ],
-        "expect": "Existen TALLERES_tuEquipo y REPARACIONES_tuEquipo. PK del lado N: REPARACION_ID; índice: PorTaller. Aún no hay ítems.",
+        "expect": "Los dos extremos tienen Entity y API. Puedes crear y listar talleres antes de crear reparaciones.",
         "scene": "model",
         "nodes": [
           "YAML: tablas + Ref",
@@ -1207,60 +1279,39 @@
       },
       {
         "id": "datos",
-        "title": "Carga los mismos datos",
-        "lead": "Compara los datos con Nest: mismos registros y referencias en dos tecnologías.",
-        "where": "mi-practica/serverless · AWS_PROFILE y AWS_REGION exportados",
+        "title": "Crear y listar talleres por API",
+        "lead": "Cada alta entra por el Controller o Handler y pasa por su Service. Conserva los IDs devueltos.",
+        "where": "Terminal 2 · tu proyecto Serverless",
         "blocks": [
           {
             "kind": "command",
-            "title": "Taller 1",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"TALLERES_${TALLER_EQUIPO}\\\" VALUE {'TALLER_ID':1,'NOMBRE':'Taller Norte'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "1 · Crear Taller Norte",
+            "code": "curl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller Norte\"}'",
+            "explain": "Anota el ID que devuelve este POST.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Taller 2",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"TALLERES_${TALLER_EQUIPO}\\\" VALUE {'TALLER_ID':2,'NOMBRE':'Taller del Barrio'}\"",
-            "explain": "Ejecuta el alta una sola vez. DuplicateItem indica que la clave ya existe.",
+            "title": "2 · Crear Taller del Barrio",
+            "code": "curl -i -X POST \"$API_URL/talleres\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Taller del Barrio\"}'",
+            "explain": "Anota el segundo ID; lo usarás para cambiar la relación.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Reparacion 7",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"REPARACIONES_${TALLER_EQUIPO}\\\" VALUE {'REPARACION_ID':7,'NOMBRE':'Ajuste de frenos','COSTE_CENTIMOS':2500,'TALLER_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Reparacion 8",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"REPARACIONES_${TALLER_EQUIPO}\\\" VALUE {'REPARACION_ID':8,'NOMBRE':'Cambio de cadena','COSTE_CENTIMOS':7000,'TALLER_ID':2}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Reparacion 9",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"INSERT INTO \\\"REPARACIONES_${TALLER_EQUIPO}\\\" VALUE {'REPARACION_ID':9,'NOMBRE':'Ajuste de frenos · nuevo','COSTE_CENTIMOS':12000,'TALLER_ID':1}\"",
-            "explain": "Los nombres, valores y referencias son los de tu ficha.",
-            "terms": []
-          },
-          {
-            "kind": "command",
-            "title": "Comprueba los dos listados",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"TALLERES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json\naws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"REPARACIONES_${TALLER_EQUIPO}\\\"\" \\\n  --consistent-read --output json",
-            "explain": "En la respuesta de AWS CLI, N significa número y S texto. PartiQL permite escribir la consulta con una sintaxis similar a SQL.",
+            "title": "3 · Listar talleres",
+            "code": "curl -i \"$API_URL/talleres\"",
+            "explain": "Comprueba que existen antes de añadir registros relacionados.",
             "terms": []
           }
         ],
-        "expect": "Dos registros de Taller y tres de Reparacion, con los valores y referencias de tu ficha.",
-        "scene": "records",
+        "expect": "GET /talleres muestra los dos registros creados y sus IDs reales.",
+        "scene": "trace",
         "nodes": [
-          "Taller 1",
-          "Reparacion 7 y 9",
-          "Taller 2",
-          "Reparacion 8"
+          "POST /talleres",
+          "Controller / Handler",
+          "Service",
+          "GET /talleres"
         ],
         "workshop": null
       },
@@ -1301,41 +1352,62 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/reparaciones/crear-listar/handler.mjs\nnode --check src/reparaciones/crear-listar/service.mjs\nnode --check src/reparaciones/crear-listar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consulta antes de crear",
+            "title": "Listar antes de crear",
             "code": "curl -i \"$API_URL/reparaciones\"",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Crea y conserva el ID que devuelve",
-            "code": "curl -fsS -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}' \\\n  -o respuesta-registro.json\ncat respuesta-registro.json\nREGISTRO_PRUEBA_ID=\"$(node -p 'JSON.parse(require(\"fs\").readFileSync(\"respuesta-registro.json\", \"utf8\")).reparacionId')\"\nexport REGISTRO_PRUEBA_ID\nprintf 'ID creado: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/reparaciones\"",
-            "explain": "Conserva el ID real en esta terminal. PostgreSQL genera el ID en Nest; Serverless usa Date.now en el service. Scan no garantiza el orden del listado.",
+            "title": "Añadir Ajuste de frenos",
+            "code": "curl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos\",\"costeCentimos\":2500,\"tallerId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Invoke · listar sin HTTP",
-            "code": "npm run invoke -- --function listarReparaciones --data '{}'",
-            "explain": "La respuesta contiene statusCode y body. La función de listar no requiere datos de entrada.",
+            "title": "Añadir Cambio de cadena",
+            "code": "curl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Cambio de cadena\",\"costeCentimos\":7000,\"tallerId\":2}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir Ajuste de frenos · nuevo",
+            "code": "curl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Ajuste de frenos · nuevo\",\"costeCentimos\":12000,\"tallerId\":1}'",
+            "explain": "Usa el ID real del principal. Conserva el ID de este registro para las modificaciones.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Añadir el registro de prueba",
+            "code": "curl -i -X POST \"$API_URL/reparaciones\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"nombre\":\"Registro de prueba\",\"costeCentimos\":2501,\"tallerId\":2}'",
+            "explain": "Anota el ID devuelto; el siguiente caso eliminará solo este registro.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar después de las altas",
+            "code": "curl -i \"$API_URL/reparaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1385,27 +1457,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/reparaciones/eliminar/handler.mjs\nnode --check src/reparaciones/eliminar/service.mjs\nnode --check src/reparaciones/eliminar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Elimina solo el registro que acabas de crear",
-            "code": "printf 'ID de prueba: %s\\n' \"$REGISTRO_PRUEBA_ID\"\ncurl -i -X DELETE \"$API_URL/reparaciones/$REGISTRO_PRUEBA_ID\"\ncurl -i \"$API_URL/reparaciones\"",
-            "explain": "Si cambias de terminal, recupera el ID de respuesta-registro.json como en el caso anterior. Conserva los registros 7, 8 y 9.",
+            "title": "Eliminar solo el registro de prueba",
+            "code": "curl -i -X DELETE \"$API_URL/reparaciones/4\"",
+            "explain": "Sustituye 4 por el ID devuelto para el registro de prueba.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Listar los que se conservan",
+            "code": "curl -i \"$API_URL/reparaciones\"",
+            "explain": "",
             "terms": []
           }
         ],
-        "expect": "Usa el ID real devuelto en el alta. Antes hay tres registros, después del alta cuatro y después del borrado vuelven a quedar 7, 8 y 9.",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1455,27 +1534,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/reparaciones/modificar-coste-centimos/handler.mjs\nnode --check src/reparaciones/modificar-coste-centimos/service.mjs\nnode --check src/reparaciones/modificar-coste-centimos/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Modificar coste",
-            "code": "curl -i -X PATCH \"$API_URL/reparaciones/7\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'\ncurl -i \"$API_URL/reparaciones\"",
+            "title": "Cambiar coste",
+            "code": "curl -i -X PATCH \"$API_URL/reparaciones/1\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"costeCentimos\":9500}'",
+            "explain": "Sustituye 1 por el ID del primer registro creado.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver el resultado",
+            "code": "curl -i \"$API_URL/reparaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId = 1",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1534,27 +1620,34 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}/taller' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}/taller' }\n\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/reparaciones/trasladar/handler.mjs\nnode --check src/reparaciones/trasladar/service.mjs\nnode --check src/reparaciones/trasladar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Cambiar la asociación",
-            "code": "curl -i -X PATCH \"$API_URL/reparaciones/7/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tallerId\":2}'\ncurl -i \"$API_URL/reparaciones\"",
+            "title": "Cambiar la relación",
+            "code": "curl -i -X PATCH \"$API_URL/reparaciones/1/taller\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"tallerId\":2}'",
+            "explain": "Usa el ID real del registro y del segundo principal.",
+            "terms": []
+          },
+          {
+            "kind": "command",
+            "title": "Ver la nueva relación",
+            "code": "curl -i \"$API_URL/reparaciones\"",
             "explain": "",
             "terms": []
           }
         ],
-        "expect": "200 · Registro 7 · costeCentimos = 9500 céntimos · tallerId pasa de 1 a 2",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1604,27 +1697,27 @@
             "kind": "file",
             "title": "serverless.yml",
             "path": "serverless.yml",
-            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}/taller' }\n  consultarTaller:\n    handler: src/talleres/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/talleres/{tallerId}/reparaciones' }\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
+            "code": "service: taller-ch09\nframeworkVersion: '3.40.0'\n\nprovider:\n  name: aws\n  runtime: nodejs22.x\n  region: ${env:AWS_REGION}\n  stage: ${env:TALLER_EQUIPO}\n  iam:\n    role: ${env:LAMBDA_ROLE_ARN}\n  httpApi:\n    payload: '2.0'\n    cors: true\n\n  environment:\n    TABLA_TALLERES: { Ref: TablaTalleres }\n    TABLA_REPARACIONES: { Ref: TablaReparaciones }\n\n\nfunctions:\n  crearTaller:\n    handler: src/talleres/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: /talleres }\n  listarTalleres:\n    handler: src/talleres/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: /talleres }\n  salud:\n    handler: src/salud/handler.handler\n    events:\n      - httpApi: { method: GET, path: /salud }\n  crearReparacion:\n    handler: src/reparaciones/crear-listar/handler.crearHandler\n    events:\n      - httpApi: { method: POST, path: '/reparaciones' }\n  listarReparaciones:\n    handler: src/reparaciones/crear-listar/handler.listarHandler\n    events:\n      - httpApi: { method: GET, path: '/reparaciones' }\n  eliminarReparacion:\n    handler: src/reparaciones/eliminar/handler.handler\n    events:\n      - httpApi: { method: DELETE, path: '/reparaciones/{reparacionId}' }\n  modificarCosteCentimos:\n    handler: src/reparaciones/modificar-coste-centimos/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}' }\n  trasladarReparacion:\n    handler: src/reparaciones/trasladar/handler.handler\n    events:\n      - httpApi: { method: PATCH, path: '/reparaciones/{reparacionId}/taller' }\n  consultarTaller:\n    handler: src/talleres/consultar/handler.handler\n    events:\n      - httpApi: { method: GET, path: '/talleres/{tallerId}/reparaciones' }\nresources:\n  Resources:\n    TablaTalleres:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: TALLERES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: TALLER_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        # Sus tipos se describen en MODELO_TALLER.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: TALLER_ID\n            KeyType: HASH  # Partition key del lado 1.\n\n    TablaReparaciones:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: REPARACIONES_${env:TALLER_EQUIPO}\n        # PARTITION KEY: REPARACION_ID (N: número).\n        # CAMPOS NO CLAVE de esta tabla (fuera de su PK):\n        #   NOMBRE (S: texto).\n        #   COSTE_CENTIMOS (N: número).\n        #   TALLER_ID (N: referencia y clave del GSI).\n        # Sus tipos se describen en MODELO_REPARACION.\n        BillingMode: PAY_PER_REQUEST\n        AttributeDefinitions:  # N = número. Declara las claves.\n          - { AttributeName: REPARACION_ID, AttributeType: N }\n          - { AttributeName: TALLER_ID, AttributeType: N }\n        KeySchema:\n          - AttributeName: REPARACION_ID\n            KeyType: HASH  # Partition key del lado N.\n\n        # GSI: segunda forma de buscar en REPARACIONES.\n        # Global: agrupa todo el lado N por su referencia.\n        GlobalSecondaryIndexes:\n          - IndexName: PorTaller\n            # Clave compuesta = partition key + sort key:\n            # (TALLER_ID, REPARACION_ID), los dos valores juntos.\n            KeySchema:\n              - AttributeName: TALLER_ID\n                KeyType: HASH   # Partition key. Agrupa por Taller.\n              - AttributeName: REPARACION_ID\n                KeyType: RANGE  # Sort key. Ordena por ID.\n            Projection:\n              ProjectionType: INCLUDE  # Claves + campos de abajo.\n              NonKeyAttributes:        # Campos de REPARACIONES copiados al índice.\n                - NOMBRE\n                - COSTE_CENTIMOS",
             "create": "touch serverless.yml\ncode serverless.yml",
             "explain": "Configuración acumulativa con los handlers y rutas de esta fase.",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Comprueba sintaxis y despliega",
-            "code": "node --check src/talleres/consultar/handler.mjs\nnode --check src/talleres/consultar/service.mjs\nnode --check src/talleres/consultar/repository.mjs\nnpm run deploy",
+            "title": "Despliega los archivos guardados",
+            "code": "npm run package\nnpm run deploy",
             "explain": "",
             "terms": []
           },
           {
             "kind": "command",
-            "title": "Consultar la relación",
-            "code": "curl -i -X GET \"$API_URL/talleres/2/reparaciones?minimo=7001\"",
-            "explain": "En DynamoDB el índice se actualiza de forma eventual; si acabas de cambiar la asociación, espera a que el índice refleje la escritura y repite la consulta.",
+            "title": "Consultar por el principal",
+            "code": "curl -i \"$API_URL/talleres/2/reparaciones?minimo=7001\"",
+            "explain": "Sustituye 2 por el ID del segundo principal.",
             "terms": []
           }
         ],
-        "expect": "200 · Taller del Barrio + registro 7 (9500 céntimos). Excluye el 8 (7000 céntimos) y el 9 (pertenece al ID 1).",
+        "expect": "Ejecuta una petición cada vez en Terminal 2. POST devuelve el ID real. Cópialo y úsalo en las siguientes peticiones; los números 1, 2 y 4 son ejemplos, no IDs impuestos. API_URL contiene la URL de tu API. Los IDs de Date.now suelen ser números largos; sustituye los ejemplos por los recibidos.",
         "scene": "trace",
         "nodes": [
           "curl / Invoke",
@@ -1643,13 +1736,6 @@
         "lead": "Compara la respuesta con el dato guardado y sube los archivos del proyecto a tu GitHub.",
         "where": "Desde tu práctica; conserva tus credenciales fuera de Git",
         "blocks": [
-          {
-            "kind": "command",
-            "title": "Lee lo guardado con PartiQL",
-            "code": "aws dynamodb execute-statement \\\n  --statement \"SELECT * FROM \\\"REPARACIONES_${TALLER_EQUIPO}\\\" WHERE REPARACION_ID = 7\" \\\n  --consistent-read --output json",
-            "explain": "",
-            "terms": []
-          },
           {
             "kind": "command",
             "title": "Revisa antes de subir",
@@ -1698,5 +1784,6 @@
     "revision": "87d14758960120570436906207b09073bb3731c3",
     "backend": "backend",
     "pilot": false
-  }
+  },
+  "apiRevision": 1
 }

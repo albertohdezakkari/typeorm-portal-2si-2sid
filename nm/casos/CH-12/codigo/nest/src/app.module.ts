@@ -7,6 +7,8 @@ import { LotesModule } from './lotes/lotes.module';
 import { InspectoresModule } from './inspectores/inspectores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { CooperativasModule } from './cooperativas/cooperativas.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    CooperativasModule,
     LotesModule,
     InspectoresModule,
     AsignacionesModule

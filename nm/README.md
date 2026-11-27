@@ -1,29 +1,24 @@
-# Recorridos N:M · todo el alumnado
+# Cuaderno 1:N y N:M · altas normales por API
 
-Abre el [cuaderno de clase](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo y prepara tu proyecto siguiendo detenidamente el README del repositorio base. Después entra en **2 · Entrenar con mis fichas**. Cada alumno conserva su contexto y los cinco casos 1:N; la relación N:M amplía ese mismo backend.
+En el [cuaderno](https://albertohdezakkari.github.io/typeorm-portal-2si-2sid/), elige tu correo y sigue tu contexto. Lee detenidamente el README del proyecto base y continúa en **Entrenar con mis fichas**.
 
-La versión validada con Arturo está aplicada a los 30 alumnos y al ejemplo docente. Los archivos se muestran completos y se pueden copiar. No hay animaciones ni puzles que bloqueen el avance. Los dibujos y las explicaciones acompañan al código como apoyo estático. Los menús permanecen abiertos y a todo el ancho; el selector de tecnología queda compacto a la derecha. Ambas relaciones comparten los mismos colores de tecnología, caso y archivo seleccionado.
+Todos los registros se crean mediante las APIs que programas. Primero prepara las Entities, el Service, Controller y módulo del lado principal; crea y lista sus registros con POST y GET. Después crea los registros relacionados usando el ID real devuelto. La FK se declara en la Entity y el Service recibe la referencia. Cada paso muestra el archivo completo.
 
-## Orden de trabajo
+En Serverless se sigue Entity → Repository → Service → Handler; el YAML conecta POST y GET con esos handlers. Todas las operaciones de datos parten de EntityRepository. Las altas y lecturas se hacen por API, sin inserciones directas en DynamoDB.
 
-1. **Preparar proyecto base**: lee el README completo de [Nest + TypeORM](https://github.com/albertohdezakkari/examen-typeorm-27-11-26-01#readme) o la guía [0-codespaces.md de Serverless](https://github.com/albertohdezakkari/festival-checkin-01/blob/main/0-codespaces.md).
-2. **Relación 1:N**: Entities y relaciones; conexión del módulo; Service y Controller por recurso; cinco casos con sus comprobaciones. Nest tiene 22 pasos y Serverless, 26.
-3. **Relación N:M**: retoma el proyecto anterior, crea las dos Entities nuevas, amplía la Entity existente, conecta los módulos y añade los seis casos. Nest tiene 38 pasos en nueve apartados; Serverless conserva sus 60 pasos en diez apartados.
+## Probar las peticiones
 
-En Nest, el Service utiliza directamente el Repository de TypeORM inyectado para sus Entities. `synchronize: true` crea las tablas; no se copian consultas SQL de creación. Las altas N:M se hacen mediante los Controllers y sus POST, con los IDs reales devueltos por la API. No se necesita otra precarga ni un fichero de IDs nuevo para ampliar la N:M.
+La zona **Prueba ambos lados de la relación** permite elegir qué añadir o consultar, escribir la URL, los datos y los IDs reales, y copiar un curl sencillo para Terminal 2. La respuesta se observa en la terminal. En Nest, mantén `npm run start:dev` abierto en Terminal 1. En Serverless, guarda y despliega antes de probar.
 
-En Serverless, el YAML crea los recursos, Table describe claves e índices y Entity define los atributos. Los repositories realizan las operaciones desde `MODELO.build(EntityRepository)`. Los casos conservan sus llamadas curl e Invoke.
+Los números de las peticiones son ejemplos: utiliza los IDs de tus propias respuestas. No hay scripts de carga, precargas ocultas ni ficheros de IDs.
 
-## Navegación y avance
+## Recorridos
 
-La entrada al cuaderno comienza en **1 · Preparar proyecto base**. Al elegir N:M se abre **01 · Entender la N:M**, con el primer apartado enfocado y el menú visible desde arriba. Se conservan las marcas de los pasos completados y la tecnología elegida. Cada alumno guarda su avance por correo, contexto y relación en este navegador; las respuestas reales se comprueban en su propia terminal.
+- 1:N: 27 pasos Nest y 31 Serverless, incluidas las APIs del principal.
+- N:M: 38 pasos Nest y 58 Serverless. Continúa el backend anterior, añade las dos Entities y sus capas y prueba los seis casos mediante la API. Se ha retirado también la precarga de N:M en Serverless.
 
-## Fuentes y generación
+Menús abiertos y a todo el ancho, archivos completos, explicaciones estáticas y selector de tecnología a la derecha. Entrada en Preparar; N:M se abre por el primer apartado. Las marcas y posiciones compatibles se migran al añadir los nuevos pasos.
 
-Los contextos se relacionan en [RECORRIDOS.md](RECORRIDOS.md). La adaptación se mantiene con `scripts/version_estudio.py`, a partir de las transformaciones validadas en Arturo y de los nombres, campos, rutas y datos propios de cada ficha. Se ejecuta con:
+## Generación
 
-```bash
-python3 scripts/version_estudio.py
-```
-
-Los generadores de preparación, 1:N y N:M llaman a esa misma adaptación. Los PDF anteriores se conservan como material histórico; esta publicación actualiza el cuaderno web y sus referencias de código.
+`scripts/version_estudio.py` aplica las adaptaciones de cada contexto y `scripts/api_sin_precarga.py` define las altas por API y elimina los mecanismos antiguos. Los generadores de preparación, taller y N:M llaman a ese mismo circuito. Los PDF anteriores se conservan como documentos históricos.

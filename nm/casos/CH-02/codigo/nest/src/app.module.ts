@@ -7,6 +7,8 @@ import { ParcelasModule } from './parcelas/parcelas.module';
 import { CultivadoresModule } from './cultivadores/cultivadores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { HuertosModule } from './huertos/huertos.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    HuertosModule,
     ParcelasModule,
     CultivadoresModule,
     AsignacionesModule

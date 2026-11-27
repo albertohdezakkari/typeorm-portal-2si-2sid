@@ -7,6 +7,8 @@ import { DocumentosModule } from './documentos/documentos.module';
 import { RevisoresModule } from './revisores/revisores.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
+import { ArchivosModule } from './archivos/archivos.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +28,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
         synchronize: true
       })
     }),
+    ArchivosModule,
     DocumentosModule,
     RevisoresModule,
     AsignacionesModule
